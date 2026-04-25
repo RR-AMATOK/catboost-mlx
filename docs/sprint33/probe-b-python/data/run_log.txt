@@ -1,4 +1,4 @@
-[probe-b] _core.so: /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/_core.cpython-313-darwin.so
+[probe-b] _core.so: <repo>/python/catboost_mlx/_core.cpython-313-darwin.so
 [probe-b] _core.so md5: 597a6966cdc581c79faa79042adb068e
 [probe-b] _core.so mtime: Fri Apr 24 22:10:46 2026
 [probe-b] dataset: N=50000, F=20, seed=42, y_mean=-0.000264, y_std=0.593976
@@ -13,6 +13,6 @@
     50      0.193679      0.295626    1.5264    52.64%
    100      0.114801      0.188376    1.6409    64.09%
 
-[probe-b] results -> /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint33/probe-b-python/data/probe_b_results.json
+[probe-b] results -> <repo>/docs/sprint33/probe-b-python/data/probe_b_results.json
 
 [probe-b] CLASS CALL: PRODUCTION-BROKEN  (iter=50 drift = 52.64%)

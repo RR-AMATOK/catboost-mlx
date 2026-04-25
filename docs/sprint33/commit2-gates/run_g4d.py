@@ -29,7 +29,7 @@ from pathlib import Path
 
 import numpy as np
 
-REPO = Path("/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx")
+REPO = Path(__file__).resolve().parents[3]
 BINARY = REPO / "csv_train_g4"
 OUT_DIR = REPO / "docs/sprint33/commit2-gates/data"
 
