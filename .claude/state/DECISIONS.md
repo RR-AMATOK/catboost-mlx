@@ -2211,94 +2211,86 @@ F2 artifacts: `docs/sprint38/f2/`. PROBE-H: `docs/sprint38/probe-h/` or
 
 **Sprint**: 38
 **Date**: 2026-04-25
-**Status**: OPEN — fix implementation pending (next session)
+**Status**: WITHDRAWN — original analysis used a counterfactual formula and misread MLX's correct
+per-side output as evidence of a bug. See §Withdrawal-rationale below.
 
-### Problem
+### Problem (original)
 
 F2 confirmed C-PSF: MLX has CPU's preferred border in its search space but scores it lower.
-PROBE-H localises the divergence to the exact formula difference.
+PROBE-H was opened to localise the divergence to the exact formula difference.
 
-### Finding
+### Original finding (INVALIDATED)
 
-PROBE-H per-side accumulator data at iter=1 (6 depth levels, 2540 (feat,bin) candidates each)
-was analysed by applying both formulas to the captured tuples:
+The original analysis applied the OLD joint-skip formula to `PROBE_E_INSTRUMENT`'s
+`mlxTermNum/mlxTermDen` fields (which by construction capture the old formula) and named the
+result `gain_mlx_formula`. It then compared this counterfactual column against `picked_by_mlx`
+(the binary's ACTUAL output under the correct per-side mask). The difference was reported as
+evidence the binary used the old formula. The analysis was inverted: the difference was
+evidence that the two formulas produce different values — which is expected — not that the
+binary uses the old formula.
 
-**CPU formula** (`short_vector_ops.h`, `UpdateScoreBinKernelPlain` generic/SSE2 path):
-- Per-side independent mask: contribute side S if `wS > 0`, else contribute 0 from side S.
-- A partition with one empty child contributes the other child's term normally.
-- `gain = cosNum / sqrt(cosDen)` where cosNum/cosDen are the per-side sums.
+### Withdrawal-rationale
 
-**MLX old joint-skip formula** (pre-DEC-042 state in the PROBE-H binary's main scoring path):
-- Joint-skip: if either side < 1e-15f, skip entire partition (contribute 0 from both sides).
-- `gain = cosNum / sqrt(cosDen + 1e-20)`.
+Code-reading at `catboost/mlx/tests/csv_train.cpp:2068-2097` confirms the per-side mask has
+been in the code since Sprint 33 commit `10c72b4e96`:
 
-**Divergence fired at d=2..5 (4 of 6 depths)**. At d=2..5 where degenerate partitions exist
-(after earlier signal-correlated splits), the old joint-skip formula under-attributes cosNum/cosDen
-for signal features by discarding entire partitions that have one empty child. CPU correctly
-includes the non-empty child's contribution from those partitions.
-
-Example (d=3, feat=0, bin=102 — CPU's preferred split):
-- 8 partitions. 6 have wR=0 (all docs left after d=0/d=2 splits on feat=0).
-- Old joint-skip cosNum = 137.08 → gain = 11.88.
-- CPU per-side cosNum = 253.98 → gain = 16.94.
-- Gain delta: +5.06 units. CPU formula recovers feat=0 as argmax; joint-skip places it 2336th.
-
-Sanity check: at d=0 (1 partition, no degenerates), both formulas agree exactly. Gain for
-d=0 winner (feat=0, bin=69): both = 12.82448080. Max |gain_cpu − gain_mlx_col| at d=0 = 9.4e-14.
-
-| d | CPU argmax | Old-joint-skip argmax | Gain delta (CPU − MLX) | CPU rank in MLX | MLX rank in CPU |
-|---|---|---|---|---|---|
-| 0 | feat=0, bin=69 | feat=0, bin=69 | 0.0000 | 1 | 1 |
-| 1 | feat=1, bin=82 | feat=1, bin=82 | 0.0000 | 1 | 1 |
-| 2 | feat=0, bin=25 | feat=9, bin=116 | +1.0932 | 2279 | 241 |
-| 3 | feat=0, bin=102 | feat=14, bin=105 | +0.7699 | 2336 | 219 |
-| 4 | feat=0, bin=102 | feat=7, bin=82 | +0.7684 | 2288 | 201 |
-| 5 | feat=0, bin=102 | feat=7, bin=84 | +0.7861 | 2224 | 142 |
-
-Note: `picked_by_mlx` at d=1 disagrees with both formula argmaxes (picks feat=1, bin=64 while
-both formulas say bin=82). PROBE-E confirms 0 degenerate partitions for all feat=1 bins at d=1;
-no formula explanation applies. Secondary mechanism (possibly a stale binary state) under
-investigation. Does not change the d=2..5 verdict.
-
-### Localization
-
-The divergence lives in `csv_train.cpp` `FindBestSplit` function, ordinal Cosine branch.
-The main scoring path appears to retain the pre-DEC-042 joint-skip condition. The
-`COSINE_RESIDUAL_INSTRUMENT` (which captures `gain_mlx` in PROBE-H) correctly uses
-per-side mask, explaining the apparent inconsistency in the PROBE-H CSV: the instrument
-captures the TARGET (correct) formula while the main path uses the OLD formula.
-
-The fix pattern is identical to what DEC-042 applied to `FindBestSplitPerPartition`
-(Sprint 38 S38-S0, commit `a481972529`):
-
-```
-Before (joint-skip):
-    if (!wL_pos || !wR_pos) break;
-
-After (per-side mask, CPU-equivalent):
-    if (!wL_pos && !wR_pos) break;
-    if (wL_pos) { termNum += ...; termDen += ...; }
-    if (wR_pos) { termNum += ...; termDen += ...; }
+```cpp
+if (!wL_pos && !wR_pos) break;   // skip only when BOTH are empty
+if (wL_pos) {
+    const double dSL = ...; const double dWL = ...;
+    termNum += dSL * dSL * dInvL;
+    termDen += dSL * dSL * dWL * dInvL * dInvL;
+}
+if (wR_pos) {
+    const double dSR = ...; const double dWR = ...;
+    termNum += dSR * dSR * dInvR;
+    termDen += dSR * dSR * dWR * dInvR * dInvR;
+}
 ```
 
-### Fix complexity
+`analyze_probe_h_v2.py` (Correction 1) confirmed this empirically: recomputing
+`gain_per_side_mask` and `gain_calc_score_on_side` from the stored per-side accumulators,
+the maximum delta across all 6 depths and all 2540 (feat,bin) candidates is **1.37e-13** —
+double-precision rounding noise, not formula divergence.
 
-~10 lines in `csv_train.cpp` `FindBestSplit` ordinal Cosine case. Pattern already present in:
-- `FindBestSplitPerPartition` (DEC-042, `a481972529`)
-- `PROBE_E_INSTRUMENT` CPU-formula block (lines 1999–2020)
+The "fix" DEC-044 proposed was already present. No fix is needed for the `FindBestSplit`
+ordinal Cosine path.
 
-### Cross-validation needed
+### Corrected finding — partial granularity explanation
 
-1. Apply fix to `FindBestSplit` ordinal Cosine path.
-2. Re-run F2 at N=1k seed=42: expect iter=1 split match ≥5/6 (currently 1/6).
-3. Re-run 5-seed drift gate at N=1k: expect drift collapse from 13.93% to ≤2%.
-4. `bench_boosting v5` ULP=0 must be preserved (Metal kernel untouched).
+`analyze_probe_h_v2.py` (Correction 2) tests the granularity hypothesis: MLX has 127 bins
+for all 20 features; CPU has 6 borders for feat 0, 5 for feat 1, none for feats 2–19. When
+MLX is restricted to only bins where a CPU-equivalent border exists (within 1e-4, 11 bins
+total), the restricted argmax matches CPU's pick in **4/6 depths** (d=0–3). At d=4–5 the
+restricted argmax also misses CPU's pick, indicating a mechanism beyond granularity.
+
+| d | MLX actual pick | MLX restricted pick | CPU pick | restricted = CPU |
+|---|---|---|---|---|
+| 0 | feat=0, bin=69 | feat=0, bin=69 | feat=0, bin=69 | YES |
+| 1 | feat=1, bin=82 | feat=1, bin=82 | feat=1, bin=82 | YES |
+| 2 | feat=0, bin=25 | feat=0, bin=25 | feat=0, bin=25 | YES |
+| 3 | feat=0, bin=102 | feat=0, bin=106 | feat=0, bin=106 | YES |
+| 4 | feat=0, bin=102 | feat=0, bin=106 | feat=1, bin=27 | NO |
+| 5 | feat=0, bin=102 | feat=0, bin=104 | feat=0, bin=122 | NO |
+
+The 13.93% N=1k drift is partially explained by MLX evaluating 127×20=2540 bins while CPU
+evaluates 11 bins (6+5 for feats 0 and 1 only). MLX finds higher-scoring bins that CPU never
+considers. At d=4 the residual disagreement is on feature identity (MLX picks feat=0; CPU
+picks feat=1) even within the restricted space — a third, unidentified mechanism.
+
+### Open investigation
+
+The 13.93% N=1k drift mechanism is not fully closed. Proposed next probe: **PROBE-Q** —
+align MLX's quantization border generation with CPU's `GreedyLogSum` algorithm (or cap MLX's
+per-feature border count to match CPU's actual border count). This targets the granularity
+component. If border-generation alignment closes 4/6 depths but leaves d=4 open, a follow-on
+probe is needed for the feature-identity disagreement.
 
 ### Authority
 
-- PROBE-H finding: `docs/sprint38/probe-h/FINDING.md`
-- Analysis script: `docs/sprint38/probe-h/scripts/analyze_probe_h.py`
-- Divergence data: `docs/sprint38/probe-h/data/divergence_iter1.csv`
+- Code-reading verification: `catboost/mlx/tests/csv_train.cpp:2068-2097`, commit `10c72b4e96`
+- Corrected analysis script: `docs/sprint38/probe-h/scripts/analyze_probe_h_v2.py`
+- Granularity test data: `docs/sprint38/probe-h/data/granularity_test.csv`
+- Revised PROBE-H finding: `docs/sprint38/probe-h/FINDING.md`
+- Original (invalid) analysis: `docs/sprint38/probe-h/scripts/analyze_probe_h.py`
 - CPU reference: `catboost/libs/helpers/short_vector_ops.h:155+`
-- MLX target: `catboost/mlx/tests/csv_train.cpp` `FindBestSplit` ordinal Cosine case
-- DEC-042 template: `csv_train.cpp` `FindBestSplitPerPartition` ordinal Cosine case

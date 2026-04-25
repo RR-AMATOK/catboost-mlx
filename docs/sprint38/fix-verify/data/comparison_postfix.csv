@@ -1,0 +1,7 @@
+depth,cpu_feat,cpu_bin,cpu_border,mlx_feat,mlx_bin,mlx_border,feat_match,bin_match,border_close,match
+0,0,2,0.10254748165607452,0,73,0.18157052,True,False,False,False
+1,1,2,0.008698826655745506,1,91,0.65761542,True,False,False,False
+2,0,0,-1.0465140342712402,0,45,-0.35235262,True,False,False,False
+3,0,3,0.9340542554855347,3,87,0.54884368,False,False,False,False
+4,1,4,0.9601356983184814,4,102,0.78292483,False,False,False,False
+5,1,0,-0.8931417465209961,14,71,0.14395939,False,False,False,False

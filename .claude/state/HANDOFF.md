@@ -1,12 +1,13 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-04-25 (S38 PROBE-H COMPLETE. Verdict: OLD JOINT-SKIP formula confirmed
-> as the C-PSF mechanism in `csv_train.cpp` `FindBestSplit` ordinal Cosine path. CPU's per-side
-> mask (from `UpdateScoreBinKernelPlain`) consistently recovers signal feature feat=0 as argmax
-> at d=2–5; MLX's old joint-skip places feat=0 in rank 2224–2336 out of 2540 (bottom decile).
-> Gain delta reaches +5.06 at d=3. Fix is ~10 lines: apply DEC-042 per-side mask to the ordinal
-> Cosine case in `FindBestSplit`. Next: implement fix, rebuild, re-run F2, verify drift collapse.
-> DEC-044 opened. Branch: `mlx/sprint-38-lg-small-n`.)
+> Last updated: 2026-04-25 (S38 PROBE-H REVISED. Original verdict WITHDRAWN — analysis error.
+> PROBE-H instrumentation is valid; original analysis script (`analyze_probe_h.py`) confused a
+> counterfactual (old joint-skip applied to PROBE-E data) with the binary's actual output.
+> Direct code-reading at `csv_train.cpp:2068-2097` and `analyze_probe_h_v2.py` Correction 1
+> confirm: per-side mask and CPU formula produce IDENTICAL gains (max delta 1.37e-13, all 6
+> depths). DEC-044 WITHDRAWN. Correction 2 (granularity test): restricting MLX to CPU-equivalent
+> bins matches CPU in 4/6 depths. d=4–5 residual unexplained. Next: PROBE-Q (border-generation
+> alignment). Branch: `mlx/sprint-38-lg-small-n`.)
 
 ## Current state
 
@@ -227,33 +228,50 @@ Key findings (full evidence at `docs/sprint38/f2/FINDING.md`):
 - **iter=1 single match**: d=0 both pick `(feat=0, border=0.10254748)` ULP-identical. The
   formula produces the correct argmax only when the top candidate is unambiguous.
 
-### PROBE-H result (2026-04-25) — COMPLETE
+### PROBE-H result (2026-04-25) — REVISED, original verdict WITHDRAWN
 
-**Verdict: old joint-skip formula confirmed as C-PSF mechanism. DEC-044 opened.**
+**Original verdict withdrawn.** The original `analyze_probe_h.py` script compared a
+COUNTERFACTUAL (old joint-skip formula applied to PROBE-E's `mlxTermNum/mlxTermDen`) against
+`picked_by_mlx` (the binary's actual output under the correct per-side mask). The script
+named the counterfactual column `gain_mlx_formula`, making it appear to be the binary's
+actual gain. Direct code-reading at `csv_train.cpp:2068-2097` and `analyze_probe_h_v2.py`
+Correction 1 confirm the binary's per-side mask has been correct since S33-L4-FIX commit
+`10c72b4e96`. DEC-044 WITHDRAWN.
 
-Key findings (full evidence at `docs/sprint38/probe-h/FINDING.md`):
-- **Sanity check PASS**: at d=0 (no degenerate partitions), both formulas give gain=12.82448080
-  for the ULP-identical winner (feat=0, bin=69). Max |gain_cpu − gain_mlx_col| = 9.4e-14.
-- **Formula divergence at d=2–5 (4/6 depths)**: CPU per-side mask places feat=0 first in all
-  four depths. Old joint-skip places feat=0 at ranks 2224–2336 out of 2540 (bottom decile).
-- **Mechanism**: feat=0's bins produce empty right-children in many partitions (after d=0
-  split on feat=0). Old joint-skip discards those partitions' contributions entirely.
-  CPU correctly adds the non-empty (left) side. Cumulative gap: +0.77 to +1.09 gain units.
-- **Secondary anomaly at d=1**: both formulas agree on (feat=1, bin=82) but picked_by_mlx
-  is (feat=1, bin=64). PROBE-E confirms 0 degenerate partitions for feat=1 at d=1; no formula
-  explanation applies. Secondary open question; does not change d=2–5 verdict.
+Corrected findings (`docs/sprint38/probe-h/FINDING.md` revised; `analyze_probe_h_v2.py`):
+- **Correction 1 (formula equivalence)**: max |gain_per_side_mask − gain_calc_score_on_side|
+  = 1.37e-13 across all 6 depths and 2540 candidates. Formulas are IDENTICAL.
+- **Correction 2 (granularity test)**: restricting MLX to only bins where a CPU-equivalent
+  border exists (11 bins out of 2540) recovers CPU's pick in **4/6 depths** (d=0–3).
+  At d=4–5 the restricted argmax also misses CPU's pick — a secondary mechanism.
+- **d=1 anomaly persists**: formula argmax is (feat=1, bin=82, gain=15.032) but
+  picked_by_mlx is (feat=1, bin=64, gain=14.976). Gap = 0.056 gain units (not noise).
+  The binary's argmax path and COSINE_RESIDUAL_INSTRUMENT disagree at d=1.
+
+Granularity test per-depth result:
+
+| d | MLX actual | MLX restricted | CPU pick | restricted = CPU |
+|---|---|---|---|---|
+| 0 | feat=0, bin=69 | feat=0, bin=69 | feat=0, bin=69 | YES |
+| 1 | feat=1, bin=82 | feat=1, bin=82 | feat=1, bin=82 | YES |
+| 2 | feat=0, bin=25 | feat=0, bin=25 | feat=0, bin=25 | YES |
+| 3 | feat=0, bin=102 | feat=0, bin=106 | feat=0, bin=106 | YES |
+| 4 | feat=0, bin=102 | feat=0, bin=106 | feat=1, bin=27 | NO |
+| 5 | feat=0, bin=102 | feat=0, bin=104 | feat=0, bin=122 | NO |
 
 ### Next session entry point
 
-1. **PROBE-H fix** — apply DEC-042 per-side mask to `FindBestSplit` ordinal Cosine case in
-   `catboost/mlx/tests/csv_train.cpp` (approximately lines 2068–2097). Pattern:
-   `if (!wL_pos || !wR_pos) break` → `if (!wL_pos && !wR_pos) break` plus per-side if-blocks.
-   ~10 lines. Already present in `FindBestSplitPerPartition` (commit `a481972529`).
-2. **Rebuild and re-run F2** at N=1k seed=42 — expect iter=1 split match ≥5/6 (was 1/6).
-3. **Re-run 5-seed drift gate** at N=1k — expect collapse from 13.93% to ≤2%.
-4. **Verify bench_boosting v5 ULP=0** is preserved (Metal kernel untouched).
-5. Also carry forward: S31-T-LATENT-P11, S31-T-CLEANUP, #113 S31-T3-MEASURE,
-   #128 S35-Q4-L2-PARENT-TERM (all lower priority than the fix).
+1. **PROBE-Q** — align MLX's quantization border generation with CPU's `GreedyLogSum`
+   algorithm. MLX uses a static uniform 127-border grid for all 20 features; CPU generates
+   borders from the data (6 for feat=0, 5 for feat=1, 0 for feats 2–19). MLX's finer grid
+   on noise features opens 2286 extra candidates. PROBE-Q should test whether matching
+   CPU's border set closes the 4/6 granularity-explained depths and measure residual drift.
+2. **d=4 secondary mechanism** — if PROBE-Q closes d=0–3 but not d=4, investigate why
+   feat=0 scores higher than feat=1 even in the CPU-restricted candidate space.
+3. **d=1 anomaly** — the binary picks (feat=1, bin=64) when the formula and instrument
+   both rank (feat=1, bin=82) first by 0.056 gain units. Worth flagging in PROBE-Q setup.
+4. Also carry forward: S31-T-LATENT-P11, S31-T-CLEANUP, #113 S31-T3-MEASURE,
+   #128 S35-Q4-L2-PARENT-TERM (all lower priority than PROBE-Q).
 
 ## Entry point for next session
 

@@ -161,6 +161,38 @@ right-children in the partitions where the d=0 split already sent everyone to th
 
 *(source: `docs/sprint38/probe-h/FINDING.md`; PROBE-H analysis 2026-04-25; DEC-044)*
 
+### Counterfactual analysis must be clearly distinguished from observational analysis in probe scripts
+
+**Date**: 2026-04-25
+**Sprint**: [sprint-38]
+**Tags**: [probe-design] [analysis-error] [counterfactual]
+
+PROBE-H's `analyze_probe_h.py` computed "what MLX would produce under the OLD joint-skip formula"
+by applying the joint-skip formula to PROBE-E's `mlxTermNum/mlxTermDen` fields (which capture the
+old formula by construction) and named the result `gain_mlx_formula`. It then compared this
+counterfactual column against `picked_by_mlx` (the binary's actual output under the correct
+per-side mask, shipped since S33-L4-FIX commit `10c72b4e96`). The difference was misread as
+evidence the binary used the old formula. In reality, the difference was expected: the two
+columns measured different things. `analyze_probe_h_v2.py` Correction 1 confirmed the binary's
+formula produces gain values agreeing with CPU's formula to within 1.37e-13 — numerical noise.
+
+**Why this matters**: Counterfactual columns simulate "what would happen under a different code
+path." Observational columns record "what the binary actually did." When a script computes both
+and names them without making the distinction explicit, a reader (or future agent) can easily
+confuse the counterfactual for the observational. If the two disagree, the natural interpretation
+is that the binary uses the hypothetical path — when in fact it just means the two formulas
+produce different numbers on the same input, which is always true when they differ in semantics.
+
+**How to apply**: Counterfactual columns in probe scripts must have names that make the
+hypothetical explicit, e.g. `gain_under_old_joint_skip_counterfactual` not `gain_mlx_formula`.
+Any code block that compares a counterfactual column against an observational column must
+include a comment: `# NOTE: comparing counterfactual (simulated) vs observational (binary actual)`.
+Before concluding "the binary uses formula X because counterfactual_X matches observational_Y",
+verify by direct code-reading which formula is actually in the binary.
+
+*(source: `docs/sprint38/probe-h/FINDING.md` §Original analysis error; `analyze_probe_h.py` vs
+`analyze_probe_h_v2.py`; DEC-044 withdrawal 2026-04-25)*
+
 ---
 
 ## Contribution Log
@@ -171,3 +203,4 @@ right-children in the partitions where the d=0 split already sent everyone to th
 | 2026-04-25 | Added § Probe Design — rubric portability lesson (PROBE-G amendment) | sprint-38 |
 | 2026-04-25 | Added § Probe Design — cross-runtime quantization grid alignment lesson (F2) | sprint-38 |
 | 2026-04-25 | Added § Probe Design — formula equivalence boundary-case lesson (PROBE-H) | sprint-38 |
+| 2026-04-25 | Added § Probe Design — counterfactual vs observational confusion lesson (PROBE-H v2) | sprint-38 |
