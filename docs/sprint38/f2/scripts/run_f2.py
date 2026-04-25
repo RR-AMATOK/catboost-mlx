@@ -246,6 +246,12 @@ def run_mlx(anchor_csv: Path) -> dict:
         "--score-function", SCORE_FN,
         # SymmetricTree is the default grow policy; no explicit flag needed
         "--seed", str(ANCHOR_SEED),
+        # S38-PROBE-Q-PHASE-2: MLX defaults to RandomStrength=1.0, but the
+        # CPU CatBoost call below uses random_strength=0.0. Without this
+        # explicit override the comparison is asymmetric and produces a
+        # phantom ~14% drift at small N from MLX's noise-induced
+        # suboptimality. ALWAYS match RS across runtimes for parity tests.
+        "--random-strength", "0",
         "--output", str(mlx_model_path),
         "--verbose",
     ]

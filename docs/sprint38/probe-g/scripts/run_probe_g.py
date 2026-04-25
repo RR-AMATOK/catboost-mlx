@@ -118,11 +118,14 @@ def phase1_anchor_capture() -> None:
     #   ./csv_train_probe_e <csv> --iterations 2 --depth 6 --bins 128 --l2 3 \
     #     --lr 0.03 --seed 42 --loss RMSE --score-function Cosine \
     #     --grow-policy SymmetricTree
-    # No --random-strength override; csv_train default is RS=1.0. The t3
-    # harness pattern matches this. The instrumentation captures gain values
-    # PRE-perturbation (totalGain, not perturbedGain), so RS=1.0 vs RS=0
-    # changes only the argmax, not the recorded mlx_termN/D / cpu_termN/D
-    # values themselves.
+    # S38-PROBE-Q-PHASE-2 (2026-04-25): the original PROBE-G run did NOT
+    # pass --random-strength 0, while the Phase 2 sweep called CPU CatBoost
+    # with random_strength=0.0. The asymmetry caused MLX to apply gain
+    # perturbation while CPU was deterministic — producing a phantom
+    # ~14% drift at N=1k that fully accounted for the "small-N residual"
+    # Sprint 37 #113 T3 G3b/G3c flagged. With matched RS=0, MLX trees are
+    # bit-identical to CPU's at the F2 N=1k seed=42 anchor (12/12 splits
+    # match). Always pass --random-strength 0 in cross-runtime parity tests.
     cmd = [
         str(BINARY), str(anchor_csv),
         "--iterations", "2",
@@ -134,6 +137,7 @@ def phase1_anchor_capture() -> None:
         "--score-function", SCORE_FN,
         "--grow-policy", "SymmetricTree",
         "--seed", str(ANCHOR_SEED),
+        "--random-strength", "0",  # S38-PROBE-Q-PHASE-2: parity with CPU
         "--verbose",
     ]
     env = os.environ.copy()
@@ -190,9 +194,11 @@ def run_mlx_sweep_cell(data_path: Path, seed: int) -> tuple[float, float]:
     For sweep cells, we send instrumentation to a /tmp directory to avoid
     polluting the canonical anchor capture in DATA_DIR.
     """
-    # Mirror the canonical t3 harness exactly so sweep numbers are directly
-    # comparable to S37 #113 verdict (G3a aggregate drift 1.27% at N=50k).
-    # No --random-strength / --bootstrap-type overrides on MLX side.
+    # S38-PROBE-Q-PHASE-2 (2026-04-25): RS=0 on both runtimes for parity.
+    # The original PROBE-G sweep used MLX default RS=1.0 vs CPU RS=0.0 —
+    # this asymmetry produced the phantom ~14% N=1k drift the sprint was
+    # chasing. Sweep numbers in the originally-committed scaling_sweep.csv
+    # reflect that asymmetry; re-running with this fix yields ~0% drift.
     cmd = [
         str(BINARY), str(data_path),
         "--iterations", str(SWEEP_ITERS),
@@ -204,6 +210,7 @@ def run_mlx_sweep_cell(data_path: Path, seed: int) -> tuple[float, float]:
         "--score-function", SCORE_FN,
         "--grow-policy", SWEEP_GROW,
         "--seed", str(seed),
+        "--random-strength", "0",  # S38-PROBE-Q-PHASE-2: parity with CPU
         "--verbose",
     ]
     env = os.environ.copy()

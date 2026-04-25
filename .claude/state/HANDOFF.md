@@ -1,47 +1,49 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-04-25 (S38 SESSION END. **Granularity FALSIFIED** by PROBE-Q phase 1:
-> CPU 128-border GreedyLogSum grid and MLX 127-border grid agree to fp32-rounding precision
-> (max delta 5e-8, all 20 features × 127 borders). Both sides evaluate identical split
-> candidates. PROBE-H Correction 2's "4/6 restricted match" is retracted — restriction was
-> to the 11 SERIALIZED borders, not the 128 evaluated during training. The 13.93% N=1k
-> drift is NOT formula and NOT quantization. Branch: `mlx/sprint-38-lg-small-n`. 6 commits
-> ahead of master.)
+> Last updated: 2026-04-25 (**S38 RESOLVED — harness asymmetry, not algorithm bug.** PROBE-Q
+> phase 2 found the smoking gun: MLX's `csv_train.cpp:599` defaults `RandomStrength=1.0`;
+> the cross-runtime drift harnesses pass `random_strength=0.0` to CPU CatBoost explicitly
+> but never override MLX's default. Result: MLX trees were perturbed by gain noise while
+> CPU trees were deterministic. With matched `--random-strength 0` on both, MLX's iter=1 +
+> iter=2 trees are bit-identical to CPU's at all 12 splits (feature and border, fp32
+> precision); train RMSE drift = **0.000%**. The "13.93% N=1k drift" the sprint chased was
+> the gap between MLX-with-noise and CPU-deterministic — the gap collapses log-linearly
+> with N because gain gaps between top candidates grow with N (less-frequent noise flips at
+> large N). PROBE-G Scenario C, F2 C-PSF, PROBE-H joint-skip — all retracted as causal
+> interpretations of the same configuration artifact. PROBE-Q phase 1 stands (border grids
+> ARE aligned). DEC-042 stands. Harness fix: `--random-strength 0` added to F2 + PROBE-G
+> Phase 1 + Phase 2 cmd blocks. See `docs/sprint38/probe-q/PHASE-2-FINDING.md`. Branch:
+> `mlx/sprint-38-lg-small-n`.)
 >
-> ## Next session entry point — investigate in this exact order
+> ## Sprint 38 close-out
 >
-> **Priority 1 — d=1 instrumentation anomaly** (must resolve BEFORE building further analysis on PROBE-H captures):
-> at iter=1 d=1, `probe_h_iter1_depth1.csv` shows `(feat=1, bin=82)` with gain **15.032**
-> as the captured argmax; but `picked_by_mlx==1` is `(feat=1, bin=64)` with gain **14.976**.
-> Both gains are correctly captured (PROBE-H Correction 1 verified the formula); binary
-> picks the lower-gain cell. Hypotheses: (a) instrumentation captures cells the binary's
-> argmax doesn't actually use, (b) binary uses different evaluation ordering or tie-break
-> logic, (c) some kernel-side state (e.g. min-data-in-leaf) rejects bin=82 silently. Read
-> MLX's argmax code path at the same site as the PROBE-H capture (`csv_train.cpp:2068+`);
-> verify what filters are applied between `gain_mlx` computation and the pick decision.
-> If anomaly traces to instrumentation contamination, all PROBE-H-derived analysis is
-> suspect and captures must be re-validated before reuse.
+> **Verdict**: small-N LG+Cosine "drift" mechanism = harness asymmetry. CPU CatBoost was
+> invoked with `random_strength=0.0`; MLX `csv_train` was invoked at its default
+> `RandomStrength=1.0`. The 13.93% N=1k drift was MLX's noise-induced suboptimality vs
+> CPU's deterministic optimum — not a real algorithm divergence. With matched RS=0, all
+> 12 iter=1+iter=2 splits at the F2 anchor are bit-identical (feature + border).
 >
-> **Priority 2 — PROBE-R** (only AFTER d=1 resolved cleanly): recover per-(feat, bin,
-> partition) `(sL, wL, sR, wR)` from PROBE-H's `cosNumL/cosDenL/cosNumR/cosDenR` via the
-> 2-equation system `cosNumL = sL²/(wL+λ)`, `cosDenL = sL²·wL/(wL+λ)²`. Compute Python
-> fp64 ground truth from the anchor data + the iter=1 d=0 split (feat=0, bin=69, border
-> 0.10254748) for partitioning. **Mandatory d=0 stop-gate**: at `(feat=0, bin=69,
-> partition=0)` the recovered sums must match Python fp64 truth to ULP (we know d=0
-> iter=1 produces gain 12.82448 to 9.4e-14 vs CPU). If gate fails, halt — recovery math
-> or reference is wrong. If gate passes, sweep d=1..5; any (feat, bin, partition) with
-> `|sL_recovered − sL_python| / |sL_python| > 1e-5` localizes the precision bug.
+> **Code state**:
+> - DEC-042 per-side mask: in place since Sprint 33 (`csv_train.cpp:2068`), verified correct.
+> - DEC-042 port to FBSPP: shipped this sprint (commit `a481972529`), correct.
+> - F2 + PROBE-G harness scripts: now pass `--random-strength 0` to MLX for parity.
+> - All four probes (G, H, Q, F2) were causally misinterpreting the same configuration
+>   artifact. Their captured data is internally consistent and may be reused with
+>   re-runs under the corrected harness.
 >
-> **Priority 3 — eliminated mechanisms (don't re-investigate)**: joint-skip formula
-> (corrected; was already fixed S33), per-side mask formula divergence (max delta 1.37e-13),
-> quantization grid (max delta 5e-8), border-generation algorithm (same GreedyLogSum,
-> complete port). Surviving candidates: histogram per-bin sum precision, Metal kernel
-> reduction non-determinism, d=1 anomaly mechanism (which may be the d=4-5 mechanism too).
->
-> **Sanity floor**: at d=0 iter=1, MLX picks `(feat=0, bin=69)` with gain 12.82448 to ULP
-> identity with CPU (verified by PROBE-H Correction 1 + F2). Whatever mechanism causes the
-> 13.93% drift, it activates ONLY after partitioning begins (d≥1). This is the cleanest
-> constraint on hypothesis space.
+> **Next-session priorities** (not S38 — these are follow-ons):
+> 1. **Optional re-run** of PROBE-G's drift sweep with the fixed harness to produce a
+>    canonical "true MLX-vs-CPU drift at parity" table for the README. Expected: ~0% at
+>    all N, modulo single-seed noise variance.
+> 2. **README update** in `catboost/mlx/README.md`: clarify that cross-runtime bit-identity
+>    requires explicit `random_strength=0` on both sides; with default RS=1.0 on both,
+>    expect single-seed RMSE deltas in the few-percent range from RNG-implementation
+>    differences, averaging to ~0 over many seeds.
+> 3. **#130 (S38-LG-SMALL-N-RESIDUAL)**: close as RESOLVED-CONFIG-ARTIFACT.
+> 4. **Latent open puzzle (low priority)**: at `RS=1.0` on both runtimes, single-seed RMSE
+>    delta is ~3.66% at N=1k. Whether this is just RNG variance (expected) or a deeper
+>    statistical asymmetry (e.g. different noise-distribution shapes) is unverified across
+>    multiple seeds. Cheap follow-up: run RS=1.0 sweep at 5+ seeds, expect mean drift ~0.
 
 ## Current state
 

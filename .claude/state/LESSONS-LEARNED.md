@@ -193,6 +193,50 @@ verify by direct code-reading which formula is actually in the binary.
 *(source: `docs/sprint38/probe-h/FINDING.md` §Original analysis error; `analyze_probe_h.py` vs
 `analyze_probe_h_v2.py`; DEC-044 withdrawal 2026-04-25)*
 
+### Cross-runtime parity tests must verify SYMMETRIC configuration before interpreting drift
+
+**Date**: 2026-04-25
+**Sprint**: [sprint-38]
+**Tags**: [probe-design] [harness] [cross-runtime] [configuration-asymmetry]
+
+Sprint 37 #113 T3 G3b/G3c flagged a 13-44% drift at small N for LG+Cosine. Sprint 38 spent
+four probes (PROBE-G, F2, PROBE-H, PROBE-Q phase 1) hunting algorithm-class mechanisms:
+formula divergence, quantization granularity, per-bin precision, instrumentation contamination.
+Each probe produced an internally-consistent verdict that was later retracted. The actual
+mechanism: the comparison harness invoked CPU CatBoost with `random_strength=0.0` (explicit
+deterministic) but invoked MLX `csv_train` at its default `RandomStrength=1.0` (noisy).
+MLX's argmax was perturbed by random noise; CPU's was not. The 13.93% drift was the gap
+between MLX-with-noise and CPU-deterministic — entirely a configuration artifact.
+
+**Why this matters**: A 13% drift number across 5 seeds feels like a real bug because it's
+reproducible and seed-stable. The reproducibility came from the asymmetry being deterministic,
+not from an algorithm defect. Probes built on the contaminated harness can produce verdicts
+that look causal but are observing the same configuration drift through different lenses.
+Verdict diversity does not imply mechanism diversity if all probes share the same input
+pipeline.
+
+**How to apply**: The first move in any cross-runtime drift investigation is a configuration
+sanity-print:
+
+```
+For each parameter that controls training behavior:
+  print(name, value_passed_to_runtime_A, value_passed_to_runtime_B, "EQUAL" if equal else "ASYMMETRIC")
+```
+
+If any line says ASYMMETRIC, fix it before opening any probe. Special attention to: random
+seeds, random strength / regularization noise, bootstrap type, sub-sampling rates, default-
+parameter handling (one runtime's default may differ from the other's). For configurations
+where defaults differ between runtimes, ALWAYS pass the value explicitly on both sides
+even when it equals the default — defaults are the most common source of silent asymmetry.
+
+**Configuration bisection rule**: when drift is mysterious, vary ONE parameter at a time
+between MATCHED and DEFAULT. Halve the difference. The parameter at which drift collapses
+is the cause. This is cheaper than any algorithm-class probe and should be the FIRST check,
+not the last.
+
+*(source: `docs/sprint38/probe-q/PHASE-2-FINDING.md`; PROBE-Q phase 2 analysis 2026-04-25;
+S38 close-out: 12/12 tree splits match at parity, 0.000% RMSE drift)*
+
 ---
 
 ## Contribution Log
@@ -204,3 +248,4 @@ verify by direct code-reading which formula is actually in the binary.
 | 2026-04-25 | Added § Probe Design — cross-runtime quantization grid alignment lesson (F2) | sprint-38 |
 | 2026-04-25 | Added § Probe Design — formula equivalence boundary-case lesson (PROBE-H) | sprint-38 |
 | 2026-04-25 | Added § Probe Design — counterfactual vs observational confusion lesson (PROBE-H v2) | sprint-38 |
+| 2026-04-25 | Added § Probe Design — cross-runtime configuration symmetry (PROBE-Q phase 2) | sprint-38 |

@@ -2294,3 +2294,74 @@ probe is needed for the feature-identity disagreement.
 - Revised PROBE-H finding: `docs/sprint38/probe-h/FINDING.md`
 - Original (invalid) analysis: `docs/sprint38/probe-h/scripts/analyze_probe_h.py`
 - CPU reference: `catboost/libs/helpers/short_vector_ops.h:155+`
+
+---
+
+## DEC-045: S38 small-N drift root-caused — harness configuration asymmetry (RESOLVED)
+
+**Sprint**: 38
+**Date**: 2026-04-25
+**Status**: RESOLVED
+**Authored by**: Claude (PROBE-Q phase 2 — opus 4.7)
+**Supersedes**: PROBE-G Scenario C verdict, F2 C-PSF verdict, PROBE-H joint-skip verdict (all retracted as causal interpretations)
+**Companion**: DEC-044 (WITHDRAWN); PROBE-Q phase 1 finding (still valid for what it claimed)
+
+### Findings
+
+The Sprint 37 #113 T3 G3b/G3c "13–44% small-N drift" and Sprint 38's entire investigation
+chain were all observing a single configuration mismatch:
+
+- MLX `csv_train.cpp:599`: `float RandomStrength = 1.0f` (CLI default).
+- Drift-comparison harnesses (`run_probe_g.py`, `run_f2.py`) explicitly pass
+  `random_strength=0.0` to CPU CatBoost but never pass `--random-strength 0` to MLX's CLI.
+- MLX argmax (`csv_train.cpp:2196-2206`) compares `perturbedGain = totalGain + noiseScale·N(0,1)`
+  against `bestGain`, where `noiseScale = RandomStrength × gradRms`. With RS=1.0 and typical
+  iter=1 RMSE gradients, σ ≈ 0.3–0.5 gain units — enough to flip top-2 candidate picks
+  whenever the gain gap is comparable.
+- The instrumentation captures `totalGain` (deterministic), not `perturbedGain`.
+
+Empirical confirmation at the F2 N=1k seed=42 anchor:
+
+| Config | MLX RMSE | CPU RMSE | Drift |
+|---|---|---|---|
+| Both RS=0.0 | 0.204238 | 0.204238 | **0.000%** (bit-identical, 12/12 splits match) |
+| Both RS=1.0 (single seed) | 0.232996 | 0.241850 | -3.66% (RNG variance) |
+| MLX RS=1.0 vs CPU RS=0.0 (asymmetry) | 0.232996 | 0.204238 | 14.08% (the phantom) |
+
+12/12 iter=1 + iter=2 splits match feature AND border to fp32-rounding precision once
+RandomStrength is matched. The 14.08% delta is exactly the gap between MLX's noise-induced
+suboptimality and CPU's deterministic optimum — not an algorithm divergence.
+
+The smooth log-linear N* curve (drift halving roughly per N-doubling, N* ≈ 19,231 at 2%
+threshold) reflects gain-gap statistics: at small N gaps are tighter, noise flips picks
+more often; at large N gaps grow, noise rarely flips. PROBE-G's "Scenario C with depth-
+amplification" verdict was reading topology dynamics into noise statistics.
+
+### Decision
+
+- Sprint 38 small-N residual: **RESOLVED-CONFIG-ARTIFACT**.
+- DEC-042 per-side mask: confirmed correct, in place since Sprint 33 (`csv_train.cpp:2068`).
+- DEC-042 port to FBSPP (`a481972529` this sprint): confirmed correct.
+- All four probe verdicts in S38 (G classification, F2 C-PSF, H joint-skip, Q-1 granularity)
+  retracted as causal interpretations of the same configuration artifact. Captured data
+  remains valid for what it observed; the causal narrative was wrong.
+- Harness fix landed: `--random-strength 0` added to `run_f2.py` and `run_probe_g.py`
+  (Phase 1 + Phase 2 cmd blocks).
+- README update queued: clarify cross-runtime parity requires explicit `RS=0` on both sides.
+
+### Implication
+
+| Branch | Outcome |
+|---|---|
+| Production correctness | DEC-042 closure for ordinal Cosine confirmed end-to-end. The Known-Limitation note in `catboost/mlx/README.md` about "LG+Cosine drift at small N" should be retired or replaced with a parity-testing note about RandomStrength. |
+| Test infrastructure | Cross-runtime parity tests must verify SYMMETRIC config before interpreting drift. Lessons-learned has the principle. |
+| Open puzzles |  At RS=1.0 on both runtimes, single-seed drift at N=1k is ~3.66% — likely RNG-implementation variance, expected to average to ~0 over many seeds. Verifying this is the only follow-on. |
+| Issue closure | #130 (S38-LG-SMALL-N-RESIDUAL) → close as RESOLVED. |
+
+### Authority
+
+- Falsification harness: ad-hoc Python in session, results pasted in `docs/sprint38/probe-q/PHASE-2-FINDING.md`
+- 12/12 tree match verified by `mlx_borders_full.json` + `cpu_model.json` cross-reference
+- Code reference for the noise mechanism: `catboost/mlx/tests/csv_train.cpp:2196-2206`
+- Configuration default: `csv_train.cpp:599` (`RandomStrength = 1.0f`)
+- Harness asymmetry source: `docs/sprint38/probe-g/scripts/run_probe_g.py:121-138, 197-211` (pre-fix)
