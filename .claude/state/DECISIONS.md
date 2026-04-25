@@ -2053,3 +2053,115 @@ The S33 CR claim "FBSPP is structurally immune" was correct only for the cross-p
 - Kernel md5: `9edaef45b99b9db3e2717da93800e76f` (host-side fix only, no Metal shader changes)
 
 **Note**: H1 (separate dominant mechanism causing ~14% LG+Cosine residual at small N) is under parallel investigation in S38 PROBE-G. This FBSPP commit is sibling to that probe; the two fixes are independent.
+
+---
+
+## DEC-043: Run F2 to discriminate d=2 formula equivalence; route to PROBE-I or PROBE-H based on result
+
+**Sprint**: 38
+**Date**: 2026-04-25
+**Status**: PROPOSED
+**Authored by**: ml-product-owner (PROBE-G verdict writeup)
+**Amended**: 2026-04-25 (@devils-advocate stress-test of PROBE-G classification)
+**Depends on**: DEC-042 (per-side mask fix), PROBE-G findings (`docs/sprint38/probe-g/FINDING.md`)
+
+### Problem
+
+PROBE-G (phases 1–4, 2026-04-25) initially classified the small-N LG+Cosine residual as
+"Scenario C dominant with depth-amplification." That verdict was amended by @devils-advocate
+stress-test on three falsifications:
+
+**Falsification 1 — skip-ratio peaks at d=3 then falls, not monotonically rising:**
+Skip-ratio (MLX-skip% / PROBE-E-skip%): d=2: 1.07×, d=3: 3.94×, d=4: 3.12×, d=5: 2.72×.
+Genuine depth-amplification of the topology mechanism requires a monotonically rising ratio.
+The fall-off at d=4/d=5 is consistent with leaf-size exhaustion (N/64 ≈ 16 docs/leaf at d=6).
+
+**Falsification 2 — gap collapses while skip rate explodes:**
+Gap d=2..5: 1.177, 0.622, 0.588, 0.582. Skip rate d=2..5: 5.36%, 29.97%, 33.06%, 39.69%.
+`mag_median_termN_nonzero` d=2..5: 60.16, 19.19, 7.04, 2.44 — 25× decay. If the mechanism
+were the same class at higher frequency, accumulated gap would rise with skip rate. Instead it
+collapses: at d≥3 each corrected cell is noise-scale. DEC-042 fires but has no material effect.
+
+**Falsification 3 — smooth power-law drift curve, no knee:**
+Drift by N: 18.7→13.9→8.6→5.1→3.1→1.9→1.2 (halves per doubling of N, full range). The
+`B/n_leaf > 1` threshold model predicts a knee near N=8k. No knee exists. This is the
+signature of a continuous precision/noise mechanism, not a discrete topology threshold. The
+math derivation in `docs/sprint38/lg-small-n/math-derivation.md` was structurally wrong, not
+just off by 2× in N* — it assumed topology-class and derived a threshold where none exists.
+
+**Amended finding**: Scenario C is confirmed at d≤2. At d≥3 the mechanism class changes —
+plausibly continuous-precision-class at small leaves. PROBE-G cannot localize it (MLX-internal
+counterfactual; never observes CPU's actual values). DEC-036's "precision class exhausted"
+closure was established at large N only and may not hold at small N.
+
+The 13.93% aggregate drift at N=1k (5-seed mean, ST+Cosine, iter=50) remains unlocalized.
+Candidates:
+
+- **(i)** MLX's per-side formula not equivalent to CPU's `UpdateScoreBinKernelPlain` at small N.
+- **(ii)** Quantization border deficit (127-vs-128, DEC-039) shifting bin membership at small N.
+- **(iii)** basePred initialization compounding at small-sample leaves.
+- **(iv)** Leaf-value precision near the L2 regularization floor at small leaf sizes.
+
+### Decision
+
+Run **F2** first — a cheap CPU-tree split comparison that requires no new instrumentation
+(~2h), then route to PROBE-H or PROBE-I based on the result.
+
+**F2 — CPU-tree split comparison at N=1k seed=42 anchor:**
+
+1. Run standard `catboost` Python package on the same N=1k seed=42 anchor (depth=6, bins=128,
+   l2=3, lr=0.03, ST, Cosine, RMSE, iters=2).
+2. Dump iter=2 tree splits via CatBoost's model-introspection API (`model.get_tree_splits()`
+   or equivalent).
+3. Compare to MLX postfix column (post-DEC-042 picks) from PROBE-G at d=0..5.
+
+No new instrumentation. Uses CatBoost's existing model API.
+
+**If PROBE-H is opened** (F2 shows d=2 divergence): instrument CPU's `UpdateScoreBinKernelPlain`
+(`catboost/libs/helpers/short_vector_ops.h:155+`) or surrounding reducer in `score_calcers.cpp`
+with a `PROBE_H_INSTRUMENT` guard, emitting `(feat, bin, partition, gain)` tuples in the same
+format as `PROBE_E_INSTRUMENT`. Cross-join against PROBE-G's postfix column. Estimate: ~1 sprint.
+
+### Findings
+
+PROBE-G confirmed (data on disk at `docs/sprint38/probe-g/data/`):
+- Scenario C at d≤2: d=2 skip rate 5.36% matches PROBE-E 5.00%; gap=1.177 gains units selects
+  signal feat=0 bin=21.
+- d≥3: mechanism class changes. Skip rates high (up to 39.69%) but per-cell contributions
+  noise-scale (mag_median_termN_nonzero 2.44 at d=5). DEC-042 fires but has no material effect.
+- N* = 19,231 (empirical, log-N interpolation N=10k to N=20k). Smooth power-law, no threshold knee.
+- The `B/n_leaf` threshold model is structurally wrong. Do not use to predict further scaling.
+
+### Implication
+
+| F2 result | Interpretation | Next step |
+|-----------|---------------|-----------|
+| CPU picks match MLX postfix at d=2 (CPU also picks feat=0, bin≈21) | DEC-042 is equivalent to CPU at d=2. Residual is at d≥3 — precision/noise class at small leaves, not formula divergence. | Open **PROBE-I** targeting leaf-value/precision/quantization at d≥3. |
+| CPU picks differ from MLX postfix at d=2 | DEC-042's per-side formula diverges from CPU's `CalcScoreOnSide`. Formula difference IS the residual. | Open **PROBE-H**: instrument CPU `UpdateScoreBinKernelPlain`; dump per-bin per-side gain; find the formula divergence. |
+
+### Gate
+
+**F2-G1**: CPU CatBoost runs on the N=1k seed=42 anchor with identical hyperparameters and
+produces a tree split dump for iter=2. Split dump joinable to PROBE-G postfix column on
+`(depth, feat, bin)` key.
+
+**F2-G2**: Pick agreement table at d=0..5 with explicit match/mismatch for the argmax pick.
+
+**PROBE-H-G1** (if opened): CPU instrumentation hook produces `(feat, bin, partition, gain)`
+CSV joinable to PROBE-G's `cos_leaf_seed42_depth{0..5}.csv` at ≥95% row match rate.
+
+### Estimate
+
+F2: ~2h. PROBE-H (if needed): ~1 sprint (~3 days). PROBE-I (if needed): ~1 sprint.
+
+### Directory
+
+F2: inline / ad hoc (no new directory needed). PROBE-H or PROBE-I: `docs/sprint38/probe-h/`
+or `docs/sprint39/probe-h/` (or probe-i/) — Ramos decides sprint boundary.
+
+### Authority
+
+- PROBE-G finding (amended): `docs/sprint38/probe-g/FINDING.md` §Classification — AMENDED
+- DEC-042: `docs/sprint33/probe-e/FINDING.md`; `.claude/state/DECISIONS.md §DEC-042`
+- CPU reference: `catboost/libs/helpers/short_vector_ops.h:155+` (`UpdateScoreBinKernelPlain`)
+- Amendment justification: @devils-advocate stress-test, 2026-04-25

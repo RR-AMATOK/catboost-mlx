@@ -1,0 +1,45 @@
+[phase2] scaling sweep: ST+Cosine, depth=6, bins=128, iters=50
+[phase2] N values: [500, 1000, 2000, 5000, 10000, 20000, 50000]; seeds: [42, 43, 44, 45, 46]
+  N=  500 seed=42 MLX=0.249546 CPU=0.208301 ratio=1.19801 drift=19.801% wall=  0.6s
+  N=  500 seed=43 MLX=0.248349 CPU=0.206948 ratio=1.20005 drift=20.005% wall=  0.6s
+  N=  500 seed=44 MLX=0.253960 CPU=0.210717 ratio=1.20522 drift=20.522% wall=  0.6s
+  N=  500 seed=45 MLX=0.259310 CPU=0.222160 ratio=1.16722 drift=16.722% wall=  0.6s
+  N=  500 seed=46 MLX=0.243740 CPU=0.209285 ratio=1.16463 drift=16.463% wall=  0.6s
+  N=  500 aggregate drift = 18.7027% (min=16.4634%, max=20.5219%)
+  N= 1000 seed=42 MLX=0.232996 CPU=0.204238 ratio=1.14081 drift=14.081% wall=  0.6s
+  N= 1000 seed=43 MLX=0.229305 CPU=0.200425 ratio=1.14409 drift=14.409% wall=  0.6s
+  N= 1000 seed=44 MLX=0.231307 CPU=0.204007 ratio=1.13382 drift=13.382% wall=  0.7s
+  N= 1000 seed=45 MLX=0.233553 CPU=0.205136 ratio=1.13853 drift=13.853% wall=  0.6s
+  N= 1000 seed=46 MLX=0.231817 CPU=0.203488 ratio=1.13921 drift=13.921% wall=  0.6s
+  N= 1000 aggregate drift = 13.9292% (min=13.3817%, max=14.4093%)
+  N= 2000 seed=42 MLX=0.213565 CPU=0.197579 ratio=1.08091 drift= 8.091% wall=  0.7s
+  N= 2000 seed=43 MLX=0.215588 CPU=0.198273 ratio=1.08733 drift= 8.733% wall=  0.6s
+  N= 2000 seed=44 MLX=0.217418 CPU=0.200893 ratio=1.08226 drift= 8.226% wall=  0.6s
+  N= 2000 seed=45 MLX=0.219071 CPU=0.201051 ratio=1.08963 drift= 8.963% wall=  0.6s
+  N= 2000 seed=46 MLX=0.216449 CPU=0.198667 ratio=1.08951 drift= 8.951% wall=  0.6s
+  N= 2000 aggregate drift = 8.5927% (min=8.0911%, max=8.9630%)
+  N= 5000 seed=42 MLX=0.207403 CPU=0.197243 ratio=1.05151 drift= 5.151% wall=  0.6s
+  N= 5000 seed=43 MLX=0.205632 CPU=0.195786 ratio=1.05029 drift= 5.029% wall=  0.7s
+  N= 5000 seed=44 MLX=0.204697 CPU=0.194455 ratio=1.05267 drift= 5.267% wall=  0.7s
+  N= 5000 seed=45 MLX=0.206553 CPU=0.196788 ratio=1.04962 drift= 4.962% wall=  0.8s
+  N= 5000 seed=46 MLX=0.204289 CPU=0.194453 ratio=1.05058 drift= 5.058% wall=  0.7s
+  N= 5000 aggregate drift = 5.0934% (min=4.9620%, max=5.2669%)
+  N=10000 seed=42 MLX=0.200717 CPU=0.194664 ratio=1.03110 drift= 3.110% wall=  0.8s
+  N=10000 seed=43 MLX=0.200317 CPU=0.194563 ratio=1.02957 drift= 2.957% wall=  0.8s
+  N=10000 seed=44 MLX=0.200292 CPU=0.194354 ratio=1.03055 drift= 3.055% wall=  0.8s
+  N=10000 seed=45 MLX=0.200080 CPU=0.194087 ratio=1.03088 drift= 3.088% wall=  1.0s
+  N=10000 seed=46 MLX=0.200932 CPU=0.194983 ratio=1.03051 drift= 3.051% wall=  0.9s
+  N=10000 aggregate drift = 3.0522% (min=2.9573%, max=3.1095%)
+  N=20000 seed=42 MLX=0.198416 CPU=0.194597 ratio=1.01962 drift= 1.962% wall=  0.8s
+  N=20000 seed=43 MLX=0.197592 CPU=0.193463 ratio=1.02134 drift= 2.134% wall=  0.8s
+  N=20000 seed=44 MLX=0.197445 CPU=0.193976 ratio=1.01789 drift= 1.789% wall=  0.9s
+  N=20000 seed=45 MLX=0.196784 CPU=0.192936 ratio=1.01994 drift= 1.994% wall=  1.0s
+  N=20000 seed=46 MLX=0.197297 CPU=0.193799 ratio=1.01805 drift= 1.805% wall=  0.8s
+  N=20000 aggregate drift = 1.9369% (min=1.7886%, max=2.1344%)
+  N=50000 seed=42 MLX=0.196232 CPU=0.193626 ratio=1.01346 drift= 1.346% wall=  1.1s
+  N=50000 seed=43 MLX=0.196011 CPU=0.193571 ratio=1.01260 drift= 1.260% wall=  1.1s
+  N=50000 seed=44 MLX=0.195479 CPU=0.193205 ratio=1.01177 drift= 1.177% wall=  1.1s
+  N=50000 seed=45 MLX=0.194815 CPU=0.192505 ratio=1.01200 drift= 1.200% wall=  1.1s
+  N=50000 seed=46 MLX=0.195340 CPU=0.193057 ratio=1.01183 drift= 1.183% wall=  1.2s
+  N=50000 aggregate drift = 1.2332% (min=1.1772%, max=1.3457%)
+[phase2] wrote /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/probe-g/data/scaling_sweep.csv

@@ -864,6 +864,36 @@ for all three grow policies (SymmetricTree, Depthwise, Lossguide). The Newton va
 (`NewtonL2`, `NewtonCosine`) are explicitly rejected at the Python API with `ValueError`
 pending a future implementation sprint. See DEC-032 and DEC-042.
 
+### Lossguide + Cosine drift at small N (N < ~19k)
+`score_function=Cosine` with `grow_policy=Lossguide` is fully supported and produces
+correct results at large N (N >= ~19k; iter=50 drift vs CPU CatBoost < 2%). At small N
+(N = 1k: ~14% drift; N = 2k: ~9% drift), a residual mechanism causes measurable RMSE
+divergence from CPU CatBoost that is not yet fully localized.
+
+**DEC-042 status at small N (PROBE-G, 2026-04-25, amended verdict)**: the
+`FindBestSplitPerPartition` per-side mask fix (S38, DEC-042) is structurally correct at d≤2
+— the per-side mask fires at depth=2 (gap = 1.177 gain units; selects signal feat=0 over
+noise feat=14) exactly as it does at large N. At d≥3, DEC-042 fires on numerically negligible
+cells (per-bin contribution decays ~25× from d=2 to d=5) and neither helps nor hurts.
+
+The ~14% N=1k residual originates from a separate mechanism class at d≥3, plausibly
+continuous precision noise at small leaves (~16 docs/leaf at depth=6, near the L2
+regularization floor). This is distinct from the topology-class mechanism DEC-042 addresses.
+The drift curve is smooth power-law with no threshold knee (unlike the `B/n_leaf > 1`
+threshold model would predict), consistent with a continuous precision/noise mechanism.
+
+**Next discriminator — F2** (before opening PROBE-H): run CPU CatBoost on the same N=1k
+seed=42 anchor and compare iter=2 tree splits via the model-introspection API. If CPU and
+MLX agree at d=2 → the residual is at d≥3 leaf-value/precision (open PROBE-I). If they
+differ at d=2 → per-side formula divergence (open PROBE-H for CPU instrumentation).
+
+See `docs/sprint38/probe-g/FINDING.md` and #130 (S38-LG-SMALL-N-RESIDUAL) for the ongoing
+investigation.
+
+For production use with `Lossguide + Cosine`, use N >= 10k or validate drift against CPU
+CatBoost on your specific dataset. The empirical N* boundary (where drift crosses 2%) is
+approximately N = 19,000.
+
 ## Troubleshooting
 
 ### "Cannot find mlx/mlx.h"

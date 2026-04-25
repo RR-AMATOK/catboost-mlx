@@ -1,6 +1,6 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-04-25 (S33 + S34 + S35 ALL MERGED to master. PRs #29 (S33), #31 (S34/S35) merged. Master tip `a10ebd63e1`. DEC-036 CLOSED, DEC-042 FULLY CLOSED for both ordinal and one-hot branches. Local merged branches cleaned up. Active backlog: #113 S31-T3-MEASURE re-run + #114 S31-T-CLEANUP + S31-T-LATENT-P11 + SA carry-forwards.)
+> Last updated: 2026-04-25 (S38 PROBE-G phases 1–4 COMPLETE. Verdict: Scenario C confirmed at d≤2; d≥3 regime change is unidentified by PROBE-G; residual likely continuous-precision-class at small leaves. F2 next. Active branch: `mlx/sprint-38-lg-small-n`.)
 
 ## Current state
 
@@ -176,9 +176,48 @@ S34-PROBE-F-LITE T0a (mathematician) + T0b (ml-engineer) converged independently
 
 **New ticket from S34 side finding**: #128 S35-Q4-L2-PARENT-TERM — MLX's L2 path subtracts `totalSum²/(totalWeight+λ)` per-(p,k) at `csv_train.cpp:1704, 1973`; CPU's L2 path subtracts no parent term. Argmax-invariant at depth=0 numPartitions=1; variable elsewhere. Currently papered over by G4d.
 
+## Sprint 38 — LG-SMALL-N-RESIDUAL (ACTIVE)
+
+**Branch**: `mlx/sprint-38-lg-small-n` (tip `a481972529`)
+**Tracking issue**: #130 (S38-LG-SMALL-N-RESIDUAL)
+
+### What shipped
+- **S38-S0 (commit `a481972529`)**: DEC-042 per-side mask ported to `FindBestSplitPerPartition`
+  (FBSPP) for all four branch × score combinations. H3 falsified as dominant mechanism.
+
+### PROBE-G result (2026-04-25) — AMENDED
+- **Phases 1–4 COMPLETE.** All artifacts under `docs/sprint38/probe-g/data/`.
+- **Verdict (amended by @devils-advocate stress-test, 2026-04-25): Scenario C confirmed at
+  d≤2 only. d≥3 is a regime change, not amplification of the same mechanism. The ~14% N=1k
+  residual is plausibly continuous-precision-class at small leaves, NOT topology-driven.
+  PROBE-G structurally cannot localize it.**
+  - d=2 skip rate at N=1k (5.36%) matches PROBE-E N=50k reference (5.00%) — Scenario C confirmed at d=2.
+  - Non-zero gap at d=2 (gap=1.177): DEC-042 is structurally correct at d≤2.
+  - d≥3: skip-ratio peaks at d=3 (3.94×) then falls at d=4 (3.12×), d=5 (2.72×) — NOT
+    monotonically rising as topology-amplification requires. Gap collapses 2× while
+    `mag_median_termN_nonzero` decays 25× (60.16→2.44). Each correction at d≥3 is noise-scale.
+  - Drift curve is smooth power-law with no knee near N=8k — continuous precision-class,
+    not discrete topology threshold.
+  - N* empirical: 19,231 (log-N interpolation between N=10k and N=20k). The `B/n_leaf`
+    threshold model is structurally wrong (predicts knee at N=8k that does not exist).
+- **Residual**: aggregate drift at N=1k = 13.93% (5-seed mean). DEC-042 does NOT close this.
+  DEC-042 fires at d≥3 but on numerically negligible cells — neither helps nor hurts.
+- **DEC-043 PROPOSED (updated)**: run F2 first; route to PROBE-H or PROBE-I per discriminator.
+
+### Next session entry point
+1. **Run F2** — CPU-tree split comparison at N=1k seed=42 anchor (~2h, no new instrumentation).
+   Use standard `catboost` Python package; dump iter=2 splits via `model.get_tree_splits()` or
+   equivalent; compare to MLX postfix column from PROBE-G.
+   - If CPU picks match MLX at d=2 (both feat=0, bin≈21) → open **PROBE-I** (precision/leaf-value
+     at d≥3). Do NOT open PROBE-H.
+   - If CPU picks differ at d=2 → open **PROBE-H** (CPU per-side instrumentation to find formula
+     divergence in `UpdateScoreBinKernelPlain`).
+2. Also carry forward: S31-T-LATENT-P11, S31-T-CLEANUP, #113 S31-T3-MEASURE,
+   #128 S35-Q4-L2-PARENT-TERM (all lower priority than F2).
+
 ## Entry point for next session
 
-**Carry-forwards from S31/S32/S33** (still open):
+**Carry-forwards from S31/S32/S33** (still open, lower priority than PROBE-H):
 - S31-T-LATENT-P11: low priority; hessian-vs-sampleWeight semantics swap at `csv_train.cpp:3780, 3967`.
 - S31-T-CLEANUP: SA-I2 try/catch + S29 CR nits.
 - #113 S31-T3-MEASURE: re-run S30 T3 gate matrix post-fix.

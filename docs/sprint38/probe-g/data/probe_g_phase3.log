@@ -1,0 +1,21 @@
+S38-PROBE-G diagnostics (N=1000, seed=42, ST+Cosine)
+Reference: PROBE-E at N=50000 (docs/sprint33/probe-e/FINDING.md)
+
+Columns:
+  rows         total per-(feat,bin,partition) records
+  skip_n/pct   rows where pre-fix MLX would have joint-skipped (wL<eps or wR<eps)
+  PE_skip_pct  PROBE-E reference at N=50k same depth
+  postfix_pick (feat,bin):gain — post-DEC-042 MLX-actual argmax (= per-side mask)
+  prefix_pick  (feat,bin):gain — pre-DEC-042 counterfactual argmax (= joint-skip)
+  gap          postfix_gain - prefix_gain (DEC-042's effect on argmax magnitude)
+
+depth rows    skip_n  skip_pct  PE_skip_pct   postfix_pick              prefix_pick               gap       
+0     2540    0       0.00      0.00          (0,69):12.4648            (0,69):12.4648            0.0000    
+1     5080    129     2.54      2.50          (1,82):14.6068            (1,82):14.6068            0.0000    
+2     10160   545     5.36      5.00          (0,21):15.7691            (14,112):14.5916          1.1775    
+3     20320   6090    29.97     7.60          (0,109):16.1764           (7,83):15.5545            0.6219    
+4     40640   13435   33.06     10.60         (1,29):16.1741            (7,92):15.5857            0.5885    
+5     81280   32260   39.69     14.60         (1,29):16.1529            (11,57):15.5709           0.5820    
+
+[phase3] wrote /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/probe-g/data/diagnostics.json
+[phase3] wrote /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/probe-g/data/diagnostics_summary.txt

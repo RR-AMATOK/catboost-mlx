@@ -1,0 +1,9 @@
+[phase4] N → aggregate drift table:
+  ** N=  500  drift=18.7027%
+  ** N= 1000  drift=13.9292%
+  ** N= 2000  drift= 8.5927%
+  ** N= 5000  drift= 5.0934%
+  ** N=10000  drift= 3.0522%
+     N=20000  drift= 1.9369%
+     N=50000  drift= 1.2332%
+[phase4] crossing: N* ≈ 19231 (between N=10000 drift=3.052% and N=20000 drift=1.937%)
