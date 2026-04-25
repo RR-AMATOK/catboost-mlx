@@ -1,0 +1,7 @@
+depth,mlx_actual_pick,mlx_actual_pick_feat,mlx_actual_pick_bin,mlx_actual_pick_gain,mlx_restricted_pick,mlx_restricted_pick_feat,mlx_restricted_pick_bin,mlx_restricted_pick_gain,cpu_actual_pick,cpu_actual_pick_feat,cpu_actual_pick_border,nearest_mlx_bin_for_cpu_pick,nearest_mlx_border_for_cpu_pick,cpu_border_in_mlx_distance,restricted_matches_cpu,actual_matches_cpu,n_equiv_bins,n_total_bins
+0,"feat=0, bin=69",0,69,12.824480798172127,"feat=0, bin=69",0,69,12.824480798172127,"feat=0, border=0.1025474817",0,0.10254748165607452,69,0.10254748,1.6560745275118194e-09,True,True,11,2540
+1,"feat=1, bin=82",1,82,15.03166362709374,"feat=1, bin=82",1,82,15.03166362709374,"feat=1, border=0.4384973049",1,0.43849730491638184,82,0.4384973,4.9163818571784645e-09,True,True,11,2540
+2,"feat=0, bin=25",0,25,16.147789167971364,"feat=0, bin=25",0,25,16.147789167971364,"feat=0, border=-0.8107502460",0,-0.8107502460479736,25,-0.81075025,3.952026372822104e-09,True,True,11,2540
+3,"feat=0, bin=102",0,102,16.942569865990823,"feat=0, bin=106",0,106,16.940168990145043,"feat=0, border=1.0352909565",0,1.0352909564971924,106,1.035291,4.350280757847713e-08,True,False,11,2540
+4,"feat=0, bin=102",0,102,16.95062867431742,"feat=0, bin=106",0,106,16.946284795014197,"feat=1, border=-0.8001531363",1,-0.8001531362533569,27,-0.80015314,3.746643106872227e-09,False,False,11,2540
+5,"feat=0, bin=102",0,102,17.31012167220335,"feat=0, bin=104",0,104,17.303058013019978,"feat=0, border=1.7465853691",0,1.7465853691101074,122,1.7465854,3.088989264377062e-08,False,False,11,2540

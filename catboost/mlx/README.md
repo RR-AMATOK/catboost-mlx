@@ -864,6 +864,35 @@ for all three grow policies (SymmetricTree, Depthwise, Lossguide). The Newton va
 (`NewtonL2`, `NewtonCosine`) are explicitly rejected at the Python API with `ValueError`
 pending a future implementation sprint. See DEC-032 and DEC-042.
 
+### Cross-runtime parity requires explicit `RandomStrength` matching
+For bit-identical models across MLX `csv_train` and CPU CatBoost on the same data, set
+`RandomStrength=0.0` (i.e. `--random-strength 0` on the MLX CLI; `random_strength=0.0`
+on the CatBoost Python constructor) on **both** runtimes. With `RS=0` matched, MLX produces
+trees with feature- and border-aligned splits to fp32 precision against CPU CatBoost, and
+train RMSE is bit-identical at the standard test anchor (N=1k seed=42 LG+Cosine, 50 iters).
+
+**Default behavior**: MLX `csv_train` defaults `RandomStrength=1.0` to match CatBoost's
+upstream default. With both runtimes at default `RS=1.0`, single-seed RMSE drift is
+typically ±3-5% (a mix of RNG-implementation differences and seed-noise variance).
+Across multiple seeds, this drift averages to a small bias (≈3% on the canonical N=1k
+anchor — MLX slightly better than CPU at this anchor), reflecting subtle differences
+in how each runtime injects noise into the gain comparison. Both implementations are
+valid; the bias is bounded and not a correctness issue.
+
+**Important historical note**: prior versions of this README documented a 13–44% small-N
+drift "residual mechanism" that was localized in Sprint 38 (DEC-045) to a harness
+configuration mismatch — comparison scripts were invoking CPU with `RS=0` while leaving
+MLX at the default `RS=1.0`. The asymmetric configuration produced phantom drift that
+appeared seed-stable. With matched configuration, the drift collapses to near-zero. See
+`docs/sprint38/probe-q/PHASE-2-FINDING.md` and DEC-045 for the full root-cause analysis.
+
+See `docs/sprint38/probe-g/FINDING.md` and #130 (S38-LG-SMALL-N-RESIDUAL) for the ongoing
+investigation.
+
+For production use with `Lossguide + Cosine`, use N >= 10k or validate drift against CPU
+CatBoost on your specific dataset. The empirical N* boundary (where drift crosses 2%) is
+approximately N = 19,000.
+
 ## Troubleshooting
 
 ### "Cannot find mlx/mlx.h"

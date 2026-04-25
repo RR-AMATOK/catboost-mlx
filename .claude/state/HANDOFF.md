@@ -1,6 +1,49 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-04-25 (S33 + S34 + S35 ALL MERGED to master. PRs #29 (S33), #31 (S34/S35) merged. Master tip `a10ebd63e1`. DEC-036 CLOSED, DEC-042 FULLY CLOSED for both ordinal and one-hot branches. Local merged branches cleaned up. Active backlog: #113 S31-T3-MEASURE re-run + #114 S31-T-CLEANUP + S31-T-LATENT-P11 + SA carry-forwards.)
+> Last updated: 2026-04-25 (**S38 RESOLVED — harness asymmetry, not algorithm bug.** PROBE-Q
+> phase 2 found the smoking gun: MLX's `csv_train.cpp:599` defaults `RandomStrength=1.0`;
+> the cross-runtime drift harnesses pass `random_strength=0.0` to CPU CatBoost explicitly
+> but never override MLX's default. Result: MLX trees were perturbed by gain noise while
+> CPU trees were deterministic. With matched `--random-strength 0` on both, MLX's iter=1 +
+> iter=2 trees are bit-identical to CPU's at all 12 splits (feature and border, fp32
+> precision); train RMSE drift = **0.000%**. The "13.93% N=1k drift" the sprint chased was
+> the gap between MLX-with-noise and CPU-deterministic — the gap collapses log-linearly
+> with N because gain gaps between top candidates grow with N (less-frequent noise flips at
+> large N). PROBE-G Scenario C, F2 C-PSF, PROBE-H joint-skip — all retracted as causal
+> interpretations of the same configuration artifact. PROBE-Q phase 1 stands (border grids
+> ARE aligned). DEC-042 stands. Harness fix: `--random-strength 0` added to F2 + PROBE-G
+> Phase 1 + Phase 2 cmd blocks. See `docs/sprint38/probe-q/PHASE-2-FINDING.md`. Branch:
+> `mlx/sprint-38-lg-small-n`.)
+>
+> ## Sprint 38 close-out
+>
+> **Verdict**: small-N LG+Cosine "drift" mechanism = harness asymmetry. CPU CatBoost was
+> invoked with `random_strength=0.0`; MLX `csv_train` was invoked at its default
+> `RandomStrength=1.0`. The 13.93% N=1k drift was MLX's noise-induced suboptimality vs
+> CPU's deterministic optimum — not a real algorithm divergence. With matched RS=0, all
+> 12 iter=1+iter=2 splits at the F2 anchor are bit-identical (feature + border).
+>
+> **Code state**:
+> - DEC-042 per-side mask: in place since Sprint 33 (`csv_train.cpp:2068`), verified correct.
+> - DEC-042 port to FBSPP: shipped this sprint (commit `a481972529`), correct.
+> - F2 + PROBE-G harness scripts: now pass `--random-strength 0` to MLX for parity.
+> - All four probes (G, H, Q, F2) were causally misinterpreting the same configuration
+>   artifact. Their captured data is internally consistent and may be reused with
+>   re-runs under the corrected harness.
+>
+> **Next-session priorities** (not S38 — these are follow-ons):
+> 1. **Optional re-run** of PROBE-G's drift sweep with the fixed harness to produce a
+>    canonical "true MLX-vs-CPU drift at parity" table for the README. Expected: ~0% at
+>    all N, modulo single-seed noise variance.
+> 2. **README update** in `catboost/mlx/README.md`: clarify that cross-runtime bit-identity
+>    requires explicit `random_strength=0` on both sides; with default RS=1.0 on both,
+>    expect single-seed RMSE deltas in the few-percent range from RNG-implementation
+>    differences, averaging to ~0 over many seeds.
+> 3. **#130 (S38-LG-SMALL-N-RESIDUAL)**: close as RESOLVED-CONFIG-ARTIFACT.
+> 4. **Latent open puzzle (low priority)**: at `RS=1.0` on both runtimes, single-seed RMSE
+>    delta is ~3.66% at N=1k. Whether this is just RNG variance (expected) or a deeper
+>    statistical asymmetry (e.g. different noise-distribution shapes) is unverified across
+>    multiple seeds. Cheap follow-up: run RS=1.0 sweep at 5+ seeds, expect mean drift ~0.
 
 ## Current state
 
@@ -176,9 +219,99 @@ S34-PROBE-F-LITE T0a (mathematician) + T0b (ml-engineer) converged independently
 
 **New ticket from S34 side finding**: #128 S35-Q4-L2-PARENT-TERM — MLX's L2 path subtracts `totalSum²/(totalWeight+λ)` per-(p,k) at `csv_train.cpp:1704, 1973`; CPU's L2 path subtracts no parent term. Argmax-invariant at depth=0 numPartitions=1; variable elsewhere. Currently papered over by G4d.
 
+## Sprint 38 — LG-SMALL-N-RESIDUAL (ACTIVE)
+
+**Branch**: `mlx/sprint-38-lg-small-n` (tip `a481972529`)
+**Tracking issue**: #130 (S38-LG-SMALL-N-RESIDUAL)
+
+### What shipped
+- **S38-S0 (commit `a481972529`)**: DEC-042 per-side mask ported to `FindBestSplitPerPartition`
+  (FBSPP) for all four branch × score combinations. H3 falsified as dominant mechanism.
+
+### PROBE-G result (2026-04-25) — AMENDED
+- **Phases 1–4 COMPLETE.** All artifacts under `docs/sprint38/probe-g/data/`.
+- **Verdict (amended by @devils-advocate stress-test, 2026-04-25): Scenario C confirmed at
+  d≤2 only. d≥3 is a regime change, not amplification of the same mechanism. The ~14% N=1k
+  residual is plausibly continuous-precision-class at small leaves, NOT topology-driven.
+  PROBE-G structurally cannot localize it.**
+  - d=2 skip rate at N=1k (5.36%) matches PROBE-E N=50k reference (5.00%) — Scenario C confirmed at d=2.
+  - Non-zero gap at d=2 (gap=1.177): DEC-042 is structurally correct at d≤2.
+  - d≥3: skip-ratio peaks at d=3 (3.94×) then falls at d=4 (3.12×), d=5 (2.72×) — NOT
+    monotonically rising as topology-amplification requires. Gap collapses 2× while
+    `mag_median_termN_nonzero` decays 25× (60.16→2.44). Each correction at d≥3 is noise-scale.
+  - Drift curve is smooth power-law with no knee near N=8k — continuous precision-class,
+    not discrete topology threshold.
+  - N* empirical: 19,231 (log-N interpolation between N=10k and N=20k). The `B/n_leaf`
+    threshold model is structurally wrong (predicts knee at N=8k that does not exist).
+- **Residual**: aggregate drift at N=1k = 13.93% (5-seed mean). DEC-042 does NOT close this.
+  DEC-042 fires at d≥3 but on numerically negligible cells — neither helps nor hurts.
+- **DEC-043 PROPOSED (updated)**: run F2 first; route to PROBE-H or PROBE-I per discriminator.
+
+### F2 result (2026-04-25) — COMPLETE
+
+**Verdict: C-PSF confirmed; C-QG falsified; C-LV falsified. Route: PROBE-H.**
+
+Key findings (full evidence at `docs/sprint38/f2/FINDING.md`):
+- **C-QG falsified (Test 1)**: All 11 CPU borders (6 for feat=0, 5 for feat=1) are present in
+  MLX's 127-border grid to within 3.5e-8. The grids are quantization-aligned.
+- **C-LV falsified (iter=1 bisection)**: iter=1 has 5/6 split mismatches from constant
+  basePred. Leaf-value cascade is impossible at iter=1. The divergence predates any learned
+  leaf values.
+- **C-PSF confirmed (Test 2)**: For all three feature-matched iter=2 depths, MLX has CPU's
+  preferred border in its search space and scores it lower, picking a bin 4–31 positions away.
+  Example: at iter=1 d=1, CPU picks `(feat=1, border=0.43849730)` which sits at MLX bin 82;
+  MLX picks bin=64 `(border=0.09566100)` instead.
+- **iter=1 single match**: d=0 both pick `(feat=0, border=0.10254748)` ULP-identical. The
+  formula produces the correct argmax only when the top candidate is unambiguous.
+
+### PROBE-H result (2026-04-25) — REVISED, original verdict WITHDRAWN
+
+**Original verdict withdrawn.** The original `analyze_probe_h.py` script compared a
+COUNTERFACTUAL (old joint-skip formula applied to PROBE-E's `mlxTermNum/mlxTermDen`) against
+`picked_by_mlx` (the binary's actual output under the correct per-side mask). The script
+named the counterfactual column `gain_mlx_formula`, making it appear to be the binary's
+actual gain. Direct code-reading at `csv_train.cpp:2068-2097` and `analyze_probe_h_v2.py`
+Correction 1 confirm the binary's per-side mask has been correct since S33-L4-FIX commit
+`10c72b4e96`. DEC-044 WITHDRAWN.
+
+Corrected findings (`docs/sprint38/probe-h/FINDING.md` revised; `analyze_probe_h_v2.py`):
+- **Correction 1 (formula equivalence)**: max |gain_per_side_mask − gain_calc_score_on_side|
+  = 1.37e-13 across all 6 depths and 2540 candidates. Formulas are IDENTICAL.
+- **Correction 2 (granularity test)**: restricting MLX to only bins where a CPU-equivalent
+  border exists (11 bins out of 2540) recovers CPU's pick in **4/6 depths** (d=0–3).
+  At d=4–5 the restricted argmax also misses CPU's pick — a secondary mechanism.
+- **d=1 anomaly persists**: formula argmax is (feat=1, bin=82, gain=15.032) but
+  picked_by_mlx is (feat=1, bin=64, gain=14.976). Gap = 0.056 gain units (not noise).
+  The binary's argmax path and COSINE_RESIDUAL_INSTRUMENT disagree at d=1.
+
+Granularity test per-depth result:
+
+| d | MLX actual | MLX restricted | CPU pick | restricted = CPU |
+|---|---|---|---|---|
+| 0 | feat=0, bin=69 | feat=0, bin=69 | feat=0, bin=69 | YES |
+| 1 | feat=1, bin=82 | feat=1, bin=82 | feat=1, bin=82 | YES |
+| 2 | feat=0, bin=25 | feat=0, bin=25 | feat=0, bin=25 | YES |
+| 3 | feat=0, bin=102 | feat=0, bin=106 | feat=0, bin=106 | YES |
+| 4 | feat=0, bin=102 | feat=0, bin=106 | feat=1, bin=27 | NO |
+| 5 | feat=0, bin=102 | feat=0, bin=104 | feat=0, bin=122 | NO |
+
+### Next session entry point
+
+1. **PROBE-Q** — align MLX's quantization border generation with CPU's `GreedyLogSum`
+   algorithm. MLX uses a static uniform 127-border grid for all 20 features; CPU generates
+   borders from the data (6 for feat=0, 5 for feat=1, 0 for feats 2–19). MLX's finer grid
+   on noise features opens 2286 extra candidates. PROBE-Q should test whether matching
+   CPU's border set closes the 4/6 granularity-explained depths and measure residual drift.
+2. **d=4 secondary mechanism** — if PROBE-Q closes d=0–3 but not d=4, investigate why
+   feat=0 scores higher than feat=1 even in the CPU-restricted candidate space.
+3. **d=1 anomaly** — the binary picks (feat=1, bin=64) when the formula and instrument
+   both rank (feat=1, bin=82) first by 0.056 gain units. Worth flagging in PROBE-Q setup.
+4. Also carry forward: S31-T-LATENT-P11, S31-T-CLEANUP, #113 S31-T3-MEASURE,
+   #128 S35-Q4-L2-PARENT-TERM (all lower priority than PROBE-Q).
+
 ## Entry point for next session
 
-**Carry-forwards from S31/S32/S33** (still open):
+**Carry-forwards from S31/S32/S33** (still open, lower priority than PROBE-H):
 - S31-T-LATENT-P11: low priority; hessian-vs-sampleWeight semantics swap at `csv_train.cpp:3780, 3967`.
 - S31-T-CLEANUP: SA-I2 try/catch + S29 CR nits.
 - #113 S31-T3-MEASURE: re-run S30 T3 gate matrix post-fix.

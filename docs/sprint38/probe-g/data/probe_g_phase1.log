@@ -1,0 +1,9 @@
+[phase1] wrote /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/probe-g/data/anchor_n1000_seed42.csv (1000 docs, 20 features, seed=42)
+[phase1] running probe binary (COSINE_RESIDUAL_OUTDIR=/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/probe-g/data)...
+[phase1] done in 0.7s; outputs:
+  cos_leaf_seed42_depth0.csv -- 2540 rows
+  cos_leaf_seed42_depth1.csv -- 5080 rows
+  cos_leaf_seed42_depth2.csv -- 10160 rows
+  cos_leaf_seed42_depth3.csv -- 20320 rows
+  cos_leaf_seed42_depth4.csv -- 40640 rows
+  cos_leaf_seed42_depth5.csv -- 81280 rows

@@ -158,6 +158,18 @@ struct TCosineResidualInstrument {
         double mlxTermDen;
         double cpuTermNum;     // contribution CPU's mask-formula would add (per-side independent)
         double cpuTermDen;
+#ifdef PROBE_H_INSTRUMENT
+        // S38-PROBE-H: split cpuTermNum/Den into per-side components so the downstream
+        // analyst can independently recompute under CPU's CalcScoreOnSide formula for
+        // the left leaf and the right leaf separately. Each side contributes iff its
+        // weight > 1e-15 (same threshold as the post-DEC-042 mask).
+        // Left side: sum²/(w+λ) for cosNum; sum²·w/(w+λ)² for cosDen — or 0 if w≤0.
+        // Right side: same formula applied to (sumRight, weightRight).
+        double cosNumL;  // left-side  cosNum contribution this partition
+        double cosDenL;  // left-side  cosDen contribution this partition
+        double cosNumR;  // right-side cosNum contribution this partition
+        double cosDenR;  // right-side cosDen contribution this partition
+#endif  // PROBE_H_INSTRUMENT
     };
     std::vector<TLeafRecord> leafRecords;  // flushed per FindBestSplit call alongside binRecords
 #endif  // PROBE_E_INSTRUMENT
@@ -215,6 +227,55 @@ static void WriteLeafRecordsCSV(const std::string& path,
     fprintf(stderr, "[PROBE-E] wrote %zu rows → %s\n", rows.size(), path.c_str());
 }
 #endif  // PROBE_E_INSTRUMENT
+
+#ifdef PROBE_H_INSTRUMENT
+// S38-PROBE-H: write per-(feat, bin, partition) records with split per-side accumulators.
+// Schema: feat,bin,partition,cosNumL,cosDenL,cosNumR,cosDenR,cosNumTotal,cosDenTotal,
+//         gain_mlx,picked_by_mlx
+// cosNumTotal = cosNumL + cosNumR (= cpu_termNum from PROBE-E).
+// cosDenTotal = cosDenL + cosDenR (= cpu_termDen from PROBE-E).
+// gain_mlx: cosine gain that MLX computed for this (feat,bin) candidate (fp64 path).
+//           Looked up from COSINE_RESIDUAL_INSTRUMENT's binRecords by (feat,bin).
+//           Set to NaN if not found (shouldn't happen when both flags are compiled in).
+// picked_by_mlx: 1 if this (feat,bin) is the argmax MLX chose at this depth, else 0.
+static void WriteProbeHCSV(
+    const std::string& path,
+    const std::vector<TCosineResidualInstrument::TLeafRecord>& leafRows,
+    const std::vector<TCosineResidualInstrument::TBinRecord>& binRows,
+    uint32_t bestFeat, uint32_t bestBin)
+{
+    // Build gain_mlx lookup from binRecords: keyed on (featIdx, bin).
+    std::unordered_map<uint64_t, double> gainLookup;
+    gainLookup.reserve(binRows.size());
+    for (const auto& br : binRows) {
+        uint64_t key = (static_cast<uint64_t>(br.featIdx) << 32) | br.bin;
+        gainLookup[key] = br.gain_f64;
+    }
+
+    std::filesystem::create_directories(std::filesystem::path(path).parent_path());
+    FILE* f = fopen(path.c_str(), "w");
+    if (!f) { fprintf(stderr, "[PROBE-H] ERROR: cannot open %s\n", path.c_str()); return; }
+    fprintf(f, "feat,bin,partition,"
+               "cosNumL,cosDenL,cosNumR,cosDenR,"
+               "cosNumTotal,cosDenTotal,"
+               "gain_mlx,picked_by_mlx\n");
+    for (const auto& r : leafRows) {
+        uint64_t key = (static_cast<uint64_t>(r.featIdx) << 32) | r.bin;
+        auto it = gainLookup.find(key);
+        double gain_mlx = (it != gainLookup.end()) ? it->second
+                                                    : std::numeric_limits<double>::quiet_NaN();
+        int picked = (r.featIdx == bestFeat && r.bin == bestBin) ? 1 : 0;
+        fprintf(f, "%u,%u,%u,%.15g,%.15g,%.15g,%.15g,%.15g,%.15g,%.15g,%d\n",
+                r.featIdx, r.bin, r.partition,
+                r.cosNumL, r.cosDenL, r.cosNumR, r.cosDenR,
+                r.cosNumL + r.cosNumR, r.cosDenL + r.cosDenR,
+                gain_mlx, picked);
+    }
+    fclose(f);
+    fprintf(stderr, "[PROBE-H] wrote %zu rows → %s (best=(feat=%u,bin=%u))\n",
+            leafRows.size(), path.c_str(), bestFeat, bestBin);
+}
+#endif  // PROBE_H_INSTRUMENT
 
 #ifdef COSINE_D2_INSTRUMENT
 // S30-D2-INSTRUMENT: write gain_scalar CSV — subset of cos_accum with only gain columns.
@@ -1929,12 +1990,22 @@ TBestSplitProperties FindBestSplit(
                             }
                             // CPU-style: each side contributes independently, masked when its weight ≤ 0
                             double cpuN = 0.0, cpuD = 0.0;
+#ifdef PROBE_H_INSTRUMENT
+                            // S38-PROBE-H: capture per-side contributions before summing so the
+                            // downstream analyst can apply CPU's CalcScoreOnSide independently.
+                            double hNumL = 0.0, hDenL = 0.0;
+                            double hNumR = 0.0, hDenR = 0.0;
+#endif  // PROBE_H_INSTRUMENT
                             if (weightLeft > 1e-15f) {
                                 const double dSL2 = static_cast<double>(sumLeft);
                                 const double dWL2 = static_cast<double>(weightLeft);
                                 const double inv  = 1.0 / (dWL2 + dL2_e);
                                 cpuN += dSL2 * dSL2 * inv;
                                 cpuD += dSL2 * dSL2 * dWL2 * inv * inv;
+#ifdef PROBE_H_INSTRUMENT
+                                hNumL = dSL2 * dSL2 * inv;
+                                hDenL = dSL2 * dSL2 * dWL2 * inv * inv;
+#endif  // PROBE_H_INSTRUMENT
                             }
                             if (weightRight > 1e-15f) {
                                 const double dSR2 = static_cast<double>(sumRight);
@@ -1942,9 +2013,19 @@ TBestSplitProperties FindBestSplit(
                                 const double inv  = 1.0 / (dWR2 + dL2_e);
                                 cpuN += dSR2 * dSR2 * inv;
                                 cpuD += dSR2 * dSR2 * dWR2 * inv * inv;
+#ifdef PROBE_H_INSTRUMENT
+                                hNumR = dSR2 * dSR2 * inv;
+                                hDenR = dSR2 * dSR2 * dWR2 * inv * inv;
+#endif  // PROBE_H_INSTRUMENT
                             }
                             lr.cpuTermNum = cpuN;
                             lr.cpuTermDen = cpuD;
+#ifdef PROBE_H_INSTRUMENT
+                            lr.cosNumL = hNumL;
+                            lr.cosDenL = hDenL;
+                            lr.cosNumR = hNumR;
+                            lr.cosDenR = hDenR;
+#endif  // PROBE_H_INSTRUMENT
                             g_cosInstr.leafRecords.push_back(lr);
                         }
 #endif  // PROBE_E_INSTRUMENT
@@ -2301,14 +2382,35 @@ std::vector<TBestSplitProperties> FindBestSplitPerPartition(
                         float weightRight = histData[totalBinFeatures + feat.FirstFoldIndex + bin];
                         float sumLeft    = totalSum - sumRight;
                         float weightLeft = totalWeight - weightRight;
-                        if (weightLeft < 1e-15f || weightRight < 1e-15f) continue;
+                        // S38-S0 (DEC-042 port): replace joint-skip with per-side mask,
+                        // mirroring S33-L4-FIX for FindBestSplit and S35-#129 for the
+                        // one-hot L2 path there.  Asymmetric treatment matches S34 verdict:
+                        //   L2:     per-side mask (non-empty side cancels parent; math no-op
+                        //           but-correct — argmax-invariant at any partition count)
+                        //   Cosine: joint-skip preserved (Cosine is parentless; per-side mask
+                        //           would inject totalSum²/(totalWeight+λ) with no parent to
+                        //           cancel, creating bin-dependent argmax bias toward rare-
+                        //           category bins — S34-PROBE-F-LITE verdict unchanged).
+                        // Reference: T0b code-reading.md (S38, 2026-04-25); S34 verdict.md.
+                        const bool wL_pos = (weightLeft  > 1e-15f);
+                        const bool wR_pos = (weightRight > 1e-15f);
                         switch (scoreFunction) {
-                            case EScoreFunction::L2:
-                                gain += (sumLeft * sumLeft) / (weightLeft + l2RegLambda)
-                                      + (sumRight * sumRight) / (weightRight + l2RegLambda)
-                                      - (totalSum * totalSum) / (totalWeight + l2RegLambda);
+                            case EScoreFunction::L2: {
+                                // Per-side mask: mirrors FindBestSplit one-hot Commit 1.5 (S35-#129).
+                                // Parent term subtracted whenever at least one side is non-empty
+                                // (skip entire (p,k) only when both children are empty = true no-op).
+                                if (!wL_pos && !wR_pos) break;
+                                if (wL_pos) gain += (sumLeft  * sumLeft)  / (weightLeft  + l2RegLambda);
+                                if (wR_pos) gain += (sumRight * sumRight) / (weightRight + l2RegLambda);
+                                gain -= (totalSum * totalSum) / (totalWeight + l2RegLambda);
                                 break;
+                            }
                             case EScoreFunction::Cosine: {
+                                // Joint-skip preserved per S34-PROBE-F-LITE verdict: Cosine has no
+                                // parent-term subtraction anywhere; per-side mask would add
+                                // totalSum²/(totalWeight+λ) for the non-empty side with nothing to
+                                // cancel it, biasing the argmax toward rare-category bins.
+                                if (!wL_pos || !wR_pos) break;
                                 // S30-T2-KAHAN K4: widen inputs to double before computing terms.
                                 const double dSL   = static_cast<double>(sumLeft);
                                 const double dSR   = static_cast<double>(sumRight);
@@ -2385,25 +2487,66 @@ std::vector<TBestSplitProperties> FindBestSplitPerPartition(
                         float weightRight = suffHess[base + binOffset];
                         float sumLeft    = totalSum - sumRight;
                         float weightLeft = totalWeight - weightRight;
-                        if (weightLeft < 1e-15f || weightRight < 1e-15f) continue;
+                        // S38-S0 (DEC-042 port): replace joint-skip with per-side mask.
+                        // Mirrors FindBestSplit ordinal Commits 1 (Cosine) and 1.5 (L2)
+                        // from S33-L4-FIX.  Asymmetric treatment per S34 verdict:
+                        //   Ordinal L2:     per-side mask — non-empty child's contribution
+                        //                   exactly cancels the per-(p,k) parent term, so
+                        //                   the per-side accumulation is math no-op-but-correct
+                        //                   and keeps argmax invariant at any partition depth.
+                        //   Ordinal Cosine: per-side mask — mirrors FindBestSplit Commit 1
+                        //                   exactly.  The ordinal Cosine case IS fixed (unlike
+                        //                   one-hot Cosine) because the FBSPP accumulator scope
+                        //                   is per-partition rather than per-bin, but the bug
+                        //                   mechanism is the same: degenerate (p,k) cells skip
+                        //                   the non-empty child's contribution.  The parentless
+                        //                   argument that prevents fixing one-hot Cosine does
+                        //                   not apply here: one-hot has fixed bins where the
+                        //                   "right" side is always a single equality category,
+                        //                   so per-side injection of totalSum²/(totalWeight+λ)
+                        //                   creates cross-bin bias.  Ordinal's suffix-sum layout
+                        //                   shares the same totalSum/totalWeight across all bins
+                        //                   of the same (feat, p, k) triple — the injected term
+                        //                   is therefore a constant across bins and does not bias
+                        //                   the argmax, exactly as the ordinal FindBestSplit case.
+                        // Reference: T0b code-reading.md (S38, 2026-04-25); S33 Commits 1+1.5.
+                        const bool wL_pos = (weightLeft  > 1e-15f);
+                        const bool wR_pos = (weightRight > 1e-15f);
                         switch (scoreFunction) {
-                            case EScoreFunction::L2:
-                                gain += (sumLeft * sumLeft) / (weightLeft + l2RegLambda)
-                                      + (sumRight * sumRight) / (weightRight + l2RegLambda)
-                                      - (totalSum * totalSum) / (totalWeight + l2RegLambda);
+                            case EScoreFunction::L2: {
+                                // Per-side mask: mirrors FindBestSplit ordinal Commit 1.5 (DEC-042).
+                                if (!wL_pos && !wR_pos) break;
+                                if (wL_pos) gain += (sumLeft  * sumLeft)  / (weightLeft  + l2RegLambda);
+                                if (wR_pos) gain += (sumRight * sumRight) / (weightRight + l2RegLambda);
+                                gain -= (totalSum * totalSum) / (totalWeight + l2RegLambda);
                                 break;
+                            }
                             case EScoreFunction::Cosine: {
-                                // S30-T2-KAHAN K4: widen inputs to double before computing terms.
-                                const double dSL   = static_cast<double>(sumLeft);
-                                const double dSR   = static_cast<double>(sumRight);
-                                const double dWL   = static_cast<double>(weightLeft);
-                                const double dWR   = static_cast<double>(weightRight);
+                                // Per-side mask: mirrors FindBestSplit ordinal Commit 1 (DEC-042).
+                                // Skip only when BOTH sides empty; otherwise add each non-empty
+                                // side's contribution independently.  Ordinal Cosine does NOT
+                                // retain joint-skip (contrast: one-hot Cosine does, per S34).
+                                if (!wL_pos && !wR_pos) break;
                                 const double dL2   = static_cast<double>(l2RegLambda);
-                                const double dInvL = 1.0 / (dWL + dL2);
-                                const double dInvR = 1.0 / (dWR + dL2);
-                                cosNum_d += dSL * dSL * dInvL + dSR * dSR * dInvR;
-                                cosDen_d += dSL * dSL * dWL * dInvL * dInvL
-                                          + dSR * dSR * dWR * dInvR * dInvR;
+                                double termNum = 0.0;
+                                double termDen = 0.0;
+                                // S30-T2-KAHAN K4: widen to double before computing per-(p,k) terms.
+                                if (wL_pos) {
+                                    const double dSL   = static_cast<double>(sumLeft);
+                                    const double dWL   = static_cast<double>(weightLeft);
+                                    const double dInvL = 1.0 / (dWL + dL2);
+                                    termNum += dSL * dSL * dInvL;
+                                    termDen += dSL * dSL * dWL * dInvL * dInvL;
+                                }
+                                if (wR_pos) {
+                                    const double dSR   = static_cast<double>(sumRight);
+                                    const double dWR   = static_cast<double>(weightRight);
+                                    const double dInvR = 1.0 / (dWR + dL2);
+                                    termNum += dSR * dSR * dInvR;
+                                    termDen += dSR * dSR * dWR * dInvR * dInvR;
+                                }
+                                cosNum_d += termNum;
+                                cosDen_d += termDen;
                                 break;
                             }
                             default:
@@ -4882,7 +5025,11 @@ TTrainResult RunTraining(
                     PrintResidualSummary("[INSTR]   cosNum", numRes);
                     PrintResidualSummary("[INSTR]   cosDen", denRes);
                     PrintResidualSummary("[INSTR]   gain  ", gainRes);
+#ifndef PROBE_H_INSTRUMENT
+                    // Under PROBE_H_INSTRUMENT, binRecords are consumed by WriteProbeHCSV
+                    // below (for gain_mlx lookup) before being cleared.
                     g_cosInstr.binRecords.clear();
+#endif  // !PROBE_H_INSTRUMENT
                     g_cosInstr.dumpCosDen = false;
                 }
 #ifdef PROBE_E_INSTRUMENT
@@ -4897,10 +5044,31 @@ TTrainResult RunTraining(
                     fprintf(stderr, "[PROBE-E] depth=%u leaf rows=%zu skipped=%zu (%.1f%%)\n",
                             depth, g_cosInstr.leafRecords.size(), skipped,
                             100.0 * skipped / std::max<size_t>(1, g_cosInstr.leafRecords.size()));
+#ifndef PROBE_H_INSTRUMENT
+                    // Clear here only when PROBE-H is NOT compiled in; PROBE-H needs the
+                    // leafRecords below to write its own CSV and clears them afterwards.
+                    g_cosInstr.leafRecords.clear();
+#endif  // !PROBE_H_INSTRUMENT
+                }
+#endif  // PROBE_E_INSTRUMENT
+#ifdef PROBE_H_INSTRUMENT
+                // S38-PROBE-H: write per-(feat, bin, partition) per-side accumulator capture.
+                // armed at the same iter/depth as PROBE_E_INSTRUMENT (controlled by
+                // PROBE_D_ARM_AT_ITER, default 0 = first tree = iter=1 in user terminology).
+                // binRecords are still populated here because their clear was deferred above.
+                if (!g_cosInstr.leafRecords.empty()) {
+                    std::string probehPath = g_cosInstr.outDir + "/probe_h_iter1_depth"
+                        + std::to_string(depth) + ".csv";
+                    uint32_t bFeat = bestSplit.Defined() ? bestSplit.FeatureId : static_cast<uint32_t>(-1);
+                    uint32_t bBin  = bestSplit.Defined() ? bestSplit.BinId     : static_cast<uint32_t>(-1);
+                    WriteProbeHCSV(probehPath, g_cosInstr.leafRecords, g_cosInstr.binRecords,
+                                   bFeat, bBin);
                     g_cosInstr.leafRecords.clear();
                 }
-#endif
-#endif
+                // Now safe to clear binRecords (deferred from above).
+                g_cosInstr.binRecords.clear();
+#endif  // PROBE_H_INSTRUMENT
+#endif  // COSINE_RESIDUAL_INSTRUMENT
 #ifdef ITER1_AUDIT
                 // S31-T3b: flush completed layer record after FindBestSplit returns.
                 // pendingLayer.topK is non-empty iff FindBestSplit fired the finalization
