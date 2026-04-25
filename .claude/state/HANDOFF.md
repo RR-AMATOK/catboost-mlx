@@ -1,13 +1,17 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-04-25 (S38 PROBE-H REVISED. Original verdict WITHDRAWN — analysis error.
-> PROBE-H instrumentation is valid; original analysis script (`analyze_probe_h.py`) confused a
-> counterfactual (old joint-skip applied to PROBE-E data) with the binary's actual output.
-> Direct code-reading at `csv_train.cpp:2068-2097` and `analyze_probe_h_v2.py` Correction 1
-> confirm: per-side mask and CPU formula produce IDENTICAL gains (max delta 1.37e-13, all 6
-> depths). DEC-044 WITHDRAWN. Correction 2 (granularity test): restricting MLX to CPU-equivalent
-> bins matches CPU in 4/6 depths. d=4–5 residual unexplained. Next: PROBE-Q (border-generation
-> alignment). Branch: `mlx/sprint-38-lg-small-n`.)
+> Last updated: 2026-04-25 (S38 PROBE-Q phase 1 complete. **Granularity FALSIFIED**:
+> CPU 128-border GreedyLogSum grid and MLX 127-border grid are aligned to fp32-rounding
+> precision (max delta 5e-8 across all 20 features × 127 borders). Both sides evaluate
+> identical split candidates. PROBE-H Correction 2's "4/6 depths match in restricted space"
+> result is now retracted: the restriction was to CPU's 11 SERIALIZED borders (not the
+> 128 evaluated during training); the apparent match was an artifact, not signal. The
+> 13.93% N=1k drift is from neither formula nor quantization. Next probe candidate:
+> per-(feat, bin, partition) raw histogram sum precision (PROBE-R) — instrument MLX's
+> histogram path to capture sumL/sumR/wL/wR and compare to a Python fp64 reference on
+> the same anchor data. d=0 iter=1 ULP-identical pick (gain 12.82448 within 9.4e-14)
+> confirms basic numerical pipeline matches CPU; divergence kicks in once partitioning
+> happens. Branch: `mlx/sprint-38-lg-small-n`.)
 
 ## Current state
 
