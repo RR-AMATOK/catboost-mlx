@@ -2028,3 +2028,28 @@ machine code as before.
 ### Scope footnote (2026-04-25)
 
 Closure scoped to FindBestSplit ordinal branch (`csv_train.cpp:1941/1980`). FindBestSplit one-hot branch (`csv_train.cpp:1698`) carries a structurally similar `continue` rule; whether the per-side mask fix shape applies there is under investigation in S34-PROBE-F-LITE. Empirical smoke (single seed, synthetic 8k 1-cat anchor) showed loss regression 0.479101 → 0.493401 when the same patch was applied at L1698, so the fix shape is not assumed to mirror Commits 1/1.5 until validated against CPU CatBoost reference.
+
+### S38 FBSPP extension (2026-04-25)
+
+**Status extension**: S38-S0 ports the DEC-042 per-side mask to `FindBestSplitPerPartition` (FBSPP), which is used by Lossguide and Depthwise. T0b code-reading (S38, `docs/sprint38/lg-small-n/code-reading.md`) confirmed FBSPP carries the same unfixed joint-skip `continue` at `csv_train.cpp:2304` (one-hot) and `csv_train.cpp:2388` (ordinal), with identical accumulator-scope bug: when one child is degenerate, the non-empty child's `sumX²/(wX+λ)` contribution is not added.
+
+The S33 CR claim "FBSPP is structurally immune" was correct only for the cross-partition running-sum class; the narrower per-partition under-attribution — the actual DEC-042 mechanism — was present and unfixed.
+
+**Asymmetric fix (matches S33/S34/S35 shape):**
+
+| Branch + Score | Fix |
+|---|---|
+| Ordinal Cosine | Per-side mask — mirrors FindBestSplit ordinal Commit 1 (`if (!wL_pos && !wR_pos) break;` + conditional `if(wL_pos)` / `if(wR_pos)`) |
+| Ordinal L2 | Per-side mask — mirrors FindBestSplit ordinal Commit 1.5 (`if(!wL_pos && !wR_pos) break;` + conditional sides + unconditional parent subtraction) |
+| One-hot L2 | Per-side mask — mirrors FindBestSplit one-hot S35-#129 |
+| One-hot Cosine | **Joint-skip preserved** — same parentless argument from S34-PROBE-F-LITE: no parent-term subtraction in FBSPP's one-hot Cosine either; per-side mask would inject `totalSum²/(totalWeight+λ)` uncancelled, biasing argmax toward rare-category bins |
+
+**Expected gate outcomes (S38):**
+- G3a (N=50k ST+Cosine): unchanged at ~1.27% (ST uses FindBestSplit, not FBSPP)
+- G3b (N=1k LG+Cosine): expected to drop from 27-31% toward ST baseline (~14%); FBSPP fix removes H3, leaves H1 residual
+- G3c (N=2k LG+Cosine): expected to drop from 43-45% toward corresponding LG-at-N=2k baseline
+- LG+Cosine N=50k smoke: expect ~0.382% or improve (S33 Commit 3b anchor)
+- L2 path: byte-identical loss curve (math no-op-but-correct, same as S35-#129)
+- Kernel md5: `9edaef45b99b9db3e2717da93800e76f` (host-side fix only, no Metal shader changes)
+
+**Note**: H1 (separate dominant mechanism causing ~14% LG+Cosine residual at small N) is under parallel investigation in S38 PROBE-G. This FBSPP commit is sibling to that probe; the two fixes are independent.

@@ -2301,14 +2301,35 @@ std::vector<TBestSplitProperties> FindBestSplitPerPartition(
                         float weightRight = histData[totalBinFeatures + feat.FirstFoldIndex + bin];
                         float sumLeft    = totalSum - sumRight;
                         float weightLeft = totalWeight - weightRight;
-                        if (weightLeft < 1e-15f || weightRight < 1e-15f) continue;
+                        // S38-S0 (DEC-042 port): replace joint-skip with per-side mask,
+                        // mirroring S33-L4-FIX for FindBestSplit and S35-#129 for the
+                        // one-hot L2 path there.  Asymmetric treatment matches S34 verdict:
+                        //   L2:     per-side mask (non-empty side cancels parent; math no-op
+                        //           but-correct — argmax-invariant at any partition count)
+                        //   Cosine: joint-skip preserved (Cosine is parentless; per-side mask
+                        //           would inject totalSum²/(totalWeight+λ) with no parent to
+                        //           cancel, creating bin-dependent argmax bias toward rare-
+                        //           category bins — S34-PROBE-F-LITE verdict unchanged).
+                        // Reference: T0b code-reading.md (S38, 2026-04-25); S34 verdict.md.
+                        const bool wL_pos = (weightLeft  > 1e-15f);
+                        const bool wR_pos = (weightRight > 1e-15f);
                         switch (scoreFunction) {
-                            case EScoreFunction::L2:
-                                gain += (sumLeft * sumLeft) / (weightLeft + l2RegLambda)
-                                      + (sumRight * sumRight) / (weightRight + l2RegLambda)
-                                      - (totalSum * totalSum) / (totalWeight + l2RegLambda);
+                            case EScoreFunction::L2: {
+                                // Per-side mask: mirrors FindBestSplit one-hot Commit 1.5 (S35-#129).
+                                // Parent term subtracted whenever at least one side is non-empty
+                                // (skip entire (p,k) only when both children are empty = true no-op).
+                                if (!wL_pos && !wR_pos) break;
+                                if (wL_pos) gain += (sumLeft  * sumLeft)  / (weightLeft  + l2RegLambda);
+                                if (wR_pos) gain += (sumRight * sumRight) / (weightRight + l2RegLambda);
+                                gain -= (totalSum * totalSum) / (totalWeight + l2RegLambda);
                                 break;
+                            }
                             case EScoreFunction::Cosine: {
+                                // Joint-skip preserved per S34-PROBE-F-LITE verdict: Cosine has no
+                                // parent-term subtraction anywhere; per-side mask would add
+                                // totalSum²/(totalWeight+λ) for the non-empty side with nothing to
+                                // cancel it, biasing the argmax toward rare-category bins.
+                                if (!wL_pos || !wR_pos) break;
                                 // S30-T2-KAHAN K4: widen inputs to double before computing terms.
                                 const double dSL   = static_cast<double>(sumLeft);
                                 const double dSR   = static_cast<double>(sumRight);
@@ -2385,25 +2406,66 @@ std::vector<TBestSplitProperties> FindBestSplitPerPartition(
                         float weightRight = suffHess[base + binOffset];
                         float sumLeft    = totalSum - sumRight;
                         float weightLeft = totalWeight - weightRight;
-                        if (weightLeft < 1e-15f || weightRight < 1e-15f) continue;
+                        // S38-S0 (DEC-042 port): replace joint-skip with per-side mask.
+                        // Mirrors FindBestSplit ordinal Commits 1 (Cosine) and 1.5 (L2)
+                        // from S33-L4-FIX.  Asymmetric treatment per S34 verdict:
+                        //   Ordinal L2:     per-side mask — non-empty child's contribution
+                        //                   exactly cancels the per-(p,k) parent term, so
+                        //                   the per-side accumulation is math no-op-but-correct
+                        //                   and keeps argmax invariant at any partition depth.
+                        //   Ordinal Cosine: per-side mask — mirrors FindBestSplit Commit 1
+                        //                   exactly.  The ordinal Cosine case IS fixed (unlike
+                        //                   one-hot Cosine) because the FBSPP accumulator scope
+                        //                   is per-partition rather than per-bin, but the bug
+                        //                   mechanism is the same: degenerate (p,k) cells skip
+                        //                   the non-empty child's contribution.  The parentless
+                        //                   argument that prevents fixing one-hot Cosine does
+                        //                   not apply here: one-hot has fixed bins where the
+                        //                   "right" side is always a single equality category,
+                        //                   so per-side injection of totalSum²/(totalWeight+λ)
+                        //                   creates cross-bin bias.  Ordinal's suffix-sum layout
+                        //                   shares the same totalSum/totalWeight across all bins
+                        //                   of the same (feat, p, k) triple — the injected term
+                        //                   is therefore a constant across bins and does not bias
+                        //                   the argmax, exactly as the ordinal FindBestSplit case.
+                        // Reference: T0b code-reading.md (S38, 2026-04-25); S33 Commits 1+1.5.
+                        const bool wL_pos = (weightLeft  > 1e-15f);
+                        const bool wR_pos = (weightRight > 1e-15f);
                         switch (scoreFunction) {
-                            case EScoreFunction::L2:
-                                gain += (sumLeft * sumLeft) / (weightLeft + l2RegLambda)
-                                      + (sumRight * sumRight) / (weightRight + l2RegLambda)
-                                      - (totalSum * totalSum) / (totalWeight + l2RegLambda);
+                            case EScoreFunction::L2: {
+                                // Per-side mask: mirrors FindBestSplit ordinal Commit 1.5 (DEC-042).
+                                if (!wL_pos && !wR_pos) break;
+                                if (wL_pos) gain += (sumLeft  * sumLeft)  / (weightLeft  + l2RegLambda);
+                                if (wR_pos) gain += (sumRight * sumRight) / (weightRight + l2RegLambda);
+                                gain -= (totalSum * totalSum) / (totalWeight + l2RegLambda);
                                 break;
+                            }
                             case EScoreFunction::Cosine: {
-                                // S30-T2-KAHAN K4: widen inputs to double before computing terms.
-                                const double dSL   = static_cast<double>(sumLeft);
-                                const double dSR   = static_cast<double>(sumRight);
-                                const double dWL   = static_cast<double>(weightLeft);
-                                const double dWR   = static_cast<double>(weightRight);
+                                // Per-side mask: mirrors FindBestSplit ordinal Commit 1 (DEC-042).
+                                // Skip only when BOTH sides empty; otherwise add each non-empty
+                                // side's contribution independently.  Ordinal Cosine does NOT
+                                // retain joint-skip (contrast: one-hot Cosine does, per S34).
+                                if (!wL_pos && !wR_pos) break;
                                 const double dL2   = static_cast<double>(l2RegLambda);
-                                const double dInvL = 1.0 / (dWL + dL2);
-                                const double dInvR = 1.0 / (dWR + dL2);
-                                cosNum_d += dSL * dSL * dInvL + dSR * dSR * dInvR;
-                                cosDen_d += dSL * dSL * dWL * dInvL * dInvL
-                                          + dSR * dSR * dWR * dInvR * dInvR;
+                                double termNum = 0.0;
+                                double termDen = 0.0;
+                                // S30-T2-KAHAN K4: widen to double before computing per-(p,k) terms.
+                                if (wL_pos) {
+                                    const double dSL   = static_cast<double>(sumLeft);
+                                    const double dWL   = static_cast<double>(weightLeft);
+                                    const double dInvL = 1.0 / (dWL + dL2);
+                                    termNum += dSL * dSL * dInvL;
+                                    termDen += dSL * dSL * dWL * dInvL * dInvL;
+                                }
+                                if (wR_pos) {
+                                    const double dSR   = static_cast<double>(sumRight);
+                                    const double dWR   = static_cast<double>(weightRight);
+                                    const double dInvR = 1.0 / (dWR + dL2);
+                                    termNum += dSR * dSR * dInvR;
+                                    termDen += dSR * dSR * dWR * dInvR * dInvR;
+                                }
+                                cosNum_d += termNum;
+                                cosDen_d += termDen;
                                 break;
                             }
                             default:

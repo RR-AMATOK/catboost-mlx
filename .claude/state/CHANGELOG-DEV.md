@@ -2,6 +2,33 @@
 
 > Coverage: Sprints 0–15 reconstructed from git log on 2026-04-15. Sprint 16+ is source of truth.
 
+## 2026-04-25 — S38-S0: DEC-042 per-side mask ported to FindBestSplitPerPartition (H3 fix)
+
+Branch: `mlx/sprint-38-lg-small-n`. Kernel sources unchanged (`9edaef45b99b9db3e2717da93800e76f`).
+
+**S38-S0 commit** — FBSPP per-side mask:
+- Removed joint-skip `continue` from FBSPP one-hot (csv_train.cpp:~2304) and ordinal (csv_train.cpp:~2388) k-loops
+- Applied asymmetric per-side mask mirroring S33/S34/S35 shape:
+  - Ordinal Cosine: per-side mask (`if (!wL_pos && !wR_pos) break;` + conditional sides)
+  - Ordinal L2: per-side mask + unconditional parent subtraction
+  - One-hot L2: per-side mask
+  - One-hot Cosine: joint-skip preserved (S34 parentless verdict unchanged)
+- Updated README Known Limitations: small-N LG+Cosine limitation documented
+- Updated .claude/state/DECISIONS.md: DEC-042 S38 FBSPP extension appended
+- Created docs/sprint38/s0-fbspp-fix/gate-report.md
+
+Gates pending build + run (bash unavailable for live measurement):
+- G3a (N=50k ST+Cosine): expected ~1.27% unchanged (ST uses FindBestSplit, not FBSPP)
+- G3b (N=1k LG+Cosine): expected drop from 27-31% to ~14% (FBSPP H3 removed; H1 residual)
+- G3c (N=2k LG+Cosine): expected drop from 43-45% toward LG baseline
+- LG+Cosine N=50k: expected ~0.382% or slight improvement
+- L2 smoke: byte-identical (math no-op-but-correct)
+- Kernel md5: `9edaef45b99b9db3e2717da93800e76f` (no Metal changes)
+
+Sibling to S38 PROBE-G (H1 investigation); H1 residual (~14% at N=1k) is a separate mechanism.
+
+---
+
 ## 2026-04-25 — S33-L4-FIX Commits 3a+3b: guard removal — DEC-042 FULLY CLOSED
 
 Branch: `mlx/sprint-33-iter2-scaffold`. Kernel sources unchanged
