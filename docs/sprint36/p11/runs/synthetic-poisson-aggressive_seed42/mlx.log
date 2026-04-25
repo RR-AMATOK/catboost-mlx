@@ -1,4 +1,4 @@
-# cmd: /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/csv_train_p11 docs/sprint36/p11/data/synthetic-poisson-aggressive-seed42.csv --loss poisson --iterations 100 --depth 6 --lr 0.03 --l2 3 --bins 128 --target-col 0 --seed 42 --score-function L2 --verbose
+# cmd: <repo>/csv_train_p11 docs/sprint36/p11/data/synthetic-poisson-aggressive-seed42.csv --loss poisson --iterations 100 --depth 6 --lr 0.03 --l2 3 --bins 128 --target-col 0 --seed 42 --score-function L2 --verbose
 # returncode: 0
 # stdout:
 CatBoost-MLX CSV Training Tool

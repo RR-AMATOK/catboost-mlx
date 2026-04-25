@@ -1,9 +1,9 @@
-# cmd: /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/csv_train_p11 /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint36/p11/data/synthetic-poisson-seed7.csv --loss poisson --iterations 100 --depth 6 --lr 0.03 --l2 3 --bins 128 --target-col 0 --seed 7 --score-function L2 --verbose
+# cmd: <repo>/csv_train_p11 <repo>/docs/sprint36/p11/data/synthetic-poisson-seed7.csv --loss poisson --iterations 100 --depth 6 --lr 0.03 --l2 3 --bins 128 --target-col 0 --seed 7 --score-function L2 --verbose
 # returncode: 0
 # stdout:
 CatBoost-MLX CSV Training Tool
 ==============================
-Loaded: 20000 rows, 10 features from /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint36/p11/data/synthetic-poisson-seed7.csv
+Loaded: 20000 rows, 10 features from <repo>/docs/sprint36/p11/data/synthetic-poisson-seed7.csv
 Quantized: 1270 bin-features, 3 uint32 per doc
 
 Training: 100 iterations, depth=6, lr=0.0300, l2=3.00, loss=poisson
