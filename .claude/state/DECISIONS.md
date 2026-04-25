@@ -2204,3 +2204,101 @@ F2 artifacts: `docs/sprint38/f2/`. PROBE-H: `docs/sprint38/probe-h/` or
 - DEC-042: `docs/sprint33/probe-e/FINDING.md`; `.claude/state/DECISIONS.md §DEC-042`
 - CPU reference: `catboost/libs/helpers/short_vector_ops.h:155+` (`UpdateScoreBinKernelPlain`)
 - Amendment justification: @devils-advocate stress-test, 2026-04-25
+
+---
+
+## DEC-044: PROBE-H verdict — old joint-skip formula confirmed in FindBestSplit ordinal Cosine path
+
+**Sprint**: 38
+**Date**: 2026-04-25
+**Status**: OPEN — fix implementation pending (next session)
+
+### Problem
+
+F2 confirmed C-PSF: MLX has CPU's preferred border in its search space but scores it lower.
+PROBE-H localises the divergence to the exact formula difference.
+
+### Finding
+
+PROBE-H per-side accumulator data at iter=1 (6 depth levels, 2540 (feat,bin) candidates each)
+was analysed by applying both formulas to the captured tuples:
+
+**CPU formula** (`short_vector_ops.h`, `UpdateScoreBinKernelPlain` generic/SSE2 path):
+- Per-side independent mask: contribute side S if `wS > 0`, else contribute 0 from side S.
+- A partition with one empty child contributes the other child's term normally.
+- `gain = cosNum / sqrt(cosDen)` where cosNum/cosDen are the per-side sums.
+
+**MLX old joint-skip formula** (pre-DEC-042 state in the PROBE-H binary's main scoring path):
+- Joint-skip: if either side < 1e-15f, skip entire partition (contribute 0 from both sides).
+- `gain = cosNum / sqrt(cosDen + 1e-20)`.
+
+**Divergence fired at d=2..5 (4 of 6 depths)**. At d=2..5 where degenerate partitions exist
+(after earlier signal-correlated splits), the old joint-skip formula under-attributes cosNum/cosDen
+for signal features by discarding entire partitions that have one empty child. CPU correctly
+includes the non-empty child's contribution from those partitions.
+
+Example (d=3, feat=0, bin=102 — CPU's preferred split):
+- 8 partitions. 6 have wR=0 (all docs left after d=0/d=2 splits on feat=0).
+- Old joint-skip cosNum = 137.08 → gain = 11.88.
+- CPU per-side cosNum = 253.98 → gain = 16.94.
+- Gain delta: +5.06 units. CPU formula recovers feat=0 as argmax; joint-skip places it 2336th.
+
+Sanity check: at d=0 (1 partition, no degenerates), both formulas agree exactly. Gain for
+d=0 winner (feat=0, bin=69): both = 12.82448080. Max |gain_cpu − gain_mlx_col| at d=0 = 9.4e-14.
+
+| d | CPU argmax | Old-joint-skip argmax | Gain delta (CPU − MLX) | CPU rank in MLX | MLX rank in CPU |
+|---|---|---|---|---|---|
+| 0 | feat=0, bin=69 | feat=0, bin=69 | 0.0000 | 1 | 1 |
+| 1 | feat=1, bin=82 | feat=1, bin=82 | 0.0000 | 1 | 1 |
+| 2 | feat=0, bin=25 | feat=9, bin=116 | +1.0932 | 2279 | 241 |
+| 3 | feat=0, bin=102 | feat=14, bin=105 | +0.7699 | 2336 | 219 |
+| 4 | feat=0, bin=102 | feat=7, bin=82 | +0.7684 | 2288 | 201 |
+| 5 | feat=0, bin=102 | feat=7, bin=84 | +0.7861 | 2224 | 142 |
+
+Note: `picked_by_mlx` at d=1 disagrees with both formula argmaxes (picks feat=1, bin=64 while
+both formulas say bin=82). PROBE-E confirms 0 degenerate partitions for all feat=1 bins at d=1;
+no formula explanation applies. Secondary mechanism (possibly a stale binary state) under
+investigation. Does not change the d=2..5 verdict.
+
+### Localization
+
+The divergence lives in `csv_train.cpp` `FindBestSplit` function, ordinal Cosine branch.
+The main scoring path appears to retain the pre-DEC-042 joint-skip condition. The
+`COSINE_RESIDUAL_INSTRUMENT` (which captures `gain_mlx` in PROBE-H) correctly uses
+per-side mask, explaining the apparent inconsistency in the PROBE-H CSV: the instrument
+captures the TARGET (correct) formula while the main path uses the OLD formula.
+
+The fix pattern is identical to what DEC-042 applied to `FindBestSplitPerPartition`
+(Sprint 38 S38-S0, commit `a481972529`):
+
+```
+Before (joint-skip):
+    if (!wL_pos || !wR_pos) break;
+
+After (per-side mask, CPU-equivalent):
+    if (!wL_pos && !wR_pos) break;
+    if (wL_pos) { termNum += ...; termDen += ...; }
+    if (wR_pos) { termNum += ...; termDen += ...; }
+```
+
+### Fix complexity
+
+~10 lines in `csv_train.cpp` `FindBestSplit` ordinal Cosine case. Pattern already present in:
+- `FindBestSplitPerPartition` (DEC-042, `a481972529`)
+- `PROBE_E_INSTRUMENT` CPU-formula block (lines 1999–2020)
+
+### Cross-validation needed
+
+1. Apply fix to `FindBestSplit` ordinal Cosine path.
+2. Re-run F2 at N=1k seed=42: expect iter=1 split match ≥5/6 (currently 1/6).
+3. Re-run 5-seed drift gate at N=1k: expect drift collapse from 13.93% to ≤2%.
+4. `bench_boosting v5` ULP=0 must be preserved (Metal kernel untouched).
+
+### Authority
+
+- PROBE-H finding: `docs/sprint38/probe-h/FINDING.md`
+- Analysis script: `docs/sprint38/probe-h/scripts/analyze_probe_h.py`
+- Divergence data: `docs/sprint38/probe-h/data/divergence_iter1.csv`
+- CPU reference: `catboost/libs/helpers/short_vector_ops.h:155+`
+- MLX target: `catboost/mlx/tests/csv_train.cpp` `FindBestSplit` ordinal Cosine case
+- DEC-042 template: `csv_train.cpp` `FindBestSplitPerPartition` ordinal Cosine case

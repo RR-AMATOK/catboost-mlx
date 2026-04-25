@@ -1,6 +1,12 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-04-25 (S38 F2 COMPLETE. Verdict: C-PSF confirmed; C-QG and C-LV falsified. CPU borders present in MLX grid to 3.5e-8; MLX scores them lower and picks different bins (up to 31 bins off at iter=1 d=1, 27 bins at iter=2 d=2). iter=1 shows 5/6 mismatches from constant basePred — leaf-value cascade ruled out. Routes to PROBE-H. Active branch: `mlx/sprint-38-lg-small-n`.)
+> Last updated: 2026-04-25 (S38 PROBE-H COMPLETE. Verdict: OLD JOINT-SKIP formula confirmed
+> as the C-PSF mechanism in `csv_train.cpp` `FindBestSplit` ordinal Cosine path. CPU's per-side
+> mask (from `UpdateScoreBinKernelPlain`) consistently recovers signal feature feat=0 as argmax
+> at d=2–5; MLX's old joint-skip places feat=0 in rank 2224–2336 out of 2540 (bottom decile).
+> Gain delta reaches +5.06 at d=3. Fix is ~10 lines: apply DEC-042 per-side mask to the ordinal
+> Cosine case in `FindBestSplit`. Next: implement fix, rebuild, re-run F2, verify drift collapse.
+> DEC-044 opened. Branch: `mlx/sprint-38-lg-small-n`.)
 
 ## Current state
 
@@ -221,16 +227,33 @@ Key findings (full evidence at `docs/sprint38/f2/FINDING.md`):
 - **iter=1 single match**: d=0 both pick `(feat=0, border=0.10254748)` ULP-identical. The
   formula produces the correct argmax only when the top candidate is unambiguous.
 
+### PROBE-H result (2026-04-25) — COMPLETE
+
+**Verdict: old joint-skip formula confirmed as C-PSF mechanism. DEC-044 opened.**
+
+Key findings (full evidence at `docs/sprint38/probe-h/FINDING.md`):
+- **Sanity check PASS**: at d=0 (no degenerate partitions), both formulas give gain=12.82448080
+  for the ULP-identical winner (feat=0, bin=69). Max |gain_cpu − gain_mlx_col| = 9.4e-14.
+- **Formula divergence at d=2–5 (4/6 depths)**: CPU per-side mask places feat=0 first in all
+  four depths. Old joint-skip places feat=0 at ranks 2224–2336 out of 2540 (bottom decile).
+- **Mechanism**: feat=0's bins produce empty right-children in many partitions (after d=0
+  split on feat=0). Old joint-skip discards those partitions' contributions entirely.
+  CPU correctly adds the non-empty (left) side. Cumulative gap: +0.77 to +1.09 gain units.
+- **Secondary anomaly at d=1**: both formulas agree on (feat=1, bin=82) but picked_by_mlx
+  is (feat=1, bin=64). PROBE-E confirms 0 degenerate partitions for feat=1 at d=1; no formula
+  explanation applies. Secondary open question; does not change d=2–5 verdict.
+
 ### Next session entry point
 
-1. **PROBE-H** — instrument CPU's `UpdateScoreBinKernelPlain` (`short_vector_ops.h:155+`)
-   or `TCosineScoreCalcer::CalcMetric` in `score_calcers.cpp` with a `PROBE_H_INSTRUMENT`
-   guard emitting `(feat, bin, partition, cosNum, cosDen, gain)` tuples. Cross-join against
-   PROBE-G's `cos_leaf_seed42_depth{0..5}.csv` (same format). Anchor both to iter=1 first
-   (cleanest signal, constant basePred). Estimate: ~1 sprint.
-   Directory: `docs/sprint38/probe-h/` or `docs/sprint39/probe-h/` — Ramos decides.
-2. Also carry forward: S31-T-LATENT-P11, S31-T-CLEANUP, #113 S31-T3-MEASURE,
-   #128 S35-Q4-L2-PARENT-TERM (all lower priority than PROBE-H).
+1. **PROBE-H fix** — apply DEC-042 per-side mask to `FindBestSplit` ordinal Cosine case in
+   `catboost/mlx/tests/csv_train.cpp` (approximately lines 2068–2097). Pattern:
+   `if (!wL_pos || !wR_pos) break` → `if (!wL_pos && !wR_pos) break` plus per-side if-blocks.
+   ~10 lines. Already present in `FindBestSplitPerPartition` (commit `a481972529`).
+2. **Rebuild and re-run F2** at N=1k seed=42 — expect iter=1 split match ≥5/6 (was 1/6).
+3. **Re-run 5-seed drift gate** at N=1k — expect collapse from 13.93% to ≤2%.
+4. **Verify bench_boosting v5 ULP=0** is preserved (Metal kernel untouched).
+5. Also carry forward: S31-T-LATENT-P11, S31-T-CLEANUP, #113 S31-T3-MEASURE,
+   #128 S35-Q4-L2-PARENT-TERM (all lower priority than the fix).
 
 ## Entry point for next session
 

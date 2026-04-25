@@ -127,6 +127,40 @@ it prevents false attribution of formula errors to grid errors or vice versa.
 
 *(source: `docs/sprint38/f2/FINDING.md` §Disambiguation; F2 analysis 2026-04-25)*
 
+### Formula equivalence proofs must treat the boundary case wSide ≈ 0 as a first-class test vector
+
+**Date**: 2026-04-25
+**Sprint**: [sprint-38]
+**Tags**: [probe-design] [formula-equivalence] [boundary-conditions] [small-n]
+
+Two Cosine scoring formulas that agree on the main path (no degenerate partitions) can produce
+radically different argmax rankings once degenerate partitions appear. PROBE-H showed that the
+old joint-skip formula and CPU's per-side mask formula produce identical gains at d=0 (no
+degenerates). At d=2–5 where degenerate partitions appear, the old joint-skip places the signal
+feature (feat=0) in rank 2224–2336 out of 2540 candidates (bottom decile), while the per-side
+mask places it first. The gain delta reaches +5.06 units at d=3. A math equivalence argument
+that ignores `wSide = 0` cases would declare these formulas identical; an empirical probe with
+real data at N=1k (where wSide = 0 is frequent after earlier signal-correlated splits) immediately
+refutes it.
+
+**Why this matters**: For any pair of scoring formulas differing only in how they handle degenerate
+inputs (empty leaves, zero weights, zero gradients), the boundary case IS the case that matters
+at small N and at large depth. Two formulas may agree asymptotically yet diverge catastrophically
+at finite samples. A proof of equivalence that doesn't enumerate the boundary cases is
+incomplete — especially when the boundary case is not pathological but structurally guaranteed
+(e.g., after a split on feat=0, every subsequent evaluation of feat=0 bins will produce empty
+right-children in the partitions where the d=0 split already sent everyone to the right).
+
+**How to apply**: When proposing that formula A is equivalent to formula B:
+1. List all inputs for which formula A and B diverge (boundary cases: zeros, infinities, ties).
+2. Check whether those inputs arise in the target training regime (N size, depth, feature correlation).
+3. Write an explicit test case at the boundary. For Cosine scoring: run at depth ≥ 2 with a
+   feature that was used at depth 0, verify that the argmax rankings match at ALL depths.
+4. Any fp comparison `w < eps` (for eps > 0) creates a small-N divergence class that any
+   correctness proof must account for.
+
+*(source: `docs/sprint38/probe-h/FINDING.md`; PROBE-H analysis 2026-04-25; DEC-044)*
+
 ---
 
 ## Contribution Log
@@ -136,3 +170,4 @@ it prevents false attribution of formula errors to grid errors or vice versa.
 | 2026-04-25 | Added § Probe Design — first real entry | sprint-38 |
 | 2026-04-25 | Added § Probe Design — rubric portability lesson (PROBE-G amendment) | sprint-38 |
 | 2026-04-25 | Added § Probe Design — cross-runtime quantization grid alignment lesson (F2) | sprint-38 |
+| 2026-04-25 | Added § Probe Design — formula equivalence boundary-case lesson (PROBE-H) | sprint-38 |
