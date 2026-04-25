@@ -5580,6 +5580,13 @@ std::vector<ui32> CreateStratifiedFolds(
 
 #ifndef CATBOOST_MLX_NO_MAIN
 int main(int argc, char** argv) {
+    // S37 SA-I2-S29 (#95): wrap the body in try/catch so uncaught exceptions
+    // exit with a clear error message and a non-zero status, instead of
+    // unwinding past main() and producing a platform-specific abort/core dump.
+    // Exit codes: 0 success; 1 expected/handled errors (existing returns);
+    // 2 instrumentation/safety abort (env-var validation, see SA-L3-S30);
+    // 3 uncaught std::exception or unknown.
+    try {
     auto config = ParseArgs(argc, argv);
 
 #ifdef COSINE_RESIDUAL_INSTRUMENT
@@ -6244,5 +6251,12 @@ int main(int argc, char** argv) {
     }
 
     return 0;
+    } catch (const std::exception& e) {
+        fprintf(stderr, "[csv_train] FATAL: %s\n", e.what());
+        return 3;
+    } catch (...) {
+        fprintf(stderr, "[csv_train] FATAL: unknown exception\n");
+        return 3;
+    }
 }
 #endif // CATBOOST_MLX_NO_MAIN
