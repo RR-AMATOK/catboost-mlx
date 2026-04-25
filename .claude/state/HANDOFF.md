@@ -1,17 +1,47 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-04-25 (S38 PROBE-Q phase 1 complete. **Granularity FALSIFIED**:
-> CPU 128-border GreedyLogSum grid and MLX 127-border grid are aligned to fp32-rounding
-> precision (max delta 5e-8 across all 20 features × 127 borders). Both sides evaluate
-> identical split candidates. PROBE-H Correction 2's "4/6 depths match in restricted space"
-> result is now retracted: the restriction was to CPU's 11 SERIALIZED borders (not the
-> 128 evaluated during training); the apparent match was an artifact, not signal. The
-> 13.93% N=1k drift is from neither formula nor quantization. Next probe candidate:
-> per-(feat, bin, partition) raw histogram sum precision (PROBE-R) — instrument MLX's
-> histogram path to capture sumL/sumR/wL/wR and compare to a Python fp64 reference on
-> the same anchor data. d=0 iter=1 ULP-identical pick (gain 12.82448 within 9.4e-14)
-> confirms basic numerical pipeline matches CPU; divergence kicks in once partitioning
-> happens. Branch: `mlx/sprint-38-lg-small-n`.)
+> Last updated: 2026-04-25 (S38 SESSION END. **Granularity FALSIFIED** by PROBE-Q phase 1:
+> CPU 128-border GreedyLogSum grid and MLX 127-border grid agree to fp32-rounding precision
+> (max delta 5e-8, all 20 features × 127 borders). Both sides evaluate identical split
+> candidates. PROBE-H Correction 2's "4/6 restricted match" is retracted — restriction was
+> to the 11 SERIALIZED borders, not the 128 evaluated during training. The 13.93% N=1k
+> drift is NOT formula and NOT quantization. Branch: `mlx/sprint-38-lg-small-n`. 6 commits
+> ahead of master.)
+>
+> ## Next session entry point — investigate in this exact order
+>
+> **Priority 1 — d=1 instrumentation anomaly** (must resolve BEFORE building further analysis on PROBE-H captures):
+> at iter=1 d=1, `probe_h_iter1_depth1.csv` shows `(feat=1, bin=82)` with gain **15.032**
+> as the captured argmax; but `picked_by_mlx==1` is `(feat=1, bin=64)` with gain **14.976**.
+> Both gains are correctly captured (PROBE-H Correction 1 verified the formula); binary
+> picks the lower-gain cell. Hypotheses: (a) instrumentation captures cells the binary's
+> argmax doesn't actually use, (b) binary uses different evaluation ordering or tie-break
+> logic, (c) some kernel-side state (e.g. min-data-in-leaf) rejects bin=82 silently. Read
+> MLX's argmax code path at the same site as the PROBE-H capture (`csv_train.cpp:2068+`);
+> verify what filters are applied between `gain_mlx` computation and the pick decision.
+> If anomaly traces to instrumentation contamination, all PROBE-H-derived analysis is
+> suspect and captures must be re-validated before reuse.
+>
+> **Priority 2 — PROBE-R** (only AFTER d=1 resolved cleanly): recover per-(feat, bin,
+> partition) `(sL, wL, sR, wR)` from PROBE-H's `cosNumL/cosDenL/cosNumR/cosDenR` via the
+> 2-equation system `cosNumL = sL²/(wL+λ)`, `cosDenL = sL²·wL/(wL+λ)²`. Compute Python
+> fp64 ground truth from the anchor data + the iter=1 d=0 split (feat=0, bin=69, border
+> 0.10254748) for partitioning. **Mandatory d=0 stop-gate**: at `(feat=0, bin=69,
+> partition=0)` the recovered sums must match Python fp64 truth to ULP (we know d=0
+> iter=1 produces gain 12.82448 to 9.4e-14 vs CPU). If gate fails, halt — recovery math
+> or reference is wrong. If gate passes, sweep d=1..5; any (feat, bin, partition) with
+> `|sL_recovered − sL_python| / |sL_python| > 1e-5` localizes the precision bug.
+>
+> **Priority 3 — eliminated mechanisms (don't re-investigate)**: joint-skip formula
+> (corrected; was already fixed S33), per-side mask formula divergence (max delta 1.37e-13),
+> quantization grid (max delta 5e-8), border-generation algorithm (same GreedyLogSum,
+> complete port). Surviving candidates: histogram per-bin sum precision, Metal kernel
+> reduction non-determinism, d=1 anomaly mechanism (which may be the d=4-5 mechanism too).
+>
+> **Sanity floor**: at d=0 iter=1, MLX picks `(feat=0, bin=69)` with gain 12.82448 to ULP
+> identity with CPU (verified by PROBE-H Correction 1 + F2). Whatever mechanism causes the
+> 13.93% drift, it activates ONLY after partitioning begins (d≥1). This is the cleanest
+> constraint on hypothesis space.
 
 ## Current state
 
