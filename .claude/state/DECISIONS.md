@@ -2056,13 +2056,14 @@ The S33 CR claim "FBSPP is structurally immune" was correct only for the cross-p
 
 ---
 
-## DEC-043: Run F2 to discriminate d=2 formula equivalence; route to PROBE-I or PROBE-H based on result
+## DEC-043: F2 discriminator — C-PSF confirmed; C-QG and C-LV falsified; route to PROBE-H
 
 **Sprint**: 38
 **Date**: 2026-04-25
-**Status**: PROPOSED
+**Status**: CLOSED — F2 ran cleanly. C-PSF confirmed. Routes to PROBE-H.
 **Authored by**: ml-product-owner (PROBE-G verdict writeup)
 **Amended**: 2026-04-25 (@devils-advocate stress-test of PROBE-G classification)
+**F2 verdict appended**: 2026-04-25 (data-scientist, F2 analysis from `docs/sprint38/f2/`)
 **Depends on**: DEC-042 (per-side mask fix), PROBE-G findings (`docs/sprint38/probe-g/FINDING.md`)
 
 ### Problem
@@ -2132,35 +2133,73 @@ PROBE-G confirmed (data on disk at `docs/sprint38/probe-g/data/`):
 - N* = 19,231 (empirical, log-N interpolation N=10k to N=20k). Smooth power-law, no threshold knee.
 - The `B/n_leaf` threshold model is structurally wrong. Do not use to predict further scaling.
 
-### Implication
+### Implication (pre-F2 routing table, retained for record)
 
 | F2 result | Interpretation | Next step |
 |-----------|---------------|-----------|
 | CPU picks match MLX postfix at d=2 (CPU also picks feat=0, bin≈21) | DEC-042 is equivalent to CPU at d=2. Residual is at d≥3 — precision/noise class at small leaves, not formula divergence. | Open **PROBE-I** targeting leaf-value/precision/quantization at d≥3. |
 | CPU picks differ from MLX postfix at d=2 | DEC-042's per-side formula diverges from CPU's `CalcScoreOnSide`. Formula difference IS the residual. | Open **PROBE-H**: instrument CPU `UpdateScoreBinKernelPlain`; dump per-bin per-side gain; find the formula divergence. |
 
+### F2 result (2026-04-25) — empirical
+
+F2 ran on `docs/sprint38/f2/data/`. Full evidence at `docs/sprint38/f2/FINDING.md`.
+
+**iter=2 result**: 0/6 full match. Feature match 3/6 (d=0–2). CPU picks at d=0–2 versus MLX:
+
+| d | CPU pick | MLX pick | MLX bin of CPU's border | verdict |
+|---|---|---|---|---|
+| 0 | feat=0, border=0.10254748 | feat=0, bin=73, border=0.18157052 | bin 69 (present) | **diverge** |
+| 1 | feat=1, border=0.00869883 | feat=1, bin=91, border=0.65761542 | bin 60 (present) | **diverge** |
+| 2 | feat=0, border=-1.04651403 | feat=0, bin=45, border=-0.35235262 | bin 18 (present) | **diverge** |
+
+**iter=1 result** (from constant basePred — no leaf-value cascade possible):
+1/6 full match (d=0 only: both pick feat=0, border=0.10254748, ULP-identical). At d=1–5, MLX
+and CPU disagree on feature choice or border value.
+
+**Three-cause disambiguation**:
+
+| Cause | Test | Result |
+|---|---|---|
+| **C-QG** — grids differ | All 11 CPU borders present in MLX grid? | **FALSIFIED** — all 11 within 3.5e-8 |
+| **C-LV** — leaf cascade | iter=1 mismatch from constant basePred? | **FALSIFIED** — 5/6 iter=1 mismatches |
+| **C-PSF** — formula diverges | MLX ignores CPU's exact border (present in its grid)? | **CONFIRMED** — ignores it in all 3 feat-matched cases |
+
+**Routing result**: PROBE-H triggered (CPU differs at d=2). PROBE-Q not needed. PROBE-I not
+the next step. C-PSF is the primary cause of the 13.93% N=1k residual.
+
+### PROBE-H scope (opened by F2)
+
+Instrument CPU's `UpdateScoreBinKernelPlain` (`catboost/libs/helpers/short_vector_ops.h:155+`)
+or `TCosineScoreCalcer::CalcMetric` in `score_calcers.cpp` with a `PROBE_H_INSTRUMENT`
+guard emitting `(feat, bin, partition, cosNum, cosDen, gain)` tuples in the same format as
+`PROBE_E_INSTRUMENT`. Cross-join against PROBE-G's `cos_leaf_seed42_depth{0..5}.csv`.
+**Anchor on iter=1 first** — cleanest signal from constant basePred; formula divergence is
+present without any iter=0 leaf-value state.
+
+Estimate: ~1 sprint. Directory: `docs/sprint38/probe-h/` or `docs/sprint39/probe-h/`.
+
 ### Gate
 
-**F2-G1**: CPU CatBoost runs on the N=1k seed=42 anchor with identical hyperparameters and
-produces a tree split dump for iter=2. Split dump joinable to PROBE-G postfix column on
-`(depth, feat, bin)` key.
+**F2-G1** MET: CPU model split dump for iter=2 at `data/cpu_model.json`. Joinable to MLX
+at `(depth, feat, border)`.
 
-**F2-G2**: Pick agreement table at d=0..5 with explicit match/mismatch for the argmax pick.
+**F2-G2** MET: 6-row pick agreement table in `docs/sprint38/f2/FINDING.md §Result — iter=2`.
 
-**PROBE-H-G1** (if opened): CPU instrumentation hook produces `(feat, bin, partition, gain)`
-CSV joinable to PROBE-G's `cos_leaf_seed42_depth{0..5}.csv` at ≥95% row match rate.
+**PROBE-H-G1** (next): CPU instrumentation hook produces `(feat, bin, partition, gain)` CSV
+joinable to `cos_leaf_seed42_depth{0..5}.csv` at ≥95% row match rate.
 
 ### Estimate
 
-F2: ~2h. PROBE-H (if needed): ~1 sprint (~3 days). PROBE-I (if needed): ~1 sprint.
+F2: DONE. PROBE-H: ~1 sprint (~3 days). PROBE-I: no longer the immediate next step.
 
 ### Directory
 
-F2: inline / ad hoc (no new directory needed). PROBE-H or PROBE-I: `docs/sprint38/probe-h/`
-or `docs/sprint39/probe-h/` (or probe-i/) — Ramos decides sprint boundary.
+F2 artifacts: `docs/sprint38/f2/`. PROBE-H: `docs/sprint38/probe-h/` or
+`docs/sprint39/probe-h/` — Ramos decides sprint boundary.
 
 ### Authority
 
+- F2 finding: `docs/sprint38/f2/FINDING.md`
 - PROBE-G finding (amended): `docs/sprint38/probe-g/FINDING.md` §Classification — AMENDED
 - DEC-042: `docs/sprint33/probe-e/FINDING.md`; `.claude/state/DECISIONS.md §DEC-042`
 - CPU reference: `catboost/libs/helpers/short_vector_ops.h:155+` (`UpdateScoreBinKernelPlain`)

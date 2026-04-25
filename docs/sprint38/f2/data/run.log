@@ -1,0 +1,177 @@
+catboost version: 1.2.10
+F2 harness start — 2026-04-25 15:44:55
+REPO_ROOT: /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx
+BINARY:    /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/csv_train_probe_g
+Anchor: N=1000, seed=42, feats=20
+Config: depth=6, bins=128, lr=0.03, l2=3.0, loss=rmse, score_fn=Cosine
+Target tree index (0-based): 1  (= iter=2, the 2nd tree built)
+
+======================================================================
+Step 0: Generate anchor data
+======================================================================
+Anchor CSV written: /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/anchor_n1000_seed42.csv
+F2 anchor md5:      0976a75cb621a74e55eb9480d35935b3
+PROBE-G anchor md5: 0976a75cb621a74e55eb9480d35935b3
+BYTE-IDENTICAL: YES — anchor files match.
+
+======================================================================
+CPU CatBoost run
+======================================================================
+catboost version: 1.2.10
+Fitting CPU model...
+CPU fit done in 0.06s
+CPU model saved: /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/cpu_model.json
+CPU iter=2 splits saved: /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/cpu_iter2_splits.json
+  CPU depth 0: feat=0, bin_idx=2, border=0.10254748
+  CPU depth 1: feat=1, bin_idx=2, border=0.0086988267
+  CPU depth 2: feat=0, bin_idx=0, border=-1.046514
+  CPU depth 3: feat=0, bin_idx=3, border=0.93405426
+  CPU depth 4: feat=1, bin_idx=4, border=0.9601357
+  CPU depth 5: feat=1, bin_idx=0, border=-0.89314175
+
+======================================================================
+MLX csv_train run
+======================================================================
+MLX binary: csv_train_probe_g
+Command: /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/csv_train_probe_g /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/anchor_n1000_seed42.csv --iterations 2 --depth 6 --lr 0.03 --bins 128 --l2 3.0 --loss rmse --score-function Cosine --seed 42 --output /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/mlx_model.json --verbose
+MLX run done in 0.30s (exit=0)
+--- MLX stdout ---
+CatBoost-MLX CSV Training Tool
+==============================
+Loaded: 1000 rows, 20 features from /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/anchor_n1000_seed42.csv
+Quantized: 2540 bin-features, 5 uint32 per doc
+
+Training: 2 iterations, depth=6, lr=0.0300, l2=3.00, loss=rmse
+---
+Base prediction (boost from average): 0.013825
+  [profile iter0] layout=0.0ms hist=7.7ms split=0.8ms part=1.9ms
+iter=0  trees=1  depth=6  loss=0.586207  time=16ms
+iter=1  trees=2  depth=6  loss=0.575142  time=244ms
+---
+Training complete: 2 trees in 0.26s
+Phase breakdown (avg per iter): grad=2.2ms tree=126.7ms leaf=0.7ms apply=0.8ms
+Model saved to: /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/mlx_model.json (2 trees, 20 features)
+--- MLX stderr ---
+[INSTR] COSINE_RESIDUAL_INSTRUMENT active — outDir=/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data seed=42
+[INSTR] wrote 64 rows → /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/leaf_sum_seed42.csv
+[INSTR] [INSTR] gSum_residual: n=64  max=1.1384e-05  mean=7.3692e-07  p99=5.7537e-06
+[INSTR] [INSTR] hSum_residual: n=64  max=0.0000e+00  mean=0.0000e+00  p99=0.0000e+00
+[INSTR] [INSTR] leafVal_residual: n=64  max=4.7123e-09  mean=4.1775e-10  p99=3.1758e-09
+[INSTR] wrote 1000 rows → /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/approx_update_seed42.csv
+[INSTR] [INSTR] approx_update_inc_residual: n=1000  max=0.0000e+00  mean=0.0000e+00  p99=0.0000e+00
+[INSTR] wrote 2540 rows → /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/cos_accum_seed42_depth0.csv
+[INSTR] ST depth=0 cosNum/cosDen/gain residuals:
+[INSTR] [INSTR]   cosNum: n=2540  max=1.4194e-05  mean=2.8917e-07  p99=6.8558e-06
+[INSTR] [INSTR]   cosDen: n=2540  max=2.2701e-05  mean=4.5332e-07  p99=9.9895e-06
+[INSTR] [INSTR]   gain  : n=2540  max=1.3851e-06  mean=5.7064e-08  p99=8.5109e-07
+[PROBE-E] wrote 2540 rows → /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/cos_leaf_seed42_depth0.csv
+[PROBE-E] depth=0 leaf rows=2540 skipped=0 (0.0%)
+[INSTR] wrote 2540 rows → /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/cos_accum_seed42_depth1.csv
+[INSTR] ST depth=1 cosNum/cosDen/gain residuals:
+[INSTR] [INSTR]   cosNum: n=2540  max=2.0308e-05  mean=5.2393e-06  p99=1.5873e-05
+[INSTR] [INSTR]   cosDen: n=2540  max=3.3131e-05  mean=6.7008e-06  p99=2.1243e-05
+[INSTR] [INSTR]   gain  : n=2540  max=2.1138e-06  mean=5.2391e-07  p99=1.5777e-06
+[PROBE-E] wrote 5080 rows → /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/cos_leaf_seed42_depth1.csv
+[PROBE-E] depth=1 leaf rows=5080 skipped=129 (2.5%)
+[INSTR] wrote 2540 rows → /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/cos_accum_seed42_depth2.csv
+[INSTR] ST depth=2 cosNum/cosDen/gain residuals:
+[INSTR] [INSTR]   cosNum: n=2540  max=3.2968e-05  mean=8.2487e-06  p99=2.5306e-05
+[INSTR] [INSTR]   cosDen: n=2540  max=3.5645e-05  mean=8.6741e-06  p99=2.7745e-05
+[INSTR] [INSTR]   gain  : n=2540  max=2.7687e-06  mean=6.9156e-07  p99=2.2153e-06
+[PROBE-E] wrote 10160 rows → /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/cos_leaf_seed42_depth2.csv
+[PROBE-E] depth=2 leaf rows=10160 skipped=545 (5.4%)
+[INSTR] wrote 2540 rows → /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/cos_accum_seed42_depth3.csv
+[INSTR] ST depth=3 cosNum/cosDen/gain residuals:
+[INSTR] [INSTR]   cosNum: n=2540  max=4.6516e-05  mean=9.7889e-06  p99=3.0863e-05
+[INSTR] [INSTR]   cosDen: n=2540  max=5.6802e-05  mean=1.1634e-05  p99=3.9846e-05
+[INSTR] [INSTR]   gain  : n=2540  max=3.3943e-06  mean=7.7384e-07  p99=2.4810e-06
+[PROBE-E] wrote 20320 rows → /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/cos_leaf_seed42_depth3.csv
+[PROBE-E] depth=3 leaf rows=20320 skipped=6090 (30.0%)
+[INSTR] wrote 2540 rows → /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/cos_accum_seed42_depth4.csv
+[INSTR] ST depth=4 cosNum/cosDen/gain residuals:
+[INSTR] [INSTR]   cosNum: n=2540  max=6.5997e-05  mean=1.3922e-05  p99=4.4550e-05
+[INSTR] [INSTR]   cosDen: n=2540  max=7.6962e-05  mean=1.4484e-05  p99=4.7420e-05
+[INSTR] [INSTR]   gain  : n=2540  max=4.7767e-06  mean=1.1179e-06  p99=3.5610e-06
+[PROBE-E] wrote 40640 rows → /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/cos_leaf_seed42_depth4.csv
+[PROBE-E] depth=4 leaf rows=40640 skipped=13435 (33.1%)
+[INSTR] wrote 2540 rows → /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/cos_accum_seed42_depth5.csv
+[INSTR] ST depth=5 cosNum/cosDen/gain residuals:
+[INSTR] [INSTR]   cosNum: n=2540  max=1.0034e-04  mean=1.9867e-05  p99=6.5479e-05
+[INSTR] [INSTR]   cosDen: n=2540  max=9.1431e-05  mean=1.9995e-05  p99=6.6262e-05
+[INSTR] [INSTR]   gain  : n=2540  max=7.9856e-06  mean=1.6303e-06  p99=5.3078e-06
+[PROBE-E] wrote 81280 rows → /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/cos_leaf_seed42_depth5.csv
+[PROBE-E] depth=5 leaf rows=81280 skipped=32260 (39.7%)
+MLX model saved: /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/mlx_model.json
+MLX iter=2 splits saved: /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/mlx_iter2_splits.json
+  MLX depth 0: feat=0, bin_idx=73, border=0.18157052
+  MLX depth 1: feat=1, bin_idx=91, border=0.65761542
+  MLX depth 2: feat=0, bin_idx=45, border=-0.35235262
+  MLX depth 3: feat=3, bin_idx=87, border=0.54884368
+  MLX depth 4: feat=4, bin_idx=102, border=0.78292483
+  MLX depth 5: feat=14, bin_idx=71, border=0.14395939
+
+======================================================================
+Quantization border-policy check
+======================================================================
+CPU (CatBoost GreedyLogSum, default feature_border_type):
+  feat 0: 6 borders, first 4: [-1.0465140342712402, -0.8107502460479736, 0.10254748165607452, 0.9340542554855347]
+  feat 1: 5 borders, first 4: [-0.8931417465209961, -0.8001531362533569, 0.008698826655745506, 0.43849730491638184]
+  feat 2: 0 borders, first 4: []
+  feat 3: 0 borders, first 4: []
+MLX (GreedyLogSum port — csv_train.cpp GreedyLogSumBestSplit):
+  feat 0: 127 borders, first 4: [-2.3936062, -2.0949655, -1.9384482, -1.8026767]
+  feat 1: 127 borders, first 4: [-2.521699, -2.1939244, -2.0537438, -1.8590772]
+  feat 2: 127 borders, first 4: [-2.4699116, -2.1421466, -2.0183315, -1.8540757]
+  feat 3: 127 borders, first 4: [-2.4704533, -2.1485105, -1.9453204, -1.8043581]
+  WARNING feat 0: CPU has 6 borders, MLX has 127 — QUANTIZATION MISMATCH. Bin indices are not directly comparable.
+  WARNING feat 1: CPU has 5 borders, MLX has 127 — QUANTIZATION MISMATCH. Bin indices are not directly comparable.
+
+======================================================================
+Comparison table: iter=2 splits (trees[1])
+======================================================================
+NOTE: bin_match is informational only — CPU and MLX have different quantization
+      grid sizes (CPU stores only used-feature borders; MLX stores full grid).
+      Primary discriminator = feat_match AND border_close (|delta|<1e-4 in feature space).
+
+depth  cpu_feat cpu_bin     cpu_border mlx_feat mlx_bin     mlx_border  feat_m  bdr_cl  MATCH
+---------------------------------------------------------------------------------------------
+0             0       2     0.10254748        0      73     0.18157052       Y       N    NO 
+1             1       2   0.0086988267        1      91     0.65761542       Y       N    NO 
+2             0       0      -1.046514        0      45    -0.35235262       Y       N    NO 
+3             0       3     0.93405426        3      87     0.54884368       N       N    NO 
+4             1       4      0.9601357        4     102     0.78292483       N       N    NO 
+5             1       0    -0.89314175       14      71     0.14395939       N       N    NO 
+
+Feature-matching depths: 3/6
+Full-match depths (feat+border): 0/6
+
+Comparison CSV written: /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint38/f2/data/comparison.csv
+
+Total wall time: 0.4s
+
+======================================================================
+File inventory
+======================================================================
+  anchor_n1000_seed42.csv                     403.9 KB
+  approx_update_seed42.csv                     53.1 KB
+  comparison.csv                                0.5 KB
+  cos_accum_seed42_depth0.csv                 342.3 KB
+  cos_accum_seed42_depth1.csv                 325.0 KB
+  cos_accum_seed42_depth2.csv                 325.1 KB
+  cos_accum_seed42_depth3.csv                 325.0 KB
+  cos_accum_seed42_depth4.csv                 324.9 KB
+  cos_accum_seed42_depth5.csv                 325.1 KB
+  cos_leaf_seed42_depth0.csv                  350.8 KB
+  cos_leaf_seed42_depth1.csv                  669.4 KB
+  cos_leaf_seed42_depth2.csv                 1335.6 KB
+  cos_leaf_seed42_depth3.csv                 2236.3 KB
+  cos_leaf_seed42_depth4.csv                 4430.1 KB
+  cos_leaf_seed42_depth5.csv                 8699.5 KB
+  cpu_iter2_splits.json                         0.5 KB
+  cpu_model.json                               25.3 KB
+  leaf_sum_seed42.csv                           4.9 KB
+  mlx_iter2_splits.json                         0.5 KB
+  mlx_model.json                               36.4 KB
+  run.log                                      12.6 KB
+
+F2 harness complete — 2026-04-25 15:44:56

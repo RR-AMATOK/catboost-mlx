@@ -93,6 +93,40 @@ rubric and the verdict derived from them are not.
 
 *(source: `docs/sprint38/probe-g/FINDING.md` §Classification — AMENDED; @devils-advocate stress-test, 2026-04-25)*
 
+### Cross-runtime tree comparisons must control for quantization grid alignment before attributing split divergence to algorithm divergence
+
+**Date**: 2026-04-25
+**Sprint**: [sprint-38]
+**Tags**: [probe-design] [cross-runtime] [quantization] [split-divergence]
+
+When two runtimes produce different split choices on the same dataset, it is tempting to
+attribute the divergence immediately to scoring formula differences. But a confound exists:
+if the two runtimes use different quantization grids, their bin indices are not directly
+comparable and their border values may not overlap. A runtime that "picks bin 73" may be
+picking a border value that the other runtime never considered, not scoring the same border
+differently.
+
+F2 resolved this confound before attributing the split divergence to the scoring formula
+(C-PSF). Test 1 checked whether CPU's borders are present in MLX's grid — all 11 CPU
+borders (6 for feat=0, 5 for feat=1) were found in MLX's 127-entry grid to within 3.5e-8.
+Only after confirming grid alignment did Test 2 ask whether MLX picks the nearest-to-CPU
+border or a different one. In all three feature-matched depths, MLX has the CPU-preferred
+border available and scores it lower — confirming the formula divergence. Without Test 1,
+Test 2 would be meaningless: "MLX picked a different border" could mean "MLX doesn't have
+that border" or "MLX has it and ranks it lower" — two very different causes requiring
+different fixes.
+
+**How to apply**: For any cross-runtime split comparison, first verify that the target
+border appears in both border arrays (to ULP-level tolerance). If it does not, the
+quantization grids diverge and a grid-alignment probe (like PROBE-Q) is required before
+any formula-level comparison. If it does appear in both, proceed to Test 2: does the
+other runtime pick that border or a different one? The two tests are sequential and each
+rules out a distinct failure class (C-QG vs C-PSF). Building both into any cross-runtime
+harness is cheap — it requires only a nearest-neighbor lookup in the border array — and
+it prevents false attribution of formula errors to grid errors or vice versa.
+
+*(source: `docs/sprint38/f2/FINDING.md` §Disambiguation; F2 analysis 2026-04-25)*
+
 ---
 
 ## Contribution Log
@@ -101,3 +135,4 @@ rubric and the verdict derived from them are not.
 |------|--------|-------------|
 | 2026-04-25 | Added § Probe Design — first real entry | sprint-38 |
 | 2026-04-25 | Added § Probe Design — rubric portability lesson (PROBE-G amendment) | sprint-38 |
+| 2026-04-25 | Added § Probe Design — cross-runtime quantization grid alignment lesson (F2) | sprint-38 |

@@ -1,0 +1,32 @@
+{
+  "depth_0": {
+    "feat": 0,
+    "bin_idx": 73,
+    "border": 0.18157052
+  },
+  "depth_1": {
+    "feat": 1,
+    "bin_idx": 91,
+    "border": 0.65761542
+  },
+  "depth_2": {
+    "feat": 0,
+    "bin_idx": 45,
+    "border": -0.35235262
+  },
+  "depth_3": {
+    "feat": 3,
+    "bin_idx": 87,
+    "border": 0.54884368
+  },
+  "depth_4": {
+    "feat": 4,
+    "bin_idx": 102,
+    "border": 0.78292483
+  },
+  "depth_5": {
+    "feat": 14,
+    "bin_idx": 71,
+    "border": 0.14395939
+  }
+}

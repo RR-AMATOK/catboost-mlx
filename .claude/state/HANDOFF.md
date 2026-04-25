@@ -1,6 +1,6 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-04-25 (S38 PROBE-G phases 1–4 COMPLETE. Verdict: Scenario C confirmed at d≤2; d≥3 regime change is unidentified by PROBE-G; residual likely continuous-precision-class at small leaves. F2 next. Active branch: `mlx/sprint-38-lg-small-n`.)
+> Last updated: 2026-04-25 (S38 F2 COMPLETE. Verdict: C-PSF confirmed; C-QG and C-LV falsified. CPU borders present in MLX grid to 3.5e-8; MLX scores them lower and picks different bins (up to 31 bins off at iter=1 d=1, 27 bins at iter=2 d=2). iter=1 shows 5/6 mismatches from constant basePred — leaf-value cascade ruled out. Routes to PROBE-H. Active branch: `mlx/sprint-38-lg-small-n`.)
 
 ## Current state
 
@@ -204,16 +204,33 @@ S34-PROBE-F-LITE T0a (mathematician) + T0b (ml-engineer) converged independently
   DEC-042 fires at d≥3 but on numerically negligible cells — neither helps nor hurts.
 - **DEC-043 PROPOSED (updated)**: run F2 first; route to PROBE-H or PROBE-I per discriminator.
 
+### F2 result (2026-04-25) — COMPLETE
+
+**Verdict: C-PSF confirmed; C-QG falsified; C-LV falsified. Route: PROBE-H.**
+
+Key findings (full evidence at `docs/sprint38/f2/FINDING.md`):
+- **C-QG falsified (Test 1)**: All 11 CPU borders (6 for feat=0, 5 for feat=1) are present in
+  MLX's 127-border grid to within 3.5e-8. The grids are quantization-aligned.
+- **C-LV falsified (iter=1 bisection)**: iter=1 has 5/6 split mismatches from constant
+  basePred. Leaf-value cascade is impossible at iter=1. The divergence predates any learned
+  leaf values.
+- **C-PSF confirmed (Test 2)**: For all three feature-matched iter=2 depths, MLX has CPU's
+  preferred border in its search space and scores it lower, picking a bin 4–31 positions away.
+  Example: at iter=1 d=1, CPU picks `(feat=1, border=0.43849730)` which sits at MLX bin 82;
+  MLX picks bin=64 `(border=0.09566100)` instead.
+- **iter=1 single match**: d=0 both pick `(feat=0, border=0.10254748)` ULP-identical. The
+  formula produces the correct argmax only when the top candidate is unambiguous.
+
 ### Next session entry point
-1. **Run F2** — CPU-tree split comparison at N=1k seed=42 anchor (~2h, no new instrumentation).
-   Use standard `catboost` Python package; dump iter=2 splits via `model.get_tree_splits()` or
-   equivalent; compare to MLX postfix column from PROBE-G.
-   - If CPU picks match MLX at d=2 (both feat=0, bin≈21) → open **PROBE-I** (precision/leaf-value
-     at d≥3). Do NOT open PROBE-H.
-   - If CPU picks differ at d=2 → open **PROBE-H** (CPU per-side instrumentation to find formula
-     divergence in `UpdateScoreBinKernelPlain`).
+
+1. **PROBE-H** — instrument CPU's `UpdateScoreBinKernelPlain` (`short_vector_ops.h:155+`)
+   or `TCosineScoreCalcer::CalcMetric` in `score_calcers.cpp` with a `PROBE_H_INSTRUMENT`
+   guard emitting `(feat, bin, partition, cosNum, cosDen, gain)` tuples. Cross-join against
+   PROBE-G's `cos_leaf_seed42_depth{0..5}.csv` (same format). Anchor both to iter=1 first
+   (cleanest signal, constant basePred). Estimate: ~1 sprint.
+   Directory: `docs/sprint38/probe-h/` or `docs/sprint39/probe-h/` — Ramos decides.
 2. Also carry forward: S31-T-LATENT-P11, S31-T-CLEANUP, #113 S31-T3-MEASURE,
-   #128 S35-Q4-L2-PARENT-TERM (all lower priority than F2).
+   #128 S35-Q4-L2-PARENT-TERM (all lower priority than PROBE-H).
 
 ## Entry point for next session
 
