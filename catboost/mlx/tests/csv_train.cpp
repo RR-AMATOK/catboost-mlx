@@ -5587,18 +5587,39 @@ int main(int argc, char** argv) {
     // Default output (T1):  docs/sprint30/t1-instrument/data/
     // Default output (D2):  docs/sprint30/d2-stack-instrument/data/  (when COSINE_D2_INSTRUMENT)
     // Both paths are overridable via COSINE_RESIDUAL_OUTDIR env var.
+    //
+    // S37 SA-L3-S30 / SA-N2-S33 hardening: env-var path must resolve under
+    // the repo's docs/ subtree. This prevents accidental writes into system
+    // directories (e.g., a stray COSINE_RESIDUAL_OUTDIR=/etc would otherwise
+    // create dirs there). Research-only instrumentation; the env-var is only
+    // reachable when the corresponding -D macro is defined at build time.
     {
+        // Walk up from binary to find the repo root (contains catboost/mlx/ dir).
+        std::filesystem::path binPath = std::filesystem::absolute(argv[0]);
+        std::filesystem::path repoRoot = binPath.parent_path();
+        for (int attempt = 0; attempt < 6; ++attempt) {
+            if (std::filesystem::is_directory(repoRoot / "catboost" / "mlx")) break;
+            repoRoot = repoRoot.parent_path();
+        }
         const char* envDir = std::getenv("COSINE_RESIDUAL_OUTDIR");
         if (envDir && *envDir) {
-            g_cosInstr.outDir = std::string(envDir);
-        } else {
-            // Walk up from binary to find the repo root (contains catboost/mlx/ dir)
-            std::filesystem::path binPath = std::filesystem::absolute(argv[0]);
-            std::filesystem::path repoRoot = binPath.parent_path();
-            for (int attempt = 0; attempt < 6; ++attempt) {
-                if (std::filesystem::is_directory(repoRoot / "catboost" / "mlx")) break;
-                repoRoot = repoRoot.parent_path();
+            std::error_code ec;
+            std::filesystem::path canon = std::filesystem::weakly_canonical(
+                std::filesystem::path(envDir), ec);
+            std::filesystem::path docsRoot = std::filesystem::weakly_canonical(
+                repoRoot / "docs", ec);
+            // Require the env-var path to lie within repo/docs/ — guards against
+            // path traversal and arbitrary system-directory writes.
+            auto rel = std::filesystem::relative(canon, docsRoot, ec);
+            if (ec || rel.empty() || rel.native().rfind("..", 0) == 0) {
+                fprintf(stderr,
+                    "[INSTR] ERROR: COSINE_RESIDUAL_OUTDIR=%s is outside %s — "
+                    "research-instrumentation outputs must live under docs/.\n",
+                    envDir, docsRoot.string().c_str());
+                std::exit(2);
             }
+            g_cosInstr.outDir = canon.string();
+        } else {
 #ifdef COSINE_D2_INSTRUMENT
             g_cosInstr.outDir = (repoRoot / "docs" / "sprint30" / "d2-stack-instrument" / "data").string();
 #else
@@ -5619,17 +5640,31 @@ int main(int argc, char** argv) {
     // S31-T3b: initialise iter=1 audit state.
     // The binary is purpose-built; always activate.
     // Output directory: ITER1_AUDIT_OUTDIR env var or default.
+    // S37 SA-L3-S30 / SA-N2-S33 hardening: env-var must resolve under repo/docs/.
     {
+        std::filesystem::path binPath = std::filesystem::absolute(argv[0]);
+        std::filesystem::path repoRoot = binPath.parent_path();
+        for (int attempt = 0; attempt < 6; ++attempt) {
+            if (std::filesystem::is_directory(repoRoot / "catboost" / "mlx")) break;
+            repoRoot = repoRoot.parent_path();
+        }
         const char* envDir = std::getenv("ITER1_AUDIT_OUTDIR");
         if (envDir && *envDir) {
-            g_iter1Audit.outDir = std::string(envDir);
-        } else {
-            std::filesystem::path binPath = std::filesystem::absolute(argv[0]);
-            std::filesystem::path repoRoot = binPath.parent_path();
-            for (int attempt = 0; attempt < 6; ++attempt) {
-                if (std::filesystem::is_directory(repoRoot / "catboost" / "mlx")) break;
-                repoRoot = repoRoot.parent_path();
+            std::error_code ec;
+            std::filesystem::path canon = std::filesystem::weakly_canonical(
+                std::filesystem::path(envDir), ec);
+            std::filesystem::path docsRoot = std::filesystem::weakly_canonical(
+                repoRoot / "docs", ec);
+            auto rel = std::filesystem::relative(canon, docsRoot, ec);
+            if (ec || rel.empty() || rel.native().rfind("..", 0) == 0) {
+                fprintf(stderr,
+                    "[AUDIT] ERROR: ITER1_AUDIT_OUTDIR=%s is outside %s — "
+                    "research-instrumentation outputs must live under docs/.\n",
+                    envDir, docsRoot.string().c_str());
+                std::exit(2);
             }
+            g_iter1Audit.outDir = canon.string();
+        } else {
             g_iter1Audit.outDir = (repoRoot / "docs" / "sprint31" / "t3b-audit" / "data").string();
         }
         g_iter1Audit.seed   = config.RandomSeed;
@@ -5643,17 +5678,31 @@ int main(int argc, char** argv) {
     // S32-T2-INSTRUMENT: initialise per-bin term audit output directory and seed.
     // Output directory: COSINE_TERM_AUDIT_OUTDIR env var or default.
     // Active only at depth=0 iter=0 with SymmetricTree+Cosine — armed at the call site.
+    // S37 SA-L3-S30 / SA-N2-S33 hardening: env-var must resolve under repo/docs/.
     {
+        std::filesystem::path binPath = std::filesystem::absolute(argv[0]);
+        std::filesystem::path repoRoot = binPath.parent_path();
+        for (int attempt = 0; attempt < 6; ++attempt) {
+            if (std::filesystem::is_directory(repoRoot / "catboost" / "mlx")) break;
+            repoRoot = repoRoot.parent_path();
+        }
         const char* envDir = std::getenv("COSINE_TERM_AUDIT_OUTDIR");
         if (envDir && *envDir) {
-            g_termAudit.outDir = std::string(envDir);
-        } else {
-            std::filesystem::path binPath = std::filesystem::absolute(argv[0]);
-            std::filesystem::path repoRoot = binPath.parent_path();
-            for (int attempt = 0; attempt < 6; ++attempt) {
-                if (std::filesystem::is_directory(repoRoot / "catboost" / "mlx")) break;
-                repoRoot = repoRoot.parent_path();
+            std::error_code ec;
+            std::filesystem::path canon = std::filesystem::weakly_canonical(
+                std::filesystem::path(envDir), ec);
+            std::filesystem::path docsRoot = std::filesystem::weakly_canonical(
+                repoRoot / "docs", ec);
+            auto rel = std::filesystem::relative(canon, docsRoot, ec);
+            if (ec || rel.empty() || rel.native().rfind("..", 0) == 0) {
+                fprintf(stderr,
+                    "[TERM_AUDIT] ERROR: COSINE_TERM_AUDIT_OUTDIR=%s is outside %s — "
+                    "research-instrumentation outputs must live under docs/.\n",
+                    envDir, docsRoot.string().c_str());
+                std::exit(2);
             }
+            g_termAudit.outDir = canon.string();
+        } else {
             g_termAudit.outDir = (repoRoot / "docs" / "sprint32" / "t2-terms" / "data").string();
         }
         g_termAudit.seed = config.RandomSeed;
