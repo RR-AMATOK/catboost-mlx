@@ -1,9 +1,24 @@
 # Active Tasks — CatBoost-MLX
 
 > Coverage: Sprints 0–15 reconstructed from git/agent-memory on 2026-04-15. Sprint 16+ is source of truth.
-> Last header refresh: 2026-04-26 (S41 READY-TO-CLOSE — Polish-to-Trust E1, branch `mlx/sprint-41-polish`, PR pending. T1–T5 done; T6 close-out being staged. Next: optional v0.5.1 tag, then S42 Upstream Benchmark Adoption.)
+> Last header refresh: 2026-04-26 (S42 IN PROGRESS — Upstream Benchmark Adoption, branch `mlx/sprint-42-benchmarks`. T0 scaffolded; T1–T5 ahead. v0.5.1 GitHub Release published.)
 
-## Sprint 41 — Polish-to-Trust (E1) — READY-TO-CLOSE
+## Sprint 42 — Upstream Benchmark Adoption — IN PROGRESS
+
+**Branch**: `mlx/sprint-42-benchmarks` (cut from master `659ab3d17c`)
+**Authoritative record**: `docs/sprint42/sprint-plan.md`
+**Goal**: defensible head-to-head numbers on upstream `catboost/benchmarks` datasets, M-series only, 4 frameworks (LightGBM, XGBoost, CatBoost-CPU, CatBoost-MLX). Pareto-frontier deliverable.
+
+**Target subset (5 datasets, gh-API verified)**: Higgs depth 6, Epsilon, Adult, Amazon (incl. DEC-046 gap with footnote), MSLR-WEB10K.
+
+- [x] **S42-T0 SCAFFOLD** — DONE 2026-04-26. Branch cut, sprint-plan.md, `benchmarks/upstream/` skeleton, HANDOFF/TODOS update.
+- [ ] **S42-T1 DATASET-ADAPTERS** — Per-dataset preprocessing scripts (raw → CSV + cat_features config). 1.5d.
+- [ ] **S42-T2 RUN-4-FRAMEWORK-BENCHMARKS** — LightGBM/XGBoost/CatBoost-CPU/CatBoost-MLX × 5 datasets × 3 seeds, on same M-series machine. ~2d wall-clock compute.
+- [ ] **S42-T3 PARETO-FRONTIER-WRITEUP** — `docs/benchmarks/v0.5.x-pareto.md` per-dataset scatter + tables + machine-readable JSON. 1.5d.
+- [ ] **S42-T4 PERF-GATE-REBUILD** — S41 carry-over: rebuild CI perf-regression gate against runner-matched baselines OR switch to relative-speedup measure. Restore `continue-on-error: false`. 1d.
+- [ ] **S42-T5 CLOSE-OUT** — sprint-close.md, state updates, optional v0.5.2 tag. 0.5d.
+
+## Sprint 41 — Polish-to-Trust (E1) — CLOSED 2026-04-26
 
 **Branch**: `mlx/sprint-41-polish` (6 commits, PR pending)
 **Authoritative record**: `docs/sprint41/sprint-close.md`
@@ -15,11 +30,12 @@
 - [x] **S41-T5 UPSTREAM-RFC-DRAFT-REFRESH** — DONE 2026-04-26. `docs/upstream_issue_draft.md` refreshed for post-S30/S40 reality (DEC-036/042/045/046 closures, v0.5.0 framing, characterized-difference positioning, five trigger conditions before submission). STAGED — NOT POSTED. Commit `c08fa10cda`.
 - [ ] **S41-T6 CLOSE-OUT-PR-AND-V051-TAG** — `docs/sprint41/sprint-close.md` written; HANDOFF + TODOS updated; CHANGELOG-DEV session entry pending; close-out commit + push + PR pending; optional v0.5.1 tag post-merge.
 
-## Current state (2026-04-26, S41 close-out)
+## Current state (2026-04-26, S42 kickoff)
 
-- **Active branch**: `mlx/sprint-41-polish` (6 commits ahead of master `aac00046a1`).
-- **S40 status**: CLOSED (PR #36 + #37 + #38 merged at `aac00046a1`). v0.5.0 GitHub Release published.
-- **S41 status**: READY-TO-CLOSE.
+- **Active branch**: `mlx/sprint-42-benchmarks` (cut from master `659ab3d17c`; 1 commit so far — scaffold).
+- **S40 status**: CLOSED (PR #36 + #37 + #38 merged). v0.5.0 GitHub Release published.
+- **S41 status**: CLOSED (PR #39 merged at `659ab3d17c`). v0.5.1 GitHub Release published.
+- **S42 status**: IN PROGRESS. T0 done; T1–T5 ahead.
 - **Production kernel**: v5 (`784f82a891`), shipped S24 D0. ULP=0 structural parity across DEC-008 envelope. Kernel sources md5 `9edaef45b99b9db3e2717da93800e76f` byte-identical S30 → S41 (no kernel changes in S41).
 - **R8 (honest)**: 1.01× e2e vs S16 baseline. Unchanged.
 - **Active DEC**: **DEC-046 ACCEPTED** (S40 lane lock); DEC-045 RESOLVED, DEC-044 WITHDRAWN, DEC-042/036/040 CLOSED.

@@ -1,12 +1,47 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-04-26 (**S41 READY-TO-CLOSE — Polish-to-Trust E1**).
-> Branch `mlx/sprint-41-polish` carries 6 commits (sprint plan + T1–T5 + close-out).
-> v0.5.0 (master `aac00046a1`) is the production tag; v0.5.1 candidate stages on
-> this branch pending PR merge. No source code changes; documentation, validator
-> case-insensitivity, profile, audit, and staged upstream-RFC refresh.
+> Last updated: 2026-04-26 (**S42 IN PROGRESS — Upstream Benchmark Adoption**).
+> Branch `mlx/sprint-42-benchmarks` cut from master `659ab3d17c` (post v0.5.1).
+> Theme: run upstream `catboost/benchmarks` suite against catboost-mlx, produce
+> Pareto-frontier deliverable, rebuild CI perf-regression gate against
+> runner-matched baselines (S41 carry-over).
 >
-> ## Sprint 41 close-out (PR pending)
+> ## Sprint 42 in-flight
+>
+> **Goal**: produce defensible head-to-head numbers on the upstream-canonical GBDT
+> benchmark datasets, on Apple Silicon, across all 4 reference frameworks
+> (LightGBM, XGBoost, CatBoost-CPU, CatBoost-MLX). Output: `docs/benchmarks/v0.5.x-pareto.md`.
+>
+> **Scope** (verified via gh API on `catboost/benchmarks` repo):
+> - 5 datasets — Higgs (training_speed, depth 6), Epsilon (training_speed), Adult
+>   (quality_benchmarks), Amazon (quality_benchmarks, includes DEC-046 gap),
+>   MSLR-WEB10K (ranking)
+> - 4 frameworks on same M-series machine (no comparison vs published A100 numbers)
+> - 3 seeds × 5 datasets × 4 frameworks
+> - Pareto-frontier scatter (x=wall-clock, y=metric) per dataset
+> - Carry-over: rebuild CI perf-regression gate (S41 left it in `continue-on-error: true`
+>   bridge mode pending runner-matched baselines)
+>
+> **Out of reach** (deliberate):
+> - Click dataset (>16M rows; ComputePartitionLayout cap)
+> - Anything requiring `boosting_type='Ordered'`, `NewtonL2/Cosine`, `max_depth>6`
+>
+> **Honest-publishing constraints**:
+> - Same machine for all 4 frameworks; no cross-hardware comparison
+> - Include Amazon (the DEC-046-affected dataset) with a footnote — don't cherry-pick
+> - Depth-6 against depth-6 only
+>
+> **Authoritative records**:
+> - Sprint plan: `docs/sprint42/sprint-plan.md`
+> - Adapters scaffold: `benchmarks/upstream/`
+>
+> ## Sprint 41 close-out (PR #39 MERGED 2026-04-26)
+>
+> v0.5.1 GitHub Release published: <https://github.com/RR-AMATOK/catboost-mlx/releases/tag/v0.5.1>
+> Branch `mlx/sprint-41-polish` (7 commits) merged at master `659ab3d17c`. T1–T6 + perf-gate
+> bridge mode delivered; sprint-close doc at `docs/sprint41/sprint-close.md`.
+>
+> ## Sprint 41 close-out (originally documented)
 >
 > **Outcome**: every paper-cut a v0.5.0 user could hit on the happy path is closed
 > or documented; the README is now the single document a new user needs;
