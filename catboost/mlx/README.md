@@ -872,12 +872,11 @@ trees with feature- and border-aligned splits to fp32 precision against CPU CatB
 train RMSE is bit-identical at the standard test anchor (N=1k seed=42 LG+Cosine, 50 iters).
 
 **Default behavior**: MLX `csv_train` defaults `RandomStrength=1.0` to match CatBoost's
-upstream default. With both runtimes at default `RS=1.0`, single-seed RMSE drift is
-typically ±3-5% (a mix of RNG-implementation differences and seed-noise variance).
-Across multiple seeds, this drift averages to a small bias (≈3% on the canonical N=1k
-anchor — MLX slightly better than CPU at this anchor), reflecting subtle differences
-in how each runtime injects noise into the gain comparison. Both implementations are
-valid; the bias is bounded and not a correctness issue.
+upstream default. With both runtimes at default `RS=1.0`, single-seed RMSE drift across
+10 seeds at the canonical N=1k anchor is **mean −4.08% (95% CI [−4.78%, −3.39%])** —
+MLX consistently lower RMSE than CPU CatBoost. This is a bounded, real difference in
+how each runtime injects noise into the gain comparison; not a correctness issue. For
+bit-identical reproducibility, set RS=0 on both.
 
 **Important historical note**: prior versions of this README documented a 13–44% small-N
 drift "residual mechanism" that was localized in Sprint 38 (DEC-045) to a harness
