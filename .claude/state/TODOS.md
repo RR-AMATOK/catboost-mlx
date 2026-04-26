@@ -1,16 +1,56 @@
 # Active Tasks — CatBoost-MLX
 
 > Coverage: Sprints 0–15 reconstructed from git/agent-memory on 2026-04-15. Sprint 16+ is source of truth.
-> Last header refresh: 2026-04-25 (S33 + S34 + S35 ALL MERGED — PRs #29 #31. Master tip `a10ebd63e1`. DEC-036 CLOSED, DEC-042 FULLY CLOSED for both ordinal and one-hot branches. Local merged branches cleaned up.)
+> Last header refresh: 2026-04-25 (S39 housekeeping COMPLETE — 6 commits on `mlx/sprint-39-housekeeping`. DEC-044 WITHDRAWN, DEC-045 RESOLVED. Branch audit SAFE-TO-DELETE pending user. README tightened. Anchor inventory through S38.)
 
-## Current state (2026-04-25)
+## Current state (2026-04-25, S39 close)
 
-- **Active branch**: `master` at `a10ebd63e1` (PR #31 merge). No active sprint branch.
+- **Active branch**: `mlx/sprint-39-housekeeping` at `313115729c` (6 commits ahead of master `679ef517a5`). Ready for PR + merge.
+- **S38 status**: CLOSED (PR #34 merged `679ef517a5`). DEC-045 RESOLVED.
+- **S39 status**: COMPLETE. 7 items shipped (items 5–11). See `docs/sprint39/sprint-close.md`.
 - **Production kernel**: v5 (`784f82a891`), shipped S24 D0. ULP=0 structural parity across DEC-008 envelope via `bench_boosting`. Kernel sources md5 `9edaef45b99b9db3e2717da93800e76f` byte-identical S30 → S35.
 - **R8 (honest)**: 1.01× e2e vs S16 baseline. Unchanged.
 - **Open PRs**: none. PRs #29 (S33), #31 (S34/S35) merged 2026-04-25.
 - **Active DEC**: **DEC-036 CLOSED** (2026-04-25, ordinal); **DEC-040 CLOSED** (investigation concluded); **DEC-041 INVALIDATED** (dead number); **DEC-042 FULLY CLOSED** (both ordinal + one-hot branches resolved); DEC-037/038/039 CLOSED. #93/#94/#123/#127/#128/#129 COMPLETED.
 - **Open backlog**: #113 S31-T3-MEASURE re-run, #114 S31-T-CLEANUP, S31-T-LATENT-P11 (Logloss/Poisson/Tweedie), SA carry-forwards (SA-L1-S33 hard-coded paths, SA-L3-S30/SA-N2-S33 instrumentation env-var hardening, SA-I2-S29 #95 CLI exit wrap).
+
+## Sprint 39 — Housekeeping after S38 RESOLVED — COMPLETE 2026-04-25
+
+**Branch**: `mlx/sprint-39-housekeeping` (6 commits, tip `313115729c`)
+
+- [x] **S39-T1 PROBE_H_INSTRUMENT-RETIRE** — COMPLETED 2026-04-25. `PROBE_H_INSTRUMENT` macro
+  removed from `catboost/mlx/tests/csv_train.cpp`. ULP-identical tree structure pre/post
+  confirmed. DEC-044 WITHDRAWN. Commit `059d0e56c8`.
+
+- [x] **S39-T2 PROBE-G-RERUN-RS0** — COMPLETED 2026-04-25. PROBE-G scaling sweep re-run with
+  matched RS=0 on both runtimes. RS=0 parity confirmed across all N; mean drift 0.023% at
+  N=1k (within measurement noise). Confirms DEC-045 config-artifact root cause. Commit
+  `aa4cb9dccb`.
+
+- [x] **S39-T3 RS1-10SEED-VERIFY** — COMPLETED 2026-04-25. RS=1.0 parity verification extended
+  to 10 seeds (seeds 42–51). Mean drift −4.08%, 95% CI [−4.78%, −3.39%]. Bias real-not-noise
+  (CI does not overlap zero). Bounded RNG-implementation difference, not a correctness
+  issue. Source: `docs/sprint38/probe-q/data/parity_verification_rs1_extended.csv`. Commit
+  `b03af34161`.
+
+- [x] **S39-T4 README-RS1-UPDATE** — COMPLETED 2026-04-25 (two commits). Initial update with
+  5-seed data (commit `482a8308dd`); tightened with 10-seed CI result (commit `313115729c`).
+  README §Known Limitations now reads: mean −4.08% (95% CI [−4.78%, −3.39%]).
+
+- [x] **S39-T5 ANCHOR-INVENTORY** — COMPLETED 2026-04-25. Refreshed
+  `docs/sprint27/scratch/aa-t1-anchor-inventory.md` through Sprint 38. Added AN-019, AN-020,
+  AN-021 (superseded), AN-022 (data-file), AN-023 (DEC-045 resolution). Total anchors: 23.
+  Commit `531b9f2c04`.
+
+- [ ] **S39-T6 BRANCH-DELETE-S24** — PENDING USER CONFIRMATION. `archive/s24-d0-v5-retreat`
+  audited SAFE-TO-DELETE. v5 fix on master (`784f82a891`), DEC-023 CLOSED. Audit performed
+  S39. **No action taken — Ramos must confirm before deletion.**
+
+- [ ] **S39-T7 BRANCH-DELETE-S33** — PENDING USER CONFIRMATION.
+  `origin/mlx/sprint-33-iter2-scaffold` audited SAFE-TO-DELETE. All commits on master via
+  PR #29. Audit performed S39. **No action taken — Ramos must confirm before deletion.**
+
+---
 
 ## Sprint 33 — Iter≥2 Runaway Divergence SCAFFOLD — OPEN 2026-04-24
 

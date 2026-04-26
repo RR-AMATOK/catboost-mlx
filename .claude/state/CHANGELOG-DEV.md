@@ -2,6 +2,52 @@
 
 > Coverage: Sprints 0–15 reconstructed from git log on 2026-04-15. Sprint 16+ is source of truth.
 
+## 2026-04-25 — Sprint 39: Housekeeping after S38 RESOLVED (DEC-045)
+
+Branch: `mlx/sprint-39-housekeeping`. No production code changes. No kernel changes.
+Kernel sources md5 `9edaef45b99b9db3e2717da93800e76f` unchanged.
+
+### Commits (6)
+
+| SHA | Description |
+|-----|-------------|
+| `482a8308dd` | Clean stale 'ongoing investigation' refs from README §Known Limitations |
+| `531b9f2c04` | Refresh anchor inventory through Sprint 38; AN-019–AN-023 registered |
+| `059d0e56c8` | Retire `PROBE_H_INSTRUMENT` macro (DEC-044 withdrawn) |
+| `aa4cb9dccb` | Re-run PROBE-G scaling sweep at RS=0 parity |
+| `b03af34161` | Extend RS=1.0 parity verification to 10 seeds |
+| `313115729c` | Tighten README RS=1.0 paragraph with 10-seed CI result |
+
+### Headline finding — RS=1.0 bias confirmed (item 7)
+
+10-seed sweep (seeds 42–51) at the canonical N=1k LG+Cosine anchor confirms the single-
+seed RS=1.0 bias from S38 is real-not-noise:
+
+| Stat | Value |
+|------|-------|
+| Mean drift | −4.08% (MLX lower RMSE) |
+| Std | 1.10% |
+| 95% CI | [−4.78%, −3.39%] |
+
+CI does not overlap zero. The bias is bounded and a known RNG-implementation difference,
+not a correctness issue. RS=0 RMSE remains bit-identical between runtimes. README
+§Known Limitations updated with the precise CI.
+
+### Branch audit results (items 9 and 10)
+
+- `archive/s24-d0-v5-retreat`: SAFE-TO-DELETE. v5 fix on master (`784f82a891`), DEC-023 CLOSED.
+- `origin/mlx/sprint-33-iter2-scaffold`: SAFE-TO-DELETE. All commits on master via PR #29.
+- **No deletions performed** — pending Ramos explicit confirmation.
+
+### Anchor inventory refresh (item 11)
+
+5 new anchors registered (AN-019–AN-023) covering Sprint 33 L1/L2 diagnostic RMSE values,
+Sprint 33 CR one-hot smoke values (superseded), Sprint 38 N=1k probe CSV, and Sprint 38
+DEC-045 resolution RMSE. 2 superseded markers added (AN-020 class-d, AN-021 superseded).
+Total: 23 anchors. Live-test-backed: 9. Docs-only: 14.
+
+---
+
 ## 2026-04-25 — S38-S0: DEC-042 per-side mask ported to FindBestSplitPerPartition (H3 fix)
 
 Branch: `mlx/sprint-38-lg-small-n`. Kernel sources unchanged (`9edaef45b99b9db3e2717da93800e76f`).

@@ -239,6 +239,46 @@ S38 close-out: 12/12 tree splits match at parity, 0.000% RMSE drift)*
 
 ---
 
+## Noise-Driven Algorithms
+
+### RNG-implementation differences between runtimes can produce bounded but persistent bias — verify with multi-seed sweep before declaring parity
+
+**Date**: 2026-04-25
+**Sprint**: [sprint-39]
+**Tags**: [cross-runtime] [rng] [bias] [multi-seed]
+
+After Sprint 38 confirmed that the small-N LG+Cosine drift was a harness configuration
+mismatch (asymmetric RandomStrength), a residual question remained: with both runtimes at
+default RS=1.0, is the single-seed RMSE delta (≈ −3.66%) just sampling noise, or a real
+structural bias? A 5-seed sample produced a mean of −3.43% (sprint 38 close-out). Sprint 39
+extended this to 10 seeds and found: mean −4.08%, 95% CI [−4.78%, −3.39%]. The CI excludes
+zero — the bias is real, bounded, and reproducible.
+
+**Why this matters**: Two runtimes sharing the same algorithm can still produce systematically
+different outputs when their underlying RNGs draw from different distributions or have different
+seeding conventions. A single-seed comparison cannot distinguish "this seed's noise happened to
+favor one side" from "this algorithm systematically favors one side". Even a 5-seed sample may
+not be enough if the effect size is small relative to per-seed variance. A 10-seed sweep with
+a 95% CI explicitly testing whether zero is excluded is the minimum credible parity claim for
+noise-driven algorithms. For CatBoost-MLX specifically: MLX's `std::mt19937` (Mersenne Twister)
+and CatBoost's internal RNG produce different noise realizations at the same integer seed, with
+the net effect that MLX slightly over-regularizes gain selection relative to CPU at small N.
+
+**How to apply**: For any two runtimes that share a noise/regularization parameter (RandomStrength,
+dropout rate, Bernoulli sampling, etc.): (1) run RS=0 parity first to confirm algorithm
+correctness; (2) run RS>0 multi-seed sweep (minimum 10 seeds) to characterize the RNG-induced
+bias; (3) compute the 95% CI; (4) if the CI excludes zero, document the bias as a known
+bounded difference, not a correctness issue; (5) update documentation with the precise CI
+rather than a single-seed estimate. Do not report "≈X%" based on fewer than 5 seeds for
+noise-driven algorithms — the per-seed variance is typically comparable to or larger than
+the bias magnitude.
+
+*(source: `docs/sprint38/probe-q/data/parity_verification_rs1_extended.csv`;
+`docs/sprint38/probe-q/scripts/verify_parity_extended.py`; sprint-39 RS=1.0 10-seed
+verification 2026-04-25)*
+
+---
+
 ## Contribution Log
 
 | Date | Change | Contributor |
@@ -249,3 +289,4 @@ S38 close-out: 12/12 tree splits match at parity, 0.000% RMSE drift)*
 | 2026-04-25 | Added § Probe Design — formula equivalence boundary-case lesson (PROBE-H) | sprint-38 |
 | 2026-04-25 | Added § Probe Design — counterfactual vs observational confusion lesson (PROBE-H v2) | sprint-38 |
 | 2026-04-25 | Added § Probe Design — cross-runtime configuration symmetry (PROBE-Q phase 2) | sprint-38 |
+| 2026-04-25 | Added § Noise-Driven Algorithms — RNG-implementation bias multi-seed verification | sprint-39 |

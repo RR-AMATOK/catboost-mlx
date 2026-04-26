@@ -1,19 +1,11 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-04-25 (**S38 RESOLVED — harness asymmetry, not algorithm bug.** PROBE-Q
-> phase 2 found the smoking gun: MLX's `csv_train.cpp:599` defaults `RandomStrength=1.0`;
-> the cross-runtime drift harnesses pass `random_strength=0.0` to CPU CatBoost explicitly
-> but never override MLX's default. Result: MLX trees were perturbed by gain noise while
-> CPU trees were deterministic. With matched `--random-strength 0` on both, MLX's iter=1 +
-> iter=2 trees are bit-identical to CPU's at all 12 splits (feature and border, fp32
-> precision); train RMSE drift = **0.000%**. The "13.93% N=1k drift" the sprint chased was
-> the gap between MLX-with-noise and CPU-deterministic — the gap collapses log-linearly
-> with N because gain gaps between top candidates grow with N (less-frequent noise flips at
-> large N). PROBE-G Scenario C, F2 C-PSF, PROBE-H joint-skip — all retracted as causal
-> interpretations of the same configuration artifact. PROBE-Q phase 1 stands (border grids
-> ARE aligned). DEC-042 stands. Harness fix: `--random-strength 0` added to F2 + PROBE-G
-> Phase 1 + Phase 2 cmd blocks. See `docs/sprint38/probe-q/PHASE-2-FINDING.md`. Branch:
-> `mlx/sprint-38-lg-small-n`.)
+> Last updated: 2026-04-25 (**S39 housekeeping COMPLETE**). 7 items shipped (PROBE_H
+> instrumentation retired, scaling sweep re-run at RS=0 parity confirms 0.023% mean drift,
+> RS=1.0 10-seed verification proves −4.08% bias is real-not-noise, README updated,
+> anchor inventory refreshed through S38, branch audits SAFE-TO-DELETE pending user
+> confirmation). 6 commits on `mlx/sprint-39-housekeeping`. See
+> `docs/sprint39/sprint-close.md`. Branch ready for PR + merge.
 >
 > ## Sprint 38 close-out
 >
@@ -219,7 +211,46 @@ S34-PROBE-F-LITE T0a (mathematician) + T0b (ml-engineer) converged independently
 
 **New ticket from S34 side finding**: #128 S35-Q4-L2-PARENT-TERM — MLX's L2 path subtracts `totalSum²/(totalWeight+λ)` per-(p,k) at `csv_train.cpp:1704, 1973`; CPU's L2 path subtracts no parent term. Argmax-invariant at depth=0 numPartitions=1; variable elsewhere. Currently papered over by G4d.
 
-## Sprint 38 — LG-SMALL-N-RESIDUAL (ACTIVE)
+## Sprint 39 — Housekeeping (COMPLETE)
+
+**Branch**: `mlx/sprint-39-housekeeping` (tip `313115729c`)
+**Cut from**: master `679ef517a5` (PR #34 merge)
+**Theme**: Post-S38 housekeeping after DEC-045 RESOLVED
+**Authoritative record**: `docs/sprint39/sprint-close.md`
+
+### What shipped (6 commits)
+
+| SHA | Description |
+|-----|-------------|
+| `482a8308dd` | Clean stale 'ongoing investigation' refs from README §Known Limitations |
+| `531b9f2c04` | Refresh anchor inventory through Sprint 38; register AN-019–AN-023 |
+| `059d0e56c8` | Retire `PROBE_H_INSTRUMENT` macro (DEC-044 withdrawn) |
+| `aa4cb9dccb` | Re-run PROBE-G scaling sweep at RS=0 parity |
+| `b03af34161` | Extend RS=1.0 verification to 10 seeds |
+| `313115729c` | Tighten README RS=1.0 paragraph with 10-seed CI result |
+
+### Headline finding
+
+10-seed RS=1.0 verification (seeds 42–51, N=1k LG+Cosine) confirms the drift is real-not-
+noise: **mean −4.08%, 95% CI [−4.78%, −3.39%]**. The CI does not overlap zero. This is
+a bounded, reproducible difference in RNG-implementation noise between MLX and CatBoost.
+Not a correctness issue. RS=0 produces bit-identical models. README updated accordingly.
+
+### Branch audit (items 9 and 10)
+
+Both `archive/s24-d0-v5-retreat` and `origin/mlx/sprint-33-iter2-scaffold` are
+**SAFE-TO-DELETE** per the Explore agent audit. No unique code or artifacts absent from
+master or the sprint docs directories. Deletions NOT performed — **pending Ramos
+confirmation before proceeding**.
+
+### DEC status at S39 close
+
+DEC-032 CLOSED, DEC-036 CLOSED, DEC-042 FULLY CLOSED, DEC-044 WITHDRAWN, DEC-045 RESOLVED.
+All guards removed. All three grow policies support Cosine. No open DECs.
+
+---
+
+## Sprint 38 — LG-SMALL-N-RESIDUAL (CLOSED, PR #34 merged)
 
 **Branch**: `mlx/sprint-38-lg-small-n` (tip `a481972529`)
 **Tracking issue**: #130 (S38-LG-SMALL-N-RESIDUAL)
