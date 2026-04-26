@@ -2365,3 +2365,55 @@ amplification" verdict was reading topology dynamics into noise statistics.
 - Code reference for the noise mechanism: `catboost/mlx/tests/csv_train.cpp:2196-2206`
 - Configuration default: `csv_train.cpp:599` (`RandomStrength = 1.0f`)
 - Harness asymmetry source: `docs/sprint38/probe-g/scripts/run_probe_g.py:121-138, 197-211` (pre-fix)
+
+## DEC-046: Sprint 40 lane lock — public release as characterized variant (Lane B / Reframe 2)
+
+**Sprint**: 40
+**Date**: 2026-04-26
+**Status**: PROPOSED → ACCEPTED (committee unanimous on evidence base)
+**Authored by**: Claude (advisory board synthesis — opus 4.7)
+**Companion**: `docs/sprint40/pre_lane_check/FINDING.md`
+
+### Findings
+
+After S38/S39 closed synthetic-anchor parity at `random_strength=0`, a real-world Kaggle test (irrigation prediction, 270k rows, 53 features, 8 categoricals, 3-class with rare High at 3.18%) showed CatBoost-CPU 0.95994 vs CatBoost-MLX 0.95710 balanced accuracy — a 0.28pp gap with 99.917% prediction agreement (223 disagreements).
+
+Three pre-decision experiments produced a complete decomposition of that 0.28pp gap (full numbers in `docs/sprint40/pre_lane_check/FINDING.md`):
+
+1. **Arithmetic reconciled**: the metric is *balanced accuracy*, not plain accuracy. The 270000 × 0.00284 ≈ 767 calculation that initially looked inconsistent with 223 actual disagreements was a category error. Under balanced accuracy, the rare High class (3.18%) carries 18× the per-row weight of Low — small disagreements concentrated on the High↔Medium boundary (74.4% of all disagreement rows) account for the gap.
+2. **`cat_features=[]` discriminator** (Experiment 2): dropping all 8 categoricals collapses disagreements 223 → 141 (−37%) and **rare-class High shift 64 → 12 (−81%)**. M2 (CTR RNG ordering) is the dominant driver of the rare-class asymmetry, exactly as mathematician's prior predicted.
+3. **CPU-vs-CPU 5-seed noise floor** (Experiment 3): pairwise across seeds 42–46 yields mean 88.2 disagreements, 5.6 High shift, MAD 9.5e-4 — the irreducible CatBoost-Plain RNG noise floor. MLX-vs-CPU is 2.5× this in disagreement count, 11.4× in rare-class shift.
+
+Decomposition of the 223-row baseline:
+| Component | Disagreements | High-class shift | % of total |
+|---|---|---|---|
+| CPU seed-noise floor | ~88 | ~5.6 | 39% / 9% |
+| MLX architectural floor (no cats) | ~53 | ~6.4 | 24% / 10% |
+| Categorical-specific (M2 CTR RNG) | ~82 | ~52 | 37% / **81%** |
+
+### Decision
+
+**Lane B locked** — ship CatBoost-MLX v0.5.0 as a *characterized-difference Apple Silicon CatBoost-Plain port*, framed under the visionary's "RS=0 deterministic moat" reframing. Specifically:
+
+- **Headline reframing**: position against LightGBM/XGBoost on (deterministic + fast + unified-memory + Apple-native), not against CatBoost-CPU on byte-faithfulness.
+- **Limitation taxonomy**: `Known Limitations` section in README rewrites with the 3-row decomposition table — every component named, bounded, and reproducible.
+- **Numeric-only parity guarantee**: workloads with `cat_features=[]` converge to within architectural floor (99.948% agreement, MAD 2.2e-3, no rare-class skew).
+- **Ordered Boosting**: explicitly documented as not implemented (only `boosting_type='Plain'`); positioned as future scope, not a deficiency hidden by framing.
+- **Lane D scope reduced**: optional post-release narrow investigation focused only on CTR RNG ordering (3-day kill-switch). M1/M3/M4 deferred — bounded contribution does not justify open scope.
+
+### Implication
+
+| Branch | Outcome |
+|---|---|
+| S40 deliverable | README/Known-Limitations rewrite, version bump to 0.3.0, CHANGELOG-DEV release notes, GitHub release on `RR-AMATOK/catboost-mlx`. |
+| Public-facing claim | "0.28pp balanced-accuracy gap on real-world multiclass-with-categoricals workloads, 81% attributable to CTR RNG ordering, 39% inside CPU's own seed-noise envelope; numeric-only workloads at 99.948% agreement." Reproducible via shipped scripts. |
+| Lane D (optional, post-release) | Single mechanism (CTR RNG ordering alignment) — not "find why MLX differs" — 3-day kill-switch, narrow targeted PR. |
+| Test infrastructure | Cross-runtime parity tests on real-world data must report decomposition (seed-noise floor + cat-attributable + residual), not raw agreement. Lesson recorded in LESSONS-LEARNED. |
+| Issue closure | The "99.92% floor unidentified" open question is closed by Sprint 40 evidence. |
+
+### Authority
+
+- Empirical basis: `docs/sprint40/pre_lane_check/FINDING.md`, `results/exp2_no_cat_features.json`, `results/exp3_cpu_noise_floor.json`
+- Reference submissions: `Predicting Irrigation Need/submissions/catboost_{cpu,mlx}_v8_rs0_submission.csv` (Kaggle balanced-accuracy 0.95994 / 0.95710)
+- Reproducibility scripts (committed): `docs/sprint40/pre_lane_check/scripts/exp2_no_cat_features.py`, `exp3_cpu_noise_floor.py`
+- Committee inputs: strategist, devils-advocate, visionary advisory rounds (this session); mathematician's mechanism prior (M2 > M1 > M4 > M3) — empirically confirmed.

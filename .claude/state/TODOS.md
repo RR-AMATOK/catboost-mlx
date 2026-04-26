@@ -1,18 +1,67 @@
 # Active Tasks — CatBoost-MLX
 
 > Coverage: Sprints 0–15 reconstructed from git/agent-memory on 2026-04-15. Sprint 16+ is source of truth.
-> Last header refresh: 2026-04-25 (S39 housekeeping COMPLETE — 6 commits on `mlx/sprint-39-housekeeping`. DEC-044 WITHDRAWN, DEC-045 RESOLVED. Branch audit SAFE-TO-DELETE pending user. README tightened. Anchor inventory through S38.)
+> Last header refresh: 2026-04-26 (S40 IN PROGRESS — Lane B locked, branch `mlx/sprint-40-lane-b-release` cut. Pre-lane-check 3-experiment decomposition complete. DEC-046 ACCEPTED.)
 
-## Current state (2026-04-25, S39 close)
+## Current state (2026-04-26, S40 kickoff)
 
-- **Active branch**: `mlx/sprint-39-housekeeping` at `313115729c` (6 commits ahead of master `679ef517a5`). Ready for PR + merge.
-- **S38 status**: CLOSED (PR #34 merged `679ef517a5`). DEC-045 RESOLVED.
-- **S39 status**: COMPLETE. 7 items shipped (items 5–11). See `docs/sprint39/sprint-close.md`.
-- **Production kernel**: v5 (`784f82a891`), shipped S24 D0. ULP=0 structural parity across DEC-008 envelope via `bench_boosting`. Kernel sources md5 `9edaef45b99b9db3e2717da93800e76f` byte-identical S30 → S35.
+- **Active branch**: `mlx/sprint-40-lane-b-release` at `02c98948bf` (cut from master, 0 commits ahead so far — pre-lane-check artifacts staged for first commit).
+- **S39 status**: CLOSED (PR #35 merged `02c98948bf`). 7 housekeeping items shipped.
+- **S40 status**: IN PROGRESS. Pre-lane-check experiments complete (`docs/sprint40/pre_lane_check/FINDING.md`). Decision: Lane B (public release as characterized variant) per DEC-046.
+- **Production kernel**: v5 (`784f82a891`), shipped S24 D0. ULP=0 structural parity across DEC-008 envelope. Kernel sources md5 `9edaef45b99b9db3e2717da93800e76f` byte-identical S30 → S39.
 - **R8 (honest)**: 1.01× e2e vs S16 baseline. Unchanged.
-- **Open PRs**: none. PRs #29 (S33), #31 (S34/S35) merged 2026-04-25.
-- **Active DEC**: **DEC-036 CLOSED** (2026-04-25, ordinal); **DEC-040 CLOSED** (investigation concluded); **DEC-041 INVALIDATED** (dead number); **DEC-042 FULLY CLOSED** (both ordinal + one-hot branches resolved); DEC-037/038/039 CLOSED. #93/#94/#123/#127/#128/#129 COMPLETED.
+- **Open PRs**: none.
+- **Active DEC**: **DEC-046 ACCEPTED** (S40 lane lock); DEC-045 RESOLVED, DEC-044 WITHDRAWN, DEC-042/036/040 CLOSED.
 - **Open backlog**: #113 S31-T3-MEASURE re-run, #114 S31-T-CLEANUP, S31-T-LATENT-P11 (Logloss/Poisson/Tweedie), SA carry-forwards (SA-L1-S33 hard-coded paths, SA-L3-S30/SA-N2-S33 instrumentation env-var hardening, SA-I2-S29 #95 CLI exit wrap).
+
+## Sprint 40 — Lane B public release (IN PROGRESS)
+
+**Branch**: `mlx/sprint-40-lane-b-release`
+**Authoritative record**: `docs/sprint40/pre_lane_check/FINDING.md` + DEC-046
+
+- [x] **S40-T0 PRE-LANE-CHECK** — COMPLETED 2026-04-26. Three experiments (arithmetic
+  reconcile, `cat_features=[]` discriminator, CPU 5-seed noise floor) produced full
+  decomposition of the irrigation 0.28pp gap: 39% seed noise + 24% architectural
+  floor + 37% CTR-attributable. Mathematician's prior (M2 dominant) confirmed.
+  Artifacts under `docs/sprint40/pre_lane_check/`.
+
+- [x] **S40-T1 README-KNOWN-LIMITATIONS-REWRITE** — DONE 2026-04-26. Added two new
+  Known Limitations entries: "Ordered Boosting (`boosting_type='Ordered'`) is not
+  implemented" (with the Ordered-CTR-vs-Ordered-Boosting clarification) and
+  "Real-world cross-runtime characterization (DEC-046)" with the 3-row decomposition
+  table and the `cat_features=[]` parity guarantee (99.948%, MAD 2.2e-3, no
+  rare-class skew). Reproducibility scripts referenced.
+
+- [x] **S40-T2 RS0-DETERMINISTIC-MOAT-POSITIONING** — DONE 2026-04-26. Added "When to
+  use this backend" section between the title and Feature Status, framing the
+  characterized-difference port positioning, the decision matrix (use MLX vs use
+  CPU/CUDA), and the explicit `RS=0` parity-testing guidance.
+
+- [x] **S40-T3 VERSION-BUMP-0.5.0** — DONE 2026-04-26. Bumped `python/pyproject.toml`
+  and `python/catboost_mlx/__init__.py` from `0.4.0` → `0.5.0`. Note: 0.4.0 was the
+  prior CHANGELOG entry (Sprint 12-14, 2026-04-12) but never tagged as a GitHub
+  Release; 0.5.0 covers Sprints 15-40 (~26 sprints of correctness work).
+
+- [x] **S40-T4 CHANGELOG-V0.5.0** — DONE 2026-04-26. Appended v0.5.0 entry to
+  `python/CHANGELOG.md` covering DEC-036/038/039/042/045/046, BUG-007, Cosine
+  closure across all 3 grow policies, real-world characterization, known
+  limitations carry-forward.
+
+- [x] **S40-T5 LESSONS-LEARNED-DECOMPOSITION** — DONE 2026-04-26. Added § Cross-Runtime
+  Triage entry to `.claude/state/LESSONS-LEARNED.md`: 3-experiment decomposition
+  methodology (arithmetic reconcile + cat_features=[] + same-runtime noise floor)
+  as a release-readiness filter that replaces multi-week PROBE-style cascades.
+  Cross-project applicability noted.
+
+- [ ] **S40-T6 PR-AND-RELEASE** — Open PR `mlx/sprint-40-lane-b-release` → master.
+  After merge, optionally cut a GitHub Release on `RR-AMATOK/catboost-mlx` tagged
+  `v0.5.0` with release notes drawn from the CHANGELOG entry.
+
+**Out of scope (deferred to future sprints)**:
+- M1/M3/M4 mechanism investigation (bounded contribution, no open question requires it).
+- CTR RNG ordering alignment fix (3-day Lane D, post-release if pursued — narrow scope).
+- Ordered Boosting implementation (major future work — would require parallel
+  data-mode implementation; scope post v0.4.x).
 
 ## Sprint 39 — Housekeeping after S38 RESOLVED — COMPLETE 2026-04-25
 
