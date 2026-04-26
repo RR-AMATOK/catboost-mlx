@@ -2,6 +2,28 @@
 
 CatBoost-MLX replaces the CUDA GPU backend with Apple's Metal via the [MLX](https://github.com/ml-explore/mlx) framework, enabling gradient boosted decision tree training on Apple Silicon Macs (M1/M2/M3/M4).
 
+## When to use this backend
+
+CatBoost-MLX is a *characterized-difference* port of CatBoost-Plain to Apple Silicon. It is
+not a byte-faithful drop-in replacement for CatBoost-CPU/CUDA — the rare-class behavior of
+the categorical-encoding (CTR) path differs slightly from upstream by a quantified amount
+(see § Known Limitations → Real-world cross-runtime characterization). It is, however,
+fully deterministic, fast, and unified-memory native. The decision matrix:
+
+- **Use CatBoost-MLX when**: you are training on Apple Silicon, your workload is mostly
+  numeric or you can tolerate a small bounded categorical-encoding asymmetry, you want
+  deterministic reproducibility (set `RS=0`, `bootstrap_type='no'`), and you value
+  unified-memory throughput on M-series chips.
+- **Use CatBoost-CPU/CUDA instead when**: you require `boosting_type='Ordered'`
+  (anti-leakage gradient on small/leakage-prone data — not implemented here, see Known
+  Limitations), or you require byte-identical agreement with upstream CatBoost on
+  multiclass-with-categoricals workloads at the per-row prediction level.
+- **Set `RandomStrength=0` for cross-runtime parity testing**: by default both runtimes
+  inject Gaussian noise into the gain comparison (`RS=1.0`). At RS=0 with matched
+  `bootstrap_type=No` MLX and CPU produce trees with feature- and border-aligned splits
+  to fp32 precision on synthetic anchors. For real-world classification with categoricals
+  expect ~99.92% prediction agreement (DEC-046).
+
 ## Feature Status
 
 | Category | Feature | Status |
@@ -884,6 +906,55 @@ configuration mismatch — comparison scripts were invoking CPU with `RS=0` whil
 MLX at the default `RS=1.0`. The asymmetric configuration produced phantom drift that
 appeared seed-stable. With matched configuration, the drift collapses to near-zero. See
 `docs/sprint38/probe-q/PHASE-2-FINDING.md` (DEC-045) for the full root-cause analysis.
+
+### Ordered Boosting (`boosting_type='Ordered'`) is not implemented
+CatBoost's signature anti-leakage feature — Ordered Boosting — is **not** implemented in
+this MLX backend. Only `boosting_type='Plain'` is supported. The Python API and CLI accept
+the parameter but treat any value as Plain. Ordered Boosting's primary benefit is on
+small/leakage-prone datasets where target-leakage in gradient calculation can dominate
+generalization; Plain boosting is what the majority of CatBoost users actually run on
+mid- to large-scale data, and it is what this port reproduces.
+
+Ordered CTR (online target encoding for categorical features) **is** implemented and
+active by default — it is a separate feature from Ordered Boosting and is what most users
+mean by "CatBoost's anti-leakage encoding". See § Categorical features and § CTR target
+encoding above for the supported CTR modes.
+
+If your workload depends specifically on `boosting_type='Ordered'`, this backend will
+silently train a Plain model. Use CatBoost-CPU/CUDA for Ordered Boosting until a future
+sprint ports the per-permutation gradient path to Metal.
+
+### Real-world cross-runtime characterization (DEC-046)
+
+CatBoost-MLX at `RS=0` matches CatBoost-CPU on synthetic anchors to fp32 precision (DEC-045).
+On real-world multiclass workloads with categorical features, a small bounded gap remains.
+The Sprint 40 pre-release characterization on the Kaggle Irrigation Need dataset
+(270k-row test set, 53 features, 8 categoricals, 3-class with rare High at 3.18%, balanced
+accuracy metric) decomposes the gap as follows:
+
+| Component | Disagreement rows | Rare-class shift | Share of total |
+|---|---|---|---|
+| CPU seed-noise floor (irreducible) | ~88 | ~5.6 | 39% / 9% |
+| MLX architectural floor (numeric path) | ~53 | ~6.4 | 24% / 10% |
+| Categorical-encoding asymmetry (CTR RNG ordering) | ~82 | ~52 | 37% / **81%** |
+| **Total observed CPU vs MLX, with categoricals** | **223** | **64** | 100% |
+
+In headline terms: CatBoost-CPU 0.95994 vs CatBoost-MLX 0.95710 balanced accuracy (a
+0.28pp gap) is **39% pure seed noise + 24% architectural floor + 37% categorical-
+attributable**. The rare-class High asymmetry that drives the metric is **81% attributable
+to a single mechanism class — CTR RNG ordering** — and the remaining components are
+bounded by CatBoost-CPU's own seed-noise envelope.
+
+**Numeric-only parity guarantee**: workloads trained with `cat_features=[]` (all features
+numeric) converge to within architectural floor only — **99.948% prediction agreement,
+mean absolute probability difference 2.2e-3, no rare-class skew**. If your pipeline can
+one-hot or pre-encode categoricals before training, MLX agreement with CPU will be at
+this tighter envelope.
+
+**Reproducibility**: see `docs/sprint40/pre_lane_check/FINDING.md` for the full method,
+`scripts/exp2_no_cat_features.py` and `exp3_cpu_noise_floor.py` for the experiments,
+and `results/exp{2,3}_*.json` for the machine-readable summaries. All numbers above are
+reproducible at fixed seed under `RS=0` + `bootstrap_type=No`.
 
 ## Troubleshooting
 
