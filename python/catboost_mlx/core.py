@@ -629,10 +629,19 @@ class CatBoostMLX(BaseEstimator):
                 raise ValueError(
                     f"max_leaves must be an integer >= 2, got {self.max_leaves!r}"
                 )
-        if self.bootstrap_type not in ("no", "bayesian", "bernoulli", "mvs"):
+        # Accept any case (e.g. 'No' from CatBoost-CPU users). Normalize to
+        # lowercase for downstream CLI passthrough and serialization.
+        if not isinstance(self.bootstrap_type, str):
             raise ValueError(
-                f"bootstrap_type must be one of 'no','bayesian','bernoulli','mvs', got {self.bootstrap_type!r}"
+                f"bootstrap_type must be a string, got {self.bootstrap_type!r}"
             )
+        bt_normalized = self.bootstrap_type.lower()
+        if bt_normalized not in ("no", "bayesian", "bernoulli", "mvs"):
+            raise ValueError(
+                f"bootstrap_type must be one of 'No','Bayesian','Bernoulli','MVS' "
+                f"(case-insensitive), got {self.bootstrap_type!r}"
+            )
+        self.bootstrap_type = bt_normalized
         if not isinstance(self.bagging_temperature, (int, float)) or not math.isfinite(self.bagging_temperature) or self.bagging_temperature < 0:
             raise ValueError(f"bagging_temperature must be a finite number >= 0, got {self.bagging_temperature!r}")
         if not isinstance(self.mvs_reg, (int, float)) or not math.isfinite(self.mvs_reg) or self.mvs_reg < 0:
