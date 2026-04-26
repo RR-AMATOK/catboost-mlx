@@ -12,7 +12,7 @@
 - **R8 (honest)**: 1.01× e2e vs S16 baseline. Unchanged.
 - **Open PRs**: pending close-out PR for `mlx/sprint-40-close-out`.
 - **Active DEC**: **DEC-046 ACCEPTED** (S40 lane lock); DEC-045 RESOLVED, DEC-044 WITHDRAWN, DEC-042/036/040 CLOSED.
-- **Open backlog (carry-forward)**: `mlx-perf-regression.yaml` chronic 0s failure (red since S36; not blocking but should be fixed); narrow Lane D CTR-RNG investigation (3-day kill-switch, optional per DEC-046); `predict()` 41× slowdown via subprocess; `bootstrap_type='No'` validator case sensitivity; #113 S31-T3-MEASURE re-run; #114 S31-T-CLEANUP; S31-T-LATENT-P11 (Logloss/Poisson/Tweedie); SA carry-forwards (SA-L1-S33 hard-coded paths, SA-L3-S30/SA-N2-S33 instrumentation env-var hardening, SA-I2-S29 #95 CLI exit wrap).
+- **Open backlog (carry-forward)**: narrow Lane D CTR-RNG investigation (3-day kill-switch, optional per DEC-046); `predict()` 41× slowdown via subprocess; `bootstrap_type='No'` validator case sensitivity; #113 S31-T3-MEASURE re-run; #114 S31-T-CLEANUP; S31-T-LATENT-P11 (Logloss/Poisson/Tweedie); SA carry-forwards (SA-L1-S33 hard-coded paths, SA-L3-S30/SA-N2-S33 instrumentation env-var hardening, SA-I2-S29 #95 CLI exit wrap). (`mlx-perf-regression.yaml` chronic 0s failure fixed inline in S40 close-out PR #37.)
 
 ## Sprint 40 — Lane B public release (IN PROGRESS)
 
