@@ -33,6 +33,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Optional
 
 from ._common import (
     DatasetMeta,
@@ -50,58 +51,64 @@ N_TEST = 500_000
 N_FEATURES = 28
 
 
-def _materialize_split(higgs_csv: Path, out_dir: Path) -> tuple[Path, Path]:
-    """Write train.csv and test.csv as actual files (~7 GB on disk).
-    Most users should NOT do this — runner scripts can stream from HIGGS.csv
-    directly using split.json offsets. This is here for completeness.
+def _materialize_subset(
+    higgs_csv: Path, out_dir: Path, n_train: int, n_test: int,
+) -> tuple[Path, Path]:
+    """Write train.csv (first n_train rows) + test.csv (next n_test rows)
+    with a header row. Used by both full-scale and subset materialization.
     """
     train_csv = out_dir / "train.csv"
     test_csv = out_dir / "test.csv"
+    feature_names = [f"f{i}" for i in range(N_FEATURES)]
+    header = "target," + ",".join(feature_names) + "\n"
 
-    print(f"  Writing train.csv (first {N_TRAIN:,} rows)...", file=sys.stderr)
+    print(f"  Writing train.csv (first {n_train:,} rows)...", file=sys.stderr)
     with open(higgs_csv) as src, open(train_csv, "w") as f:
-        # HIGGS.csv has no header; csv_train --target-col 0 handles raw layout.
-        # Add a header so the runner scripts can introspect it consistently.
-        feature_names = [f"f{i}" for i in range(N_FEATURES)]
-        f.write("target," + ",".join(feature_names) + "\n")
+        f.write(header)
         for i, line in enumerate(src):
-            if i >= N_TRAIN:
+            if i >= n_train:
                 break
             f.write(line)
 
-    print(f"  Writing test.csv (next {N_TEST:,} rows)...", file=sys.stderr)
+    print(f"  Writing test.csv (next {n_test:,} rows)...", file=sys.stderr)
     with open(higgs_csv) as src, open(test_csv, "w") as f:
-        feature_names = [f"f{i}" for i in range(N_FEATURES)]
-        f.write("target," + ",".join(feature_names) + "\n")
+        f.write(header)
         for i, line in enumerate(src):
-            if i < N_TRAIN:
+            if i < n_train:
                 continue
-            if i >= N_TRAIN + N_TEST:
+            if i >= n_train + n_test:
                 break
             f.write(line)
 
     return train_csv, test_csv
 
 
-def prepare(out_dir: Path, *, materialize: bool = False) -> DatasetMeta:
+def prepare(
+    out_dir: Path, *,
+    materialize: bool = False,
+    n_train: Optional[int] = None,
+    n_test: Optional[int] = None,
+) -> DatasetMeta:
+    """Prepare Higgs at full scale (default) or a subset (--n-train / --n-test).
+
+    Subset mode is useful for smoke-testing the runner pipeline on a tractable
+    fraction of the data; for the canonical training_speed/ comparison numbers
+    use the default (materialize the full 10.5M / 500k split).
+    """
     higgs_gz = out_dir / "HIGGS.csv.gz"
     higgs_csv = out_dir / "HIGGS.csv"
 
     download_if_missing(URL_GZ, higgs_gz, label="HIGGS.csv.gz (~2.7 GB)")
     gunzip_if_missing(higgs_gz, higgs_csv)
 
-    # Verify the decompressed file has the expected row count
-    print(f"  Verifying row count of {higgs_csv.name}...", file=sys.stderr)
-    n_rows = 0
-    with open(higgs_csv) as f:
-        for _ in f:
-            n_rows += 1
-            if n_rows > N_TOTAL:
-                break
-    if n_rows < N_TOTAL:
-        raise RuntimeError(
-            f"HIGGS.csv has only {n_rows:,} rows; expected {N_TOTAL:,}. "
-            f"Re-download the gz."
+    actual_n_train = n_train if n_train is not None else N_TRAIN
+    actual_n_test = n_test if n_test is not None else N_TEST
+    is_subset = (actual_n_train, actual_n_test) != (N_TRAIN, N_TEST)
+
+    if actual_n_train + actual_n_test > N_TOTAL:
+        raise ValueError(
+            f"n_train + n_test = {actual_n_train + actual_n_test:,} exceeds the "
+            f"Higgs total of {N_TOTAL:,} rows."
         )
 
     split_meta = {
@@ -110,39 +117,41 @@ def prepare(out_dir: Path, *, materialize: bool = False) -> DatasetMeta:
         "target_col": 0,
         "feature_cols": list(range(1, N_FEATURES + 1)),
         "train_start": 0,
-        "train_end": N_TRAIN,
-        "test_start": N_TRAIN,
-        "test_end": N_TRAIN + N_TEST,
+        "train_end": actual_n_train,
+        "test_start": actual_n_train,
+        "test_end": actual_n_train + actual_n_test,
+        "is_subset": is_subset,
     }
     (out_dir / "split.json").write_text(json.dumps(split_meta, indent=2))
 
     if materialize:
-        _materialize_split(higgs_csv, out_dir)
+        _materialize_subset(higgs_csv, out_dir, actual_n_train, actual_n_test)
 
+    suffix = " (SUBSET)" if is_subset else ""
     meta = DatasetMeta(
         name=NAME,
         task="classification",
         metric="logloss",
-        n_train=N_TRAIN,
-        n_test=N_TEST,
+        n_train=actual_n_train,
+        n_test=actual_n_test,
         n_features=N_FEATURES,
         cat_indices=[],
         target_col=0,
         notes=(
-            "UCI Higgs Boson, binary classification, all numeric. Standard split: "
-            f"first {N_TRAIN:,} rows train, next {N_TEST:,} rows test. Source CSV is "
-            f"~7.5 GB uncompressed; runner scripts should stream rather than fully "
-            f"materialize unless --materialize was passed."
+            f"UCI Higgs Boson{suffix}, binary classification, all numeric. "
+            f"Split: first {actual_n_train:,} rows train, next {actual_n_test:,} rows test. "
+            f"Canonical full-scale upstream split is {N_TRAIN:,} train / {N_TEST:,} test; "
+            f"this prep is{'' if not is_subset else ' a subset of'} that."
         ),
         source_url=URL_GZ,
     )
     meta.write(out_dir)
 
-    print(f"Higgs prepared:")
+    print(f"Higgs prepared{suffix}:")
     print(f"  out: {out_dir}")
     print(f"  train: {meta.n_train:,} rows  test: {meta.n_test:,} rows  features: {meta.n_features}")
     if not materialize:
-        print(f"  Streaming mode (split.json offsets); pass --materialize to write actual {N_FEATURES+1}-col CSVs.")
+        print(f"  Streaming mode (split.json offsets); pass --materialize to write CSVs.")
     return meta
 
 
@@ -150,12 +159,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--cache-root", default=None)
     parser.add_argument("--materialize", action="store_true",
-                        help="Write actual train.csv/test.csv files (~7 GB on disk).")
+                        help="Write actual train.csv/test.csv files (~7 GB on disk for full-scale).")
+    parser.add_argument("--n-train", type=int, default=None,
+                        help=f"Train rows (default: {N_TRAIN:,}). Use a smaller value for "
+                             "a tractable subset; e.g. --n-train 1000000 --n-test 100000.")
+    parser.add_argument("--n-test", type=int, default=None,
+                        help=f"Test rows (default: {N_TEST:,}).")
     args = parser.parse_args()
 
     out_dir = cache_dir(NAME, root=Path(args.cache_root) if args.cache_root else None)
     try:
-        prepare(out_dir, materialize=args.materialize)
+        prepare(out_dir, materialize=args.materialize,
+                n_train=args.n_train, n_test=args.n_test)
     except Exception as exc:
         print(f"FAILED: {exc}", file=sys.stderr)
         return 1
