@@ -884,14 +884,7 @@ drift "residual mechanism" that was localized in Sprint 38 (DEC-045) to a harnes
 configuration mismatch — comparison scripts were invoking CPU with `RS=0` while leaving
 MLX at the default `RS=1.0`. The asymmetric configuration produced phantom drift that
 appeared seed-stable. With matched configuration, the drift collapses to near-zero. See
-`docs/sprint38/probe-q/PHASE-2-FINDING.md` and DEC-045 for the full root-cause analysis.
-
-See `docs/sprint38/probe-g/FINDING.md` and #130 (S38-LG-SMALL-N-RESIDUAL) for the ongoing
-investigation.
-
-For production use with `Lossguide + Cosine`, use N >= 10k or validate drift against CPU
-CatBoost on your specific dataset. The empirical N* boundary (where drift crosses 2%) is
-approximately N = 19,000.
+`docs/sprint38/probe-q/PHASE-2-FINDING.md` (DEC-045) for the full root-cause analysis.
 
 ## Troubleshooting
 
