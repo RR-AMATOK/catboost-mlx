@@ -38,7 +38,10 @@
 > PR (initial run hung at ~15% on a `csv_train` subprocess for 27 min — flaky
 > GitHub-hosted M1; same commits passed at 4m45s on the push event). Pre-existing
 > chronic `mlx-perf-regression.yaml` 0s failure (red since S36, did not block PRs
-> #32–#35) carried forward — separate housekeeping needed.
+> #32–#36) **fixed in close-out PR #37** — root cause was a job-level `if: runner.os
+> == 'macOS'` blocking workflow startup per current GitHub Actions context schema
+> (runner context only valid in steps); `runs-on: macos-14` already constrains the
+> platform.
 >
 > **Next-session entry points** (none blocking, all optional):
 > 1. **GitHub Release v0.5.0** — first public Release on `RR-AMATOK/catboost-mlx`. Tag
@@ -46,12 +49,11 @@
 > 2. **Narrow Lane D investigation** (CTR RNG ordering alignment) — optional 3-day
 >    post-release sprint per DEC-046. Sole isolatable mechanism with majority
 >    contribution to the rare-class asymmetry.
-> 3. **`mlx-perf-regression.yaml` chronic-flake fix** — workflow has been red since
->    S36 on every push (failure at 0s). Either restore the baseline / fix the YAML or
->    retire the gate if the baseline is stale beyond useful comparison.
-> 4. **Minor polish gaps** noted in DEC-046: 41× MLX `predict()` slowdown via
+> 3. **Minor polish gaps** noted in DEC-046: 41× MLX `predict()` slowdown via
 >    subprocess (nanobind path unaffected), `bootstrap_type='No'` validator case
 >    sensitivity.
+>
+> (`mlx-perf-regression.yaml` chronic-flake fixed inline in close-out PR #37.)
 >
 > **Pre-lane-check artifacts** (master `96ed224b35`, under `docs/sprint40/pre_lane_check/`):
 > `FINDING.md`, `scripts/exp{2,3}_*.py`, `results/exp{2,3}_*.json`, `results/exp{2,3}_run.log`.

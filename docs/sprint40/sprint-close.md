@@ -103,15 +103,49 @@ Companion documents:
 
 ---
 
-## CI Status at Merge
+## CI Status at Merge (PR #36)
 
 | Workflow | PR Run | Push Run (final commit) | Notes |
 |---|---|---|---|
 | Compile csv_train (Apple Silicon) | pass (47s) | pass (50s) | Clean |
 | MLX Python Test Suite (macos-14, py3.13) | pass after one re-run | pass (4m45s) | Initial PR run hung at ~15% on `csv_train` subprocess for 27 min then runner cancellation; flaky GitHub-hosted M1. Push run on same commits passed at 4m45s. Re-run on PR passed. |
-| `mlx-perf-regression.yaml` | failure (0s) | failure (0s) | **Pre-existing chronic flake** since at least S36 (April 25). Failed at 0s on master merges of PR #32, #33, #34, #35 too. Not introduced by S40. Should be addressed by a separate housekeeping pass. |
+| `mlx-perf-regression.yaml` | failure (0s) | failure (0s) | **Pre-existing chronic flake** since at least S36 (April 25). Failed at 0s on master merges of PR #32, #33, #34, #35 too. Not introduced by S40. Fixed in close-out PR #37 — see "Close-out fix" section below. |
 
-No real failures; merged on the same evidentiary basis as the prior 4 PRs.
+No real failures at PR #36 merge; merged on the same evidentiary basis as the prior 4 PRs.
+
+## Close-out fix — `mlx-perf-regression.yaml` chronic 0s failure RESOLVED
+
+After the user noted the perf-regression workflow was failing on the close-out PR
+#37, root-causing showed it had been failing at 0s on every push since at least
+S36 — across 11+ runs including the master merges of PR #32, #33, #34, #35, #36.
+
+**Root cause** (one line, line 62 of `.github/workflows/mlx-perf-regression.yaml`):
+
+```yaml
+if: runner.os == 'macOS'
+```
+
+GitHub Actions tightened context validation: the `runner` context is only
+available inside steps, not at the job level. Available at job level: `github`,
+`inputs`, `needs`, `vars`. `actionlint` 1.7.12 explicitly flags:
+
+> context "runner" is not allowed here. available contexts are "github",
+> "inputs", "needs", "vars".
+
+This is the source of GitHub's "This run likely failed because of a workflow
+file issue." 0s startup failure. None of our PRs touched this workflow —
+the schema validator simply tightened on GitHub's side and the previously-tolerated
+`runner` reference at the job level became a hard reject.
+
+**Fix**: removed the redundant `if: runner.os == 'macOS'` line. The workflow's
+own comment already noted it was "belt-and-suspenders" since `runs-on: macos-14`
+already constrains the platform; the platform constraint is fully preserved.
+Comment refreshed to explain why a job-level `if: runner.os` cannot be
+re-added.
+
+After the fix, `actionlint` reports zero error-level issues on the workflow
+(only two pre-existing SC2086 INFO-level shellcheck warnings on shell variable
+quoting in the C++ build step, which are non-blocking).
 
 ---
 
@@ -163,10 +197,10 @@ S40 closes with master at `96ed224b35`. No active sprint branch (until close-out
 2. **Narrow Lane D investigation** (CTR RNG ordering alignment) — optional 3-day
    post-release sprint per DEC-046. Goal: close the rare-class asymmetry attributable
    to M2; the only isolatable mechanism with majority contribution.
-3. **`mlx-perf-regression.yaml` chronic flake** — needs a housekeeping pass to either
-   fix the workflow YAML / restore the baseline file, or remove the gate if the baseline
-   is stale beyond useful comparison. Has been red on every push since S36.
-4. **Address minor polish gaps** noted in DEC-046 implication table: predict slowdown,
+3. **Address minor polish gaps** noted in DEC-046 implication table: predict slowdown,
    bootstrap_type case sensitivity.
+
+(`mlx-perf-regression.yaml` chronic flake fixed inline in this close-out PR — see
+"Close-out fix" section above.)
 
 None of these block any other work; S40's deliverable (v0.5.0 source-of-truth) is shipped.
