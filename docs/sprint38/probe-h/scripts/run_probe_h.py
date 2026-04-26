@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# HISTORICAL: PROBE_H_INSTRUMENT block removed in S39 (DEC-044 withdrawn). This script preserved as historical record. Re-running requires restoring the source block.
 """
 S38-PROBE-H: Per-side cosNum/cosDen capture at iter=1 for formula-divergence localisation.
 

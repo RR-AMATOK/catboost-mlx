@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# HISTORICAL: PROBE_H_INSTRUMENT block removed in S39 (DEC-044 withdrawn). This script preserved as historical record. Re-running requires restoring the source block.
 # Build csv_train_probe_h for S38-PROBE-H (per-side cosNum/cosDen capture at iter=1).
 #
 # Compile-time gates:
