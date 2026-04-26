@@ -2,6 +2,90 @@
 
 > Coverage: Sprints 0–15 reconstructed from git log on 2026-04-15. Sprint 16+ is source of truth.
 
+## 2026-04-26 — Sprint 40: Lane B v0.5.0 public release (DEC-046)
+
+Branches: `mlx/sprint-40-lane-b-release` (4 commits, merged via PR #36 at master
+`96ed224b35`) + `mlx/sprint-40-close-out` (close-out doc + state updates).
+No production code changes. No kernel changes. Kernel sources md5
+`9edaef45b99b9db3e2717da93800e76f` unchanged from S30 → S40.
+
+### Commits (4 on lane-b-release)
+
+| SHA | Description |
+|-----|-------------|
+| `08eaa014c8` | Pre-lane-check FINDING + scripts + results (3-experiment decomposition) |
+| `8df65d0820` | README — When-to-use positioning + DEC-046 Known Limitations entries |
+| `c07f01e700` | Bump 0.4.0 → 0.5.0 + CHANGELOG v0.5.0 release notes |
+| `0e25bd7d75` | State — DEC-046 lane lock + HANDOFF/TODOS + LESSONS Cross-Runtime Triage |
+
+### Headline finding — Real-world gap fully decomposed
+
+Three pre-decision experiments on the irrigation Kaggle dataset (270k rows, 53 features,
+8 categoricals, 3-class with rare High at 3.18%, balanced accuracy metric) produced a
+complete decomposition of the 0.28pp CPU-vs-MLX gap.
+
+| Comparison | Disagreements | Probability MAD | High-class shift |
+|---|---|---|---|
+| CPU vs CPU (5 seeds, 10 pairs mean) | 88.2 | 9.5e-4 | 5.6 |
+| CPU vs MLX, no categoricals | 141 | 2.2e-3 | 12 |
+| CPU vs MLX, with categoricals (baseline) | 223 | 3.8e-3 | 64 |
+
+Decomposition: **39% pure CPU seed-noise + 24% MLX architectural floor + 37% categorical-
+encoding asymmetry**. The rare-class High shift driving the metric is **81% attributable
+to a single mechanism — CTR RNG ordering**. Mathematician's prior (M2 dominant) confirmed.
+
+### Decision recorded — DEC-046
+
+S40 lane lock: ship CatBoost-MLX v0.5.0 as a *characterized-difference Apple Silicon
+CatBoost-Plain port* under the visionary's "RS=0 deterministic moat" framing. Compete vs
+LightGBM/XGBoost on (deterministic + fast + unified-memory + Apple-native), not vs
+CatBoost-CPU on byte-faithfulness.
+
+Out-of-scope deferrals:
+- M1/M3/M4 mechanism investigation — bounded contribution, no open question requires it.
+- CTR RNG ordering alignment fix — narrow optional Lane D, 3-day kill-switch post-release.
+- `boosting_type='Ordered'` implementation — major future work, scope post-v0.6.x.
+
+### Documentation deliverables
+
+- `catboost/mlx/README.md`: new "When to use this backend" positioning section between
+  title and Feature Status; new Known Limitations entries for Ordered-Boosting absence
+  and DEC-046 real-world cross-runtime characterization with 3-row decomposition table
+  and `cat_features=[]` parity guarantee (99.948% agreement, MAD 2.2e-3, no rare-class
+  skew).
+- `python/CHANGELOG.md`: new `[0.5.0] - 2026-04-26` section covering DEC-036/038/039/042/
+  045/046, BUG-007, Cosine across all 3 grow policies — ~26 sprints since 0.4.0.
+- `.claude/state/LESSONS-LEARNED.md`: new § Cross-Runtime Triage methodology recording
+  the 3-experiment decomposition as a release-readiness filter for cross-runtime ML
+  port residuals; cross-project applicability noted.
+- `docs/sprint40/pre_lane_check/`: FINDING.md + scripts (exp2_no_cat_features.py,
+  exp3_cpu_noise_floor.py) + results (JSON + run logs).
+- `docs/sprint40/sprint-close.md`: this sprint close-out.
+
+### Version bump
+
+`python/pyproject.toml` and `python/catboost_mlx/__init__.py`: 0.4.0 → 0.5.0. The 0.4.0
+CHANGELOG entry (Sprint 12-14, 2026-04-12) was never tagged as a GitHub Release;
+0.5.0 is the first public Release on `RR-AMATOK/catboost-mlx` (pending optional
+`gh release create v0.5.0` follow-on, not auto-cut from this sprint).
+
+### CI status at merge
+
+C++ build green (47s/50s on PR/push respectively). Python test suite required one
+re-run on the PR (initial run hung at ~15% on a `csv_train` subprocess for 27 min;
+GitHub-hosted M1 flake — the same commits passed at 4m45s on the push event). Pre-
+existing chronic `mlx-perf-regression.yaml` 0s failure carried forward (red since S36
+on every push, did not block PRs #32–#35); requires a separate housekeeping pass.
+
+### Source of truth pointers
+
+- Authoritative writeup: `docs/sprint40/pre_lane_check/FINDING.md`
+- Decision record: `.claude/state/DECISIONS.md` § DEC-046
+- Sprint close: `docs/sprint40/sprint-close.md`
+- External source data: `Predicting Irrigation Need/submissions/catboost_{cpu,mlx}_v8_rs0_submission.csv` (Kaggle balanced-accuracy 0.95994 / 0.95710)
+
+---
+
 ## 2026-04-25 — Sprint 39: Housekeeping after S38 RESOLVED (DEC-045)
 
 Branch: `mlx/sprint-39-housekeeping`. No production code changes. No kernel changes.

@@ -1,42 +1,62 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-04-26 (**S40 IN PROGRESS — Lane B locked**). Branch
-> `mlx/sprint-40-lane-b-release` cut from master `02c98948bf`. Pre-lane-check
-> experiments complete (irrigation real-data 3-experiment decomposition):
-> arithmetic-anomaly resolved (metric was balanced accuracy, not plain accuracy);
-> M2 (CTR RNG ordering) confirmed dominant driver of rare-class asymmetry (81% of
-> the 64-row High shift); CPU 5-seed noise floor establishes ~88-disagreement /
-> 5.6-High-shift envelope. The 0.28pp irrigation gap is now fully decomposed:
-> 39% seed noise + 24% architectural floor + 37% CTR-attributable. **Decision
-> recorded as DEC-046**. See `docs/sprint40/pre_lane_check/FINDING.md`.
+> Last updated: 2026-04-26 (**S40 SHIPPED — v0.5.0 public release**).
+> PR #36 merged at master `96ed224b35`. Authoritative close-out doc:
+> `docs/sprint40/sprint-close.md`. Active branch `mlx/sprint-40-close-out`
+> carries the post-merge close-out + state updates only — no further sprint work.
 >
-> ## Sprint 40 in-flight
+> ## Sprint 40 close-out (PR #36 MERGED 2026-04-26)
 >
-> **Goal**: ship v0.5.0 as a *characterized-difference Apple Silicon CatBoost-Plain port*,
-> framed under "RS=0 deterministic moat" positioning (vs LightGBM/XGBoost on Apple
-> Silicon, not vs CatBoost-CPU on byte-faithfulness).
+> **Outcome**: CatBoost-MLX v0.5.0 shipped as a *characterized-difference Apple Silicon
+> CatBoost-Plain port* under the "RS=0 deterministic moat" framing. DEC-046 records the
+> lane lock. Three pre-decision experiments produced a full empirical decomposition of
+> the 0.28pp real-world gap on irrigation Kaggle data:
 >
-> **Sprint scope**:
-> 1. README rewrite — Known Limitations section adopts the 3-row decomposition table;
->    `cat_features=[]` parity guarantee documented; Ordered Boosting absence stated.
-> 2. Version bump 0.2.0 → 0.3.0 in `python/catboost_mlx/__init__.py`.
-> 3. CHANGELOG-DEV release notes for v0.5.0.
-> 4. LESSONS-LEARNED entry on the decomposition methodology (seed-noise + arch-floor +
->    cat-attributable) — applicable to any future cross-runtime ML port.
-> 5. Optional GitHub Release after PR merge.
+> | Component | Disagreements | High-class shift | Share |
+> |---|---|---|---|
+> | CPU seed-noise floor (irreducible) | ~88 | ~5.6 | 39% / 9% |
+> | MLX architectural floor (numeric path) | ~53 | ~6.4 | 24% / 10% |
+> | Categorical-encoding asymmetry (M2 CTR RNG) | ~82 | ~52 | 37% / **81%** |
+> | **Total** | **223** | **64** | 100% |
 >
-> **Out of scope (deferred)**:
-> - M1/M3/M4 mechanism investigation — bounded contribution, no open question requires it.
-> - CTR RNG ordering alignment fix — 3-day Lane D sprint scoped post-release if pursued.
-> - Ordered Boosting implementation — future major work.
+> Mathematician's M2 prior empirically confirmed (81% of rare-class shift attributable
+> to CTR RNG ordering). Numeric-only workloads (`cat_features=[]`) ship a parity guarantee
+> at 99.948% / MAD 2.2e-3 / no rare-class skew.
 >
-> **Pre-lane-check artifacts** (committed under `docs/sprint40/pre_lane_check/`):
-> - `FINDING.md` — authoritative writeup
-> - `scripts/exp2_no_cat_features.py`, `exp3_cpu_noise_floor.py`
-> - `results/exp2_no_cat_features.json`, `exp3_cpu_noise_floor.json`
-> - `results/exp2_run.log`, `exp3_run.log`
+> **Code state (master `96ed224b35`)**:
+> - No source code changes in S40. Production kernel v5 (`784f82a891`) byte-identical
+>   from S30 through S40 (md5 `9edaef45b99b9db3e2717da93800e76f`).
+> - Version bumped 0.4.0 → 0.5.0 (`python/pyproject.toml`, `python/catboost_mlx/__init__.py`).
+> - CHANGELOG entry `[0.5.0] - 2026-04-26` added covering ~26 sprints since 0.4.0
+>   (DEC-036/038/039/042/045/046, BUG-007, Cosine across all 3 grow policies).
+> - README: new "When to use this backend" section + Ordered-Boosting + DEC-046 Known
+>   Limitations entries.
+> - LESSONS-LEARNED: new § Cross-Runtime Triage methodology (3-experiment decomposition
+>   as release-readiness filter; cross-project applicability).
 >
-> **Source data referenced** (external): `Predicting Irrigation Need/submissions/catboost_{cpu,mlx}_v8_rs0_submission.csv` produced by `09_cpu_vs_mlx_submissions.ipynb` at RS=0.
+> **CI status at merge**: C++ build green; Python test suite required one re-run on the
+> PR (initial run hung at ~15% on a `csv_train` subprocess for 27 min — flaky
+> GitHub-hosted M1; same commits passed at 4m45s on the push event). Pre-existing
+> chronic `mlx-perf-regression.yaml` 0s failure (red since S36, did not block PRs
+> #32–#35) carried forward — separate housekeeping needed.
+>
+> **Next-session entry points** (none blocking, all optional):
+> 1. **GitHub Release v0.5.0** — first public Release on `RR-AMATOK/catboost-mlx`. Tag
+>    and notes drawn from `python/CHANGELOG.md` [0.5.0]. Pending user confirmation.
+> 2. **Narrow Lane D investigation** (CTR RNG ordering alignment) — optional 3-day
+>    post-release sprint per DEC-046. Sole isolatable mechanism with majority
+>    contribution to the rare-class asymmetry.
+> 3. **`mlx-perf-regression.yaml` chronic-flake fix** — workflow has been red since
+>    S36 on every push (failure at 0s). Either restore the baseline / fix the YAML or
+>    retire the gate if the baseline is stale beyond useful comparison.
+> 4. **Minor polish gaps** noted in DEC-046: 41× MLX `predict()` slowdown via
+>    subprocess (nanobind path unaffected), `bootstrap_type='No'` validator case
+>    sensitivity.
+>
+> **Pre-lane-check artifacts** (master `96ed224b35`, under `docs/sprint40/pre_lane_check/`):
+> `FINDING.md`, `scripts/exp{2,3}_*.py`, `results/exp{2,3}_*.json`, `results/exp{2,3}_run.log`.
+>
+> **Source data referenced** (external): `Predicting Irrigation Need/submissions/catboost_{cpu,mlx}_v8_rs0_submission.csv` produced by `09_cpu_vs_mlx_submissions.ipynb` at RS=0. Kaggle balanced-accuracy 0.95994 / 0.95710.
 >
 > ## Sprint 39 close-out (PR #35 MERGED 2026-04-25)
 >
