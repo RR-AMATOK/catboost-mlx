@@ -804,6 +804,17 @@ class TestValidation:
         with pytest.raises(ValueError, match="bootstrap_type"):
             CatBoostMLX(iterations=1, bootstrap_type="invalid").fit(X, y)
 
+    def test_bootstrap_type_case_insensitive(self):
+        # CatBoost-CPU users routinely pass 'No', 'Bayesian', etc. (capitalized)
+        # — validator must accept any case and normalize to lowercase internally.
+        for raw in ("No", "NO", "no", "Bayesian", "BAYESIAN", "Bernoulli", "MVS"):
+            m = CatBoostMLX(iterations=1, bootstrap_type=raw)
+            m._validate_params()
+            assert m.bootstrap_type == raw.lower(), (
+                f"bootstrap_type={raw!r} should normalize to {raw.lower()!r}, "
+                f"got {m.bootstrap_type!r}"
+            )
+
     def test_invalid_monotone_constraint_values(self):
         X, y = self._dummy_data()
         with pytest.raises(ValueError, match="monotone_constraints"):

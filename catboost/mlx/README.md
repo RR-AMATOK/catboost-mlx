@@ -24,6 +24,105 @@ fully deterministic, fast, and unified-memory native. The decision matrix:
   to fp32 precision on synthetic anchors. For real-world classification with categoricals
   expect ~99.92% prediction agreement (DEC-046).
 
+## Installation & Quick Start
+
+> CatBoost-MLX is not yet on PyPI. The supported install path today is **from source**
+> (clone the repo) or from the **v0.5.0 GitHub Release** tarball. PyPI publication is
+> tracked for a future release.
+
+### One-time prerequisites
+
+Apple Silicon Mac (M1/M2/M3/M4), macOS 14+, Xcode 15+, Python 3.9+.
+
+```bash
+# 1. Install MLX (the only external runtime dependency)
+brew install mlx
+
+# 2. Verify
+brew info mlx | head -2
+# Expect: mlx: stable X.Y.Z (bottled), installed at /opt/homebrew/Cellar/mlx/X.Y.Z
+```
+
+### Install CatBoost-MLX from source
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/RR-AMATOK/catboost-mlx.git
+cd catboost-mlx
+
+# 2. (Optional) check out a specific release tag
+git checkout v0.5.0
+
+# 3. Compile the standalone CLI binaries (csv_train + csv_predict)
+MLX_PREFIX="$(brew --prefix mlx)"
+CFLAGS="-std=c++17 -O2 -I. -I${MLX_PREFIX}/include -L${MLX_PREFIX}/lib -lmlx -framework Metal -framework Foundation -Wno-c++20-extensions"
+clang++ ${CFLAGS} catboost/mlx/tests/csv_train.cpp   -o csv_train
+clang++ ${CFLAGS} catboost/mlx/tests/csv_predict.cpp -o csv_predict
+
+# 4. Bundle the binaries into the Python package and install
+mkdir -p python/catboost_mlx/bin
+cp csv_train csv_predict python/catboost_mlx/bin/
+pip install -e python/
+
+# (Optional) install with sklearn/ONNX/CoreML extras
+# pip install -e "python/[all]"
+```
+
+### 30-second smoke test
+
+After installing, verify the Python package works end-to-end on synthetic data:
+
+```python
+import numpy as np
+from catboost_mlx import CatBoostMLXRegressor
+
+rng = np.random.default_rng(42)
+X = rng.standard_normal((1000, 4)).astype(np.float64)
+y = X[:, 0] + 0.5 * X[:, 1] - 0.3 * X[:, 2] + rng.standard_normal(1000) * 0.1
+
+model = CatBoostMLXRegressor(
+    iterations=100, depth=6, learning_rate=0.1,
+    random_strength=0,        # deterministic-greedy mode (recommended for reproducibility)
+    bootstrap_type="No",      # case-insensitive — 'No', 'NO', 'no' all accepted
+    verbose=False,
+)
+model.fit(X, y)
+
+pred = model.predict(X[:5])
+print(f"OK — first 5 predictions: {pred.round(3)}")
+print(f"Feature importance: {model.get_feature_importance()}")
+```
+
+If you see two lines of output starting with `OK — ...`, the install is working.
+
+### Verifying parity against CatBoost-CPU (optional)
+
+If you also have `catboost` installed (`pip install catboost`) and want to confirm the
+deterministic-greedy contract, train both at matched `RandomStrength=0` and `bootstrap_type=No`
+and compare predictions — synthetic-anchor anchors agree to fp32 precision (DEC-045);
+real-world workloads with categoricals are characterized at ~99.92% agreement with bounded
+rare-class asymmetry (DEC-046; see § Known Limitations).
+
+### CLI quick test (no Python)
+
+If you only want the standalone CLI:
+
+```bash
+cat > test.csv << 'EOF'
+x1,x2,target
+0.1,0.2,0
+0.3,0.1,0
+0.6,0.7,1
+0.8,0.9,1
+0.9,0.8,1
+0.2,0.3,0
+EOF
+./csv_train test.csv --loss logloss --iterations 50 --verbose
+```
+
+For full installation details (troubleshooting, MLX from source, build-script automation),
+see § Building the Standalone CSV Training Tool below and § Python Bindings.
+
 ## Feature Status
 
 | Category | Feature | Status |
@@ -590,8 +689,12 @@ The `catboost_mlx` Python package wraps the compiled CLI binaries.
 
 ### Installation
 
+> See **§ Installation & Quick Start** near the top of this document for the canonical
+> end-to-end install path (clone → build binaries → `pip install -e python/`). The
+> recap below is the minimum command list assuming binaries are already built.
+
 ```bash
-# Build the binaries first (see above)
+# Build the binaries first (see § Installation & Quick Start above)
 # Then install the Python package
 cd catboost-mlx
 pip install -e python/
@@ -876,6 +979,33 @@ The first Metal kernel dispatch per process triggers JIT shader compilation. Exp
 
 ### Python API uses subprocess
 `CatBoostMLXRegressor`/`CatBoostMLXClassifier` invoke `csv_train` and `csv_predict` via subprocess, passing data through temporary CSV files. This adds roughly 50 ms per `fit()`/`predict()` call. The C++ library path (`mlx_boosting.h/cpp`) is not affected.
+
+**`predict()` performance — two paths, asymmetric latency.** The Python `predict()`
+implementation chooses between two backends at call time:
+
+| Path | Triggered when | Throughput (50k rows × 12 features, 100-tree model, M-series) | Notes |
+|---|---|---|---|
+| **In-process** | `cat_features=[]` (numeric-only model) | ~940k rows/s (~53 ms / 50k rows) | NumPy tree evaluator at `python/catboost_mlx/_predict_utils.py`. Within ~1.5× of CatBoost-CPU's `predict()` throughput. |
+| **Subprocess (csv_predict)** | model has any categorical features (CTR encoding required) | ~111k rows/s (~450 ms / 50k rows) | ~58% of subprocess latency is CSV serialization of input data; ~35% is binary load + Metal init + actual predict. CSV-write time scales linearly in `n_rows × n_features`. |
+
+The cross-runtime slowdown ratio is **~8× at 50k×12 and grows with feature count** —
+the irrigation Kaggle benchmark (270k × 53 features, 6 chunks of 50k) measured 41×
+because CSV serialization dominated at that footprint.
+
+**Workarounds for subprocess-path predict latency**:
+
+1. **Pre-encode categoricals** to numeric (one-hot, target-encode at training time
+   with sklearn's `TargetEncoder`, etc.) and train with `cat_features=[]`. This routes
+   `predict()` through the in-process path. **Recommended when predict latency matters**.
+2. **Batch your prediction calls** — subprocess overhead is per-call, not per-row, so
+   one `predict(X_full)` is materially faster than `predict(X_chunk)` × N calls.
+3. **Use the underlying C++ library directly** via `mlx_boosting.h` if you're embedding
+   the model — bypasses Python and CSV entirely.
+
+Closing the categorical-predict gap to in-process speed requires either (a) a binary IPC
+format between `csv_predict` and Python (replacing CSV serialization), or (b) porting the
+C++ CTR-application logic to Python so the `_predict_inprocess` path can handle
+categoricals. Both are tracked as future engineering scope; neither is on a current sprint.
 
 ### Feature combinations (crosses) not implemented
 CatBoost's automatic feature cross search is not yet ported.

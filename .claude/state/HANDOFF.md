@@ -1,11 +1,57 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-04-26 (**S40 SHIPPED — v0.5.0 public release**).
-> PR #36 merged at master `96ed224b35`. Authoritative close-out doc:
-> `docs/sprint40/sprint-close.md`. Active branch `mlx/sprint-40-close-out`
-> carries the post-merge close-out + state updates only — no further sprint work.
+> Last updated: 2026-04-26 (**S41 READY-TO-CLOSE — Polish-to-Trust E1**).
+> Branch `mlx/sprint-41-polish` carries 6 commits (sprint plan + T1–T5 + close-out).
+> v0.5.0 (master `aac00046a1`) is the production tag; v0.5.1 candidate stages on
+> this branch pending PR merge. No source code changes; documentation, validator
+> case-insensitivity, profile, audit, and staged upstream-RFC refresh.
 >
-> ## Sprint 40 close-out (PR #36 MERGED 2026-04-26)
+> ## Sprint 41 close-out (PR pending)
+>
+> **Outcome**: every paper-cut a v0.5.0 user could hit on the happy path is closed
+> or documented; the README is now the single document a new user needs;
+> upstream RFC is staged but not posted; PyPI publish-readiness audited (one
+> must-fix gate at publish time, otherwise GREEN).
+>
+> **Code state (master `aac00046a1` + branch `mlx/sprint-41-polish`)**:
+> - `bootstrap_type` validator now case-insensitive (`'No'`, `'NO'`, `'no'`,
+>   `'Bayesian'`, etc. all accepted; normalized to lowercase internally) — matches
+>   CatBoost-CPU UX. New test in `tests/test_basic.py`.
+> - README has a top-of-document **§ Installation & Quick Start** with prerequisites,
+>   source install, 30-second smoke test, optional CPU parity verification, CLI quick
+>   test. Smoke test verified end-to-end on dev install AND on a fresh-venv wheel install.
+> - README **§ Python API uses subprocess** rewritten with profile-derived two-row
+>   mechanism table (in-process ~940k rows/s vs subprocess ~111k rows/s at 50k×12),
+>   phase breakdown (58% CSV write dominates), three workarounds (pre-encode cats,
+>   batch calls, embed via library path).
+> - PyPI publish-readiness: sdist + wheel build cleanly; sdist is hygienic (47 files,
+>   no secrets/state); fresh-venv wheel install passes smoke test. Must-fix at
+>   publish time: `MACOSX_DEPLOYMENT_TARGET=14.0` so wheel doesn't tag as
+>   `macosx_26_0_arm64` (host-OS artifact). Recorded in `docs/sprint41/T4-pypi-readiness.md`.
+> - Upstream RFC draft refreshed for post-S30/S40 reality (DEC-036/042/045/046 closures,
+>   v0.5.0 framing, characterized-difference positioning, five trigger conditions
+>   before submission). Status: STAGED — NOT POSTED.
+> - No source-of-truth code changes. No kernel changes. Production kernel v5
+>   (`784f82a891`) byte-identical from S30 → S41.
+>
+> **Authoritative records**:
+> - `docs/sprint41/sprint-plan.md` — sprint scope
+> - `docs/sprint41/sprint-close.md` — close-out (this sprint's record)
+> - `docs/sprint41/profile_predict.py`, `profile_output.txt` — T3 profile artifacts
+> - `docs/sprint41/T4-pypi-readiness.md` — T4 audit
+> - `docs/upstream_issue_draft.md` — staged RFC (T5)
+>
+> **Next-session priorities**:
+> 1. **Open close-out PR** for `mlx/sprint-41-polish` → master.
+> 2. **Optional v0.5.1 tag** post-merge — covers T1 (bootstrap_type fix), T3
+>    (predict() doc), T5 (RFC stage). Notes drawn from `docs/sprint41/sprint-close.md`.
+> 3. **Sprint 42 — Upstream Benchmark Adoption** — per ml-product-owner plan
+>    (2026-04-26 advisory). 5-dataset subset (Higgs depth 6, Epsilon, MSLR-WEB10K,
+>    Yahoo-LTR, Amazon), Pareto-frontier deliverable, ~1 sprint. The benchmark
+>    artifact becomes the cited backbone for both the staged upstream RFC and the
+>    eventual E3 launch when v0.6.0 ships Ordered Boosting.
+>
+> ## Sprint 40 close-out (PR #36 + #37 + #38 MERGED 2026-04-26)
 >
 > **Outcome**: CatBoost-MLX v0.5.0 shipped as a *characterized-difference Apple Silicon
 > CatBoost-Plain port* under the "RS=0 deterministic moat" framing. DEC-046 records the
