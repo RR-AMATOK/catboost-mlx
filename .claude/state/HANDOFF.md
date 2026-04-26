@@ -1,45 +1,70 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-04-26 (**S42 IN PROGRESS — Upstream Benchmark Adoption**).
-> Branch `mlx/sprint-42-benchmarks` cut from master `659ab3d17c` (post v0.5.1).
-> Theme: run upstream `catboost/benchmarks` suite against catboost-mlx, produce
-> Pareto-frontier deliverable, rebuild CI perf-regression gate against
-> runner-matched baselines (S41 carry-over).
+> Last updated: 2026-04-26 (**S42 READY-TO-CLOSE — Upstream Benchmark Adoption**).
+> Branch `mlx/sprint-42-benchmarks` carries 8 commits (T0–T5 + close-out). PR
+> pending. Two of five upstream datasets shipped (Adult + Higgs-1M); three
+> require user-action data acquisition. CI perf-regression gate retired from
+> S41 bridge mode and rebuilt as hardware-invariant speedup-ratio gate.
 >
-> ## Sprint 42 in-flight
+> ## Sprint 42 close-out (PR pending)
 >
-> **Goal**: produce defensible head-to-head numbers on the upstream-canonical GBDT
-> benchmark datasets, on Apple Silicon, across all 4 reference frameworks
-> (LightGBM, XGBoost, CatBoost-CPU, CatBoost-MLX). Output: `docs/benchmarks/v0.5.x-pareto.md`.
+> **Outcome**: `docs/benchmarks/v0.5.x-pareto.md` is live with two-dataset
+> head-to-head numbers (Adult, Higgs-1M) across 4 frameworks
+> (LightGBM, XGBoost, CatBoost-CPU, CatBoost-MLX), each at 3 seeds, on the same
+> M-series machine. The DEC-046 "numeric-only ⇒ bounded gap" claim is
+> empirically validated on a second independent dataset 30× larger than the
+> S40-era irrigation reference: MLX-vs-CPU logloss gap on Higgs (0 cats) is
+> +0.0012; on Adult (8 cats / 14 features) it is +0.1695, decomposed cleanly
+> per DEC-046 into 39% architectural-floor + 61% categorical-attributable.
 >
-> **Scope** (verified via gh API on `catboost/benchmarks` repo):
-> - 5 datasets — Higgs (training_speed, depth 6), Epsilon (training_speed), Adult
->   (quality_benchmarks), Amazon (quality_benchmarks, includes DEC-046 gap),
->   MSLR-WEB10K (ranking)
-> - 4 frameworks on same M-series machine (no comparison vs published A100 numbers)
-> - 3 seeds × 5 datasets × 4 frameworks
-> - Pareto-frontier scatter (x=wall-clock, y=metric) per dataset
-> - Carry-over: rebuild CI perf-regression gate (S41 left it in `continue-on-error: true`
->   bridge mode pending runner-matched baselines)
+> XGBoost (CPU hist) is the only point on the Pareto frontier on both
+> datasets — fastest train AND best logloss. The CatBoost family
+> (CPU + MLX) is consistently ~0.012 logloss behind LightGBM/XGBoost on
+> Higgs at 200 iterations; this is a known CatBoost characteristic at low
+> iter count, not MLX-specific (CPU CatBoost shows the same gap).
 >
-> **Out of reach** (deliberate):
-> - Click dataset (>16M rows; ComputePartitionLayout cap)
-> - Anything requiring `boosting_type='Ordered'`, `NewtonL2/Cosine`, `max_depth>6`
+> CI perf-regression gate (T4): wall-clock gate now compares CPU/MLX speedup
+> ratios instead of absolute MLX wall-clock — hardware-invariant.
+> `continue-on-error: false` restored; the S41-trigger case (4× uniformly
+> slower runner) now correctly passes (+0.0% Δ ratio); a real MLX +10%
+> regression correctly fires (+9.1% Δ). Histogram-stage gate retains
+> continue-on-error: true pending its own redesign.
 >
-> **Honest-publishing constraints**:
-> - Same machine for all 4 frameworks; no cross-hardware comparison
-> - Include Amazon (the DEC-046-affected dataset) with a footnote — don't cherry-pick
-> - Depth-6 against depth-6 only
+> **Code state (master `659ab3d17c` + branch `mlx/sprint-42-benchmarks`)**:
+> - No source code changes in S42. Production kernel v5 (`784f82a891`)
+>   byte-identical from S30 → S42.
+> - Benchmark infrastructure shipped under `benchmarks/upstream/`:
+>   5 dataset adapters + 4 framework runners + driver + aggregator + plot
+>   generator (~2700 lines total).
+> - 27 result JSONs (15 Adult including the no-cat variant, 12 Higgs-1M)
+>   under `benchmarks/upstream/results/`.
+> - Pareto-frontier writeup at `docs/benchmarks/v0.5.x-pareto.md`.
+> - `.github/workflows/mlx-perf-regression.yaml` redesigned T4.
 >
 > **Authoritative records**:
 > - Sprint plan: `docs/sprint42/sprint-plan.md`
-> - Adapters scaffold: `benchmarks/upstream/`
+> - Sprint close: `docs/sprint42/sprint-close.md`
+> - Pareto-frontier writeup: `docs/benchmarks/v0.5.x-pareto.md`
+> - Per-run JSONs: `benchmarks/upstream/results/<dataset>_<framework>_<seed>.json`
+>
+> **Next-session priorities** (none blocking, all optional):
+> 1. **Open close-out PR** for `mlx/sprint-42-benchmarks` → master.
+> 2. **Optional v0.5.2 tag** post-merge — covers benchmark suite + writeup +
+>    CI gate redesign. Notes drawn from `docs/sprint42/sprint-close.md`.
+> 3. **Run remaining 3 datasets** (Epsilon / Amazon / MSLR) once user
+>    completes data acquisition (Kaggle creds, Microsoft form, libsvm
+>    download).
+> 4. **Full 11M Higgs sweep** — data already on disk; needs ~hour compute
+>    window for the canonical upstream comparison.
+> 5. **Ordered Boosting (E2)** — strategist's v0.6.0 hero feature; ~5 sprints,
+>    major Metal kernel work; the gate to broad community-launch readiness.
 >
 > ## Sprint 41 close-out (PR #39 MERGED 2026-04-26)
 >
-> v0.5.1 GitHub Release published: <https://github.com/RR-AMATOK/catboost-mlx/releases/tag/v0.5.1>
-> Branch `mlx/sprint-41-polish` (7 commits) merged at master `659ab3d17c`. T1–T6 + perf-gate
-> bridge mode delivered; sprint-close doc at `docs/sprint41/sprint-close.md`.
+> v0.5.1 GitHub Release published. Branch `mlx/sprint-41-polish` (7 commits)
+> merged at master `659ab3d17c`. T1–T6 + perf-gate bridge mode delivered;
+> sprint-close doc at `docs/sprint41/sprint-close.md`. T4 carry-over (perf-
+> gate rebuild) closed in S42-T4.
 >
 > ## Sprint 41 close-out (originally documented)
 >

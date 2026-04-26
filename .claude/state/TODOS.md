@@ -1,22 +1,20 @@
 # Active Tasks — CatBoost-MLX
 
 > Coverage: Sprints 0–15 reconstructed from git/agent-memory on 2026-04-15. Sprint 16+ is source of truth.
-> Last header refresh: 2026-04-26 (S42 IN PROGRESS — Upstream Benchmark Adoption, branch `mlx/sprint-42-benchmarks`. T0 scaffolded; T1–T5 ahead. v0.5.1 GitHub Release published.)
+> Last header refresh: 2026-04-26 (S42 READY-TO-CLOSE — Upstream Benchmark Adoption. Branch `mlx/sprint-42-benchmarks` carries 8 commits T0–T5. PR pending. Adult + Higgs-1M shipped; perf-regression gate redesigned hardware-invariant.)
 
-## Sprint 42 — Upstream Benchmark Adoption — IN PROGRESS
+## Sprint 42 — Upstream Benchmark Adoption — READY-TO-CLOSE
 
-**Branch**: `mlx/sprint-42-benchmarks` (cut from master `659ab3d17c`)
-**Authoritative record**: `docs/sprint42/sprint-plan.md`
-**Goal**: defensible head-to-head numbers on upstream `catboost/benchmarks` datasets, M-series only, 4 frameworks (LightGBM, XGBoost, CatBoost-CPU, CatBoost-MLX). Pareto-frontier deliverable.
+**Branch**: `mlx/sprint-42-benchmarks` (8 commits, PR pending)
+**Authoritative record**: `docs/sprint42/sprint-close.md`
+**Outcome**: 2-of-5 upstream datasets shipped (Adult + Higgs-1M); DEC-046 numeric-only-bounded-gap claim cross-validated; perf-regression CI gate retired from S41 bridge mode and rebuilt as hardware-invariant speedup-ratio gate.
 
-**Target subset (5 datasets, gh-API verified)**: Higgs depth 6, Epsilon, Adult, Amazon (incl. DEC-046 gap with footnote), MSLR-WEB10K.
-
-- [x] **S42-T0 SCAFFOLD** — DONE 2026-04-26. Branch cut, sprint-plan.md, `benchmarks/upstream/` skeleton, HANDOFF/TODOS update.
-- [ ] **S42-T1 DATASET-ADAPTERS** — Per-dataset preprocessing scripts (raw → CSV + cat_features config). 1.5d.
-- [ ] **S42-T2 RUN-4-FRAMEWORK-BENCHMARKS** — LightGBM/XGBoost/CatBoost-CPU/CatBoost-MLX × 5 datasets × 3 seeds, on same M-series machine. ~2d wall-clock compute.
-- [ ] **S42-T3 PARETO-FRONTIER-WRITEUP** — `docs/benchmarks/v0.5.x-pareto.md` per-dataset scatter + tables + machine-readable JSON. 1.5d.
-- [ ] **S42-T4 PERF-GATE-REBUILD** — S41 carry-over: rebuild CI perf-regression gate against runner-matched baselines OR switch to relative-speedup measure. Restore `continue-on-error: false`. 1d.
-- [ ] **S42-T5 CLOSE-OUT** — sprint-close.md, state updates, optional v0.5.2 tag. 0.5d.
+- [x] **S42-T0 SCAFFOLD** — DONE 2026-04-26. Branch cut, sprint-plan.md, `benchmarks/upstream/` skeleton. Commit `1ba0d55edf`.
+- [x] **S42-T1 DATASET-ADAPTERS** — DONE 2026-04-26. 5 adapters + shared utilities (~1100 lines). Adult auto-downloads; Amazon/Higgs/Epsilon/MSLR with download instructions. Commits `13088f517a` + `fd00d1a321` (Higgs subset support).
+- [x] **S42-T2 RUN-4-FRAMEWORK-RUNNERS** — DONE 2026-04-26. LightGBM, XGBoost, CatBoost-CPU, CatBoost-MLX runners + driver. Validated end-to-end on Adult (12/12 runs across 3 seeds). Commit `4823b024e6`.
+- [x] **S42-T3 PARETO-FRONTIER-WRITEUP** — DONE 2026-04-26. `docs/benchmarks/v0.5.x-pareto.md` + aggregator + plot generator. Adult + Higgs-1M sweeps shipped with cross-dataset summary; DEC-046 decomposition applied to both. Commits `bee28d02c4` + `71ef53c54b`.
+- [x] **S42-T4 PERF-GATE-REBUILD** — DONE 2026-04-26. Wall-clock-vs-baseline replaced with hardware-invariant CPU/MLX speedup-ratio comparison. `continue-on-error: false` restored. Verified across 6 simulated scenarios incl. the actual S41-trigger case. Commit `4391cee586`.
+- [ ] **S42-T5 CLOSE-OUT** — sprint-close.md written; HANDOFF/TODOS/CHANGELOG-DEV updates pending in this commit; optional v0.5.2 tag post-merge.
 
 ## Sprint 41 — Polish-to-Trust (E1) — CLOSED 2026-04-26
 
@@ -30,35 +28,26 @@
 - [x] **S41-T5 UPSTREAM-RFC-DRAFT-REFRESH** — DONE 2026-04-26. `docs/upstream_issue_draft.md` refreshed for post-S30/S40 reality (DEC-036/042/045/046 closures, v0.5.0 framing, characterized-difference positioning, five trigger conditions before submission). STAGED — NOT POSTED. Commit `c08fa10cda`.
 - [ ] **S41-T6 CLOSE-OUT-PR-AND-V051-TAG** — `docs/sprint41/sprint-close.md` written; HANDOFF + TODOS updated; CHANGELOG-DEV session entry pending; close-out commit + push + PR pending; optional v0.5.1 tag post-merge.
 
-## Current state (2026-04-26, S42 kickoff)
+## Current state (2026-04-26, S42 close-out)
 
-- **Active branch**: `mlx/sprint-42-benchmarks` (cut from master `659ab3d17c`; 1 commit so far — scaffold).
+- **Active branch**: `mlx/sprint-42-benchmarks` (8 commits ahead of master `659ab3d17c`).
 - **S40 status**: CLOSED (PR #36 + #37 + #38 merged). v0.5.0 GitHub Release published.
 - **S41 status**: CLOSED (PR #39 merged at `659ab3d17c`). v0.5.1 GitHub Release published.
-- **S42 status**: IN PROGRESS. T0 done; T1–T5 ahead.
+- **S42 status**: READY-TO-CLOSE. T0–T5 all done; PR pending; optional v0.5.2 tag post-merge.
 - **Production kernel**: v5 (`784f82a891`), shipped S24 D0. ULP=0 structural parity across DEC-008 envelope. Kernel sources md5 `9edaef45b99b9db3e2717da93800e76f` byte-identical S30 → S41 (no kernel changes in S41).
 - **R8 (honest)**: 1.01× e2e vs S16 baseline. Unchanged.
 - **Active DEC**: **DEC-046 ACCEPTED** (S40 lane lock); DEC-045 RESOLVED, DEC-044 WITHDRAWN, DEC-042/036/040 CLOSED.
 
-## Sprint 42 (planned) — Upstream Benchmark Adoption
-
-Per @ml-product-owner advisory 2026-04-26 (recorded in S41 close-out doc):
-
-- **Subset**: Higgs (depth 6), Epsilon, MSLR-WEB10K, Yahoo-LTR, Amazon
-- **Effort**: ~1 sprint (1.5d adapters + 2d compute + 1.5d Pareto-frontier writeup)
-- **Deliverable**: `benchmarks/upstream/` adapters + `docs/benchmarks/v0.5.x-pareto.md`
-- **Honest framing**: M-series only; include Amazon (the unflattering one) with DEC-046 footnote
-- **Output**: cited backbone for the staged upstream RFC (T5) and the E3 launch when v0.6.0 ships
-
-(Detailed plan to be written when S42 opens.)
-
 ## Open backlog (carry-forward; not on any current sprint)
 
-- narrow Lane D CTR-RNG investigation (3-day kill-switch, optional per DEC-046)
-- `predict()` 41× slowdown via subprocess — DOCUMENTED in S41-T3; real fix (binary IPC or port CTR to Python) is non-trivial future engineering
-- Ordered Boosting (`boosting_type='Ordered'`) — major future work, hero feature for v0.6.0
-- PyPI publish itself (audit complete in S41-T4; publish gated on `MACOSX_DEPLOYMENT_TARGET=14.0` build env + per-Python wheel matrix)
-- Posting the upstream RFC draft (gated on DEC-046 trigger conditions)
+- **Run remaining 3 datasets in the upstream benchmark suite** (S42 carry-over): Epsilon (manual ~12 GB libsvm download); Amazon (Kaggle CLI auth); MSLR-WEB10K (Microsoft Research registration form). Adapters and runners are in place; data acquisition is the only blocker.
+- **Full 11M Higgs sweep** (S42 carry-over): data on disk (~8 GB HIGGS.csv); requires ~hour-scale compute window for the canonical upstream-comparable run. Subset (1M) shipped in S42.
+- **Histogram-stage CI gate redesign** (S42 carry-over): currently `continue-on-error: true` (informational). Wall-clock gate was rebuilt as hardware-invariant speedup-ratio in S42-T4; same redesign needed for histogram_ms (compare as fraction-of-iter or relative-Δ across the 18-config grid).
+- **Narrow Lane D CTR-RNG investigation** (3-day kill-switch, optional per DEC-046) — would close the 61% categorical-attributable share of the MLX-vs-CPU gap on Adult; 0% effect on Higgs-1M (no cats).
+- **`predict()` 41× slowdown via subprocess** — DOCUMENTED in S41-T3; real fix (binary IPC or port CTR to Python) is non-trivial future engineering.
+- **Ordered Boosting (`boosting_type='Ordered'`)** — major future work; the strategist's E2 hero feature for v0.6.0; ~5 sprints of Metal kernel work.
+- **PyPI publish** (S41-T4 audit complete; gated on `MACOSX_DEPLOYMENT_TARGET=14.0` build env + per-Python wheel matrix).
+- **Posting the upstream RFC** (gated on DEC-046 trigger conditions; the Pareto-frontier writeup with the full 5-dataset suite is one such trigger).
 - #113 S31-T3-MEASURE re-run; #114 S31-T-CLEANUP; S31-T-LATENT-P11 (Logloss/Poisson/Tweedie); SA carry-forwards (SA-L1-S33, SA-L3-S30/SA-N2-S33, SA-I2-S29 #95 CLI exit wrap)
 
 ## Sprint 40 — Lane B public release (CLOSED)
