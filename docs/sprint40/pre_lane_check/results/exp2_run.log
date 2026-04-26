@@ -1,0 +1,604 @@
+catboost 1.2.10  catboost_mlx 0.2.0
+train: (630000, 55)  test: (270000, 54)
+all features: 53  categorical: 8  numeric (kept): 45
+X_train: (630000, 45)  X_test: (270000, 45)  cat_features=[]
+
+=== CatBoost CPU (no cat_features) ===
+0:	learn: 1.0053527	total: 99.7ms	remaining: 49.8s
+100:	learn: 0.0645116	total: 4.93s	remaining: 19.5s
+200:	learn: 0.0595123	total: 12.3s	remaining: 18.3s
+300:	learn: 0.0579713	total: 18.9s	remaining: 12.5s
+400:	learn: 0.0568957	total: 25.5s	remaining: 6.29s
+499:	learn: 0.0561278	total: 31.5s	remaining: 0us
+CPU fit: 31.61s
+CPU predict: 0.06s
+
+=== CatBoost-MLX (no cat_features) ===
+CatBoost-MLX CSV Training Tool
+==============================
+Loaded: 630000 rows, 45 features from /var/folders/7s/rvrgpkk50xlfkqyqt2p334g40000gn/T/catboost_mlx_mj538ml6/train.cbmx
+MultiClass: 3 classes, approxDim=2
+Quantized: 5344 bin-features, 12 uint32 per doc
+
+Training: 500 iterations, depth=6, lr=0.0500, l2=3.00, loss=multiclass
+---
+Base prediction (boost from average): -2.431822 0.436506
+  [profile iter0] layout=0.3ms hist=274.4ms split=2.7ms part=17.2ms
+iter=0  trees=1  depth=6  loss=0.705724  time=313ms
+iter=1  trees=2  depth=6  loss=0.653909  time=253ms
+iter=2  trees=3  depth=6  loss=0.609133  time=282ms
+iter=3  trees=4  depth=6  loss=0.569658  time=303ms
+iter=4  trees=5  depth=6  loss=0.534170  time=278ms
+iter=5  trees=6  depth=6  loss=0.501936  time=252ms
+iter=6  trees=7  depth=6  loss=0.472568  time=251ms
+iter=7  trees=8  depth=6  loss=0.445845  time=251ms
+iter=8  trees=9  depth=6  loss=0.421176  time=283ms
+iter=9  trees=10  depth=6  loss=0.398453  time=244ms
+iter=10  trees=11  depth=6  loss=0.377504  time=290ms
+iter=11  trees=12  depth=6  loss=0.358006  time=249ms
+iter=12  trees=13  depth=6  loss=0.340072  time=251ms
+iter=13  trees=14  depth=6  loss=0.323224  time=237ms
+iter=14  trees=15  depth=6  loss=0.307540  time=258ms
+iter=15  trees=16  depth=6  loss=0.292908  time=241ms
+iter=16  trees=17  depth=6  loss=0.279238  time=248ms
+iter=17  trees=18  depth=6  loss=0.266671  time=267ms
+iter=18  trees=19  depth=6  loss=0.254720  time=286ms
+iter=19  trees=20  depth=6  loss=0.243529  time=276ms
+iter=20  trees=21  depth=6  loss=0.233044  time=256ms
+iter=21  trees=22  depth=6  loss=0.223220  time=241ms
+iter=22  trees=23  depth=6  loss=0.214000  time=282ms
+iter=23  trees=24  depth=6  loss=0.205396  time=260ms
+iter=24  trees=25  depth=6  loss=0.197293  time=267ms
+iter=25  trees=26  depth=6  loss=0.189681  time=304ms
+iter=26  trees=27  depth=6  loss=0.182490  time=270ms
+iter=27  trees=28  depth=6  loss=0.175864  time=247ms
+iter=28  trees=29  depth=6  loss=0.169492  time=244ms
+iter=29  trees=30  depth=6  loss=0.163493  time=278ms
+iter=30  trees=31  depth=6  loss=0.157837  time=245ms
+iter=31  trees=32  depth=6  loss=0.152518  time=262ms
+iter=32  trees=33  depth=6  loss=0.147494  time=268ms
+iter=33  trees=34  depth=6  loss=0.142750  time=269ms
+iter=34  trees=35  depth=6  loss=0.138266  time=233ms
+iter=35  trees=36  depth=6  loss=0.134035  time=259ms
+iter=36  trees=37  depth=6  loss=0.130044  time=259ms
+iter=37  trees=38  depth=6  loss=0.126280  time=255ms
+iter=38  trees=39  depth=6  loss=0.122725  time=269ms
+iter=39  trees=40  depth=6  loss=0.119394  time=280ms
+iter=40  trees=41  depth=6  loss=0.116225  time=267ms
+iter=41  trees=42  depth=6  loss=0.113234  time=252ms
+iter=42  trees=43  depth=6  loss=0.110409  time=276ms
+iter=43  trees=44  depth=6  loss=0.107746  time=279ms
+iter=44  trees=45  depth=6  loss=0.105237  time=284ms
+iter=45  trees=46  depth=6  loss=0.102868  time=229ms
+iter=46  trees=47  depth=6  loss=0.100628  time=270ms
+iter=47  trees=48  depth=6  loss=0.098509  time=240ms
+iter=48  trees=49  depth=6  loss=0.096504  time=314ms
+iter=49  trees=50  depth=6  loss=0.094611  time=255ms
+iter=50  trees=51  depth=6  loss=0.092825  time=295ms
+iter=51  trees=52  depth=6  loss=0.091134  time=240ms
+iter=52  trees=53  depth=6  loss=0.089523  time=288ms
+iter=53  trees=54  depth=6  loss=0.087998  time=234ms
+iter=54  trees=55  depth=6  loss=0.086553  time=255ms
+iter=55  trees=56  depth=6  loss=0.085191  time=280ms
+iter=56  trees=57  depth=6  loss=0.083902  time=239ms
+iter=57  trees=58  depth=6  loss=0.082684  time=275ms
+iter=58  trees=59  depth=6  loss=0.081530  time=251ms
+iter=59  trees=60  depth=6  loss=0.080440  time=251ms
+iter=60  trees=61  depth=6  loss=0.079408  time=259ms
+iter=61  trees=62  depth=6  loss=0.078426  time=253ms
+iter=62  trees=63  depth=6  loss=0.077503  time=265ms
+iter=63  trees=64  depth=6  loss=0.076626  time=281ms
+iter=64  trees=65  depth=6  loss=0.075799  time=271ms
+iter=65  trees=66  depth=6  loss=0.075013  time=278ms
+iter=66  trees=67  depth=6  loss=0.074273  time=266ms
+iter=67  trees=68  depth=6  loss=0.073573  time=257ms
+iter=68  trees=69  depth=6  loss=0.072906  time=264ms
+iter=69  trees=70  depth=6  loss=0.072285  time=266ms
+iter=70  trees=71  depth=6  loss=0.071687  time=286ms
+iter=71  trees=72  depth=6  loss=0.071126  time=247ms
+iter=72  trees=73  depth=6  loss=0.070600  time=259ms
+iter=73  trees=74  depth=6  loss=0.070094  time=256ms
+iter=74  trees=75  depth=6  loss=0.069615  time=268ms
+iter=75  trees=76  depth=6  loss=0.069162  time=256ms
+iter=76  trees=77  depth=6  loss=0.068732  time=235ms
+iter=77  trees=78  depth=6  loss=0.068327  time=233ms
+iter=78  trees=79  depth=6  loss=0.067944  time=271ms
+iter=79  trees=80  depth=6  loss=0.067582  time=263ms
+iter=80  trees=81  depth=6  loss=0.067235  time=244ms
+iter=81  trees=82  depth=6  loss=0.066908  time=284ms
+iter=82  trees=83  depth=6  loss=0.066592  time=263ms
+iter=83  trees=84  depth=6  loss=0.066291  time=233ms
+iter=84  trees=85  depth=6  loss=0.066007  time=270ms
+iter=85  trees=86  depth=6  loss=0.065739  time=260ms
+iter=86  trees=87  depth=6  loss=0.065491  time=261ms
+iter=87  trees=88  depth=6  loss=0.065255  time=283ms
+iter=88  trees=89  depth=6  loss=0.065030  time=241ms
+iter=89  trees=90  depth=6  loss=0.064817  time=240ms
+iter=90  trees=91  depth=6  loss=0.064617  time=294ms
+iter=91  trees=92  depth=6  loss=0.064426  time=249ms
+iter=92  trees=93  depth=6  loss=0.064240  time=252ms
+iter=93  trees=94  depth=6  loss=0.064069  time=259ms
+iter=94  trees=95  depth=6  loss=0.063907  time=233ms
+iter=95  trees=96  depth=6  loss=0.063739  time=245ms
+iter=96  trees=97  depth=6  loss=0.063584  time=238ms
+iter=97  trees=98  depth=6  loss=0.063439  time=295ms
+iter=98  trees=99  depth=6  loss=0.063291  time=253ms
+iter=99  trees=100  depth=6  loss=0.063151  time=254ms
+iter=100  trees=101  depth=6  loss=0.063019  time=303ms
+iter=101  trees=102  depth=6  loss=0.062899  time=261ms
+iter=102  trees=103  depth=6  loss=0.062786  time=223ms
+iter=103  trees=104  depth=6  loss=0.062677  time=288ms
+iter=104  trees=105  depth=6  loss=0.062565  time=256ms
+iter=105  trees=106  depth=6  loss=0.062456  time=244ms
+iter=106  trees=107  depth=6  loss=0.062362  time=270ms
+iter=107  trees=108  depth=6  loss=0.062266  time=247ms
+iter=108  trees=109  depth=6  loss=0.062177  time=235ms
+iter=109  trees=110  depth=6  loss=0.062092  time=280ms
+iter=110  trees=111  depth=6  loss=0.062010  time=249ms
+iter=111  trees=112  depth=6  loss=0.061934  time=257ms
+iter=112  trees=113  depth=6  loss=0.061856  time=231ms
+iter=113  trees=114  depth=6  loss=0.061780  time=273ms
+iter=114  trees=115  depth=6  loss=0.061709  time=286ms
+iter=115  trees=116  depth=6  loss=0.061643  time=281ms
+iter=116  trees=117  depth=6  loss=0.061575  time=256ms
+iter=117  trees=118  depth=6  loss=0.061510  time=308ms
+iter=118  trees=119  depth=6  loss=0.061450  time=267ms
+iter=119  trees=120  depth=6  loss=0.061393  time=244ms
+iter=120  trees=121  depth=6  loss=0.061339  time=261ms
+iter=121  trees=122  depth=6  loss=0.061287  time=254ms
+iter=122  trees=123  depth=6  loss=0.061233  time=263ms
+iter=123  trees=124  depth=6  loss=0.061182  time=254ms
+iter=124  trees=125  depth=6  loss=0.061135  time=289ms
+iter=125  trees=126  depth=6  loss=0.061082  time=301ms
+iter=126  trees=127  depth=6  loss=0.061024  time=255ms
+iter=127  trees=128  depth=6  loss=0.060964  time=276ms
+iter=128  trees=129  depth=6  loss=0.060914  time=286ms
+iter=129  trees=130  depth=6  loss=0.060868  time=247ms
+iter=130  trees=131  depth=6  loss=0.060827  time=269ms
+iter=131  trees=132  depth=6  loss=0.060788  time=302ms
+iter=132  trees=133  depth=6  loss=0.060751  time=273ms
+iter=133  trees=134  depth=6  loss=0.060702  time=285ms
+iter=134  trees=135  depth=6  loss=0.060663  time=242ms
+iter=135  trees=136  depth=6  loss=0.060629  time=244ms
+iter=136  trees=137  depth=6  loss=0.060591  time=280ms
+iter=137  trees=138  depth=6  loss=0.060559  time=281ms
+iter=138  trees=139  depth=6  loss=0.060517  time=237ms
+iter=139  trees=140  depth=6  loss=0.060479  time=292ms
+iter=140  trees=141  depth=6  loss=0.060448  time=251ms
+iter=141  trees=142  depth=6  loss=0.060413  time=252ms
+iter=142  trees=143  depth=6  loss=0.060383  time=283ms
+iter=143  trees=144  depth=6  loss=0.060352  time=252ms
+iter=144  trees=145  depth=6  loss=0.060314  time=254ms
+iter=145  trees=146  depth=6  loss=0.060278  time=268ms
+iter=146  trees=147  depth=6  loss=0.060245  time=241ms
+iter=147  trees=148  depth=6  loss=0.060216  time=267ms
+iter=148  trees=149  depth=6  loss=0.060190  time=282ms
+iter=149  trees=150  depth=6  loss=0.060159  time=324ms
+iter=150  trees=151  depth=6  loss=0.060129  time=270ms
+iter=151  trees=152  depth=6  loss=0.060099  time=252ms
+iter=152  trees=153  depth=6  loss=0.060073  time=261ms
+iter=153  trees=154  depth=6  loss=0.060045  time=280ms
+iter=154  trees=155  depth=6  loss=0.060007  time=273ms
+iter=155  trees=156  depth=6  loss=0.059985  time=289ms
+iter=156  trees=157  depth=6  loss=0.059952  time=272ms
+iter=157  trees=158  depth=6  loss=0.059924  time=307ms
+iter=158  trees=159  depth=6  loss=0.059897  time=270ms
+iter=159  trees=160  depth=6  loss=0.059864  time=299ms
+iter=160  trees=161  depth=6  loss=0.059835  time=295ms
+iter=161  trees=162  depth=6  loss=0.059808  time=295ms
+iter=162  trees=163  depth=6  loss=0.059774  time=287ms
+iter=163  trees=164  depth=6  loss=0.059754  time=260ms
+iter=164  trees=165  depth=6  loss=0.059727  time=291ms
+iter=165  trees=166  depth=6  loss=0.059697  time=293ms
+iter=166  trees=167  depth=6  loss=0.059669  time=266ms
+iter=167  trees=168  depth=6  loss=0.059634  time=274ms
+iter=168  trees=169  depth=6  loss=0.059612  time=277ms
+iter=169  trees=170  depth=6  loss=0.059588  time=308ms
+iter=170  trees=171  depth=6  loss=0.059562  time=285ms
+iter=171  trees=172  depth=6  loss=0.059537  time=279ms
+iter=172  trees=173  depth=6  loss=0.059511  time=317ms
+iter=173  trees=174  depth=6  loss=0.059488  time=271ms
+iter=174  trees=175  depth=6  loss=0.059464  time=283ms
+iter=175  trees=176  depth=6  loss=0.059436  time=254ms
+iter=176  trees=177  depth=6  loss=0.059418  time=304ms
+iter=177  trees=178  depth=6  loss=0.059399  time=295ms
+iter=178  trees=179  depth=6  loss=0.059377  time=314ms
+iter=179  trees=180  depth=6  loss=0.059342  time=281ms
+iter=180  trees=181  depth=6  loss=0.059313  time=283ms
+iter=181  trees=182  depth=6  loss=0.059288  time=274ms
+iter=182  trees=183  depth=6  loss=0.059265  time=259ms
+iter=183  trees=184  depth=6  loss=0.059242  time=279ms
+iter=184  trees=185  depth=6  loss=0.059221  time=278ms
+iter=185  trees=186  depth=6  loss=0.059191  time=282ms
+iter=186  trees=187  depth=6  loss=0.059162  time=325ms
+iter=187  trees=188  depth=6  loss=0.059137  time=300ms
+iter=188  trees=189  depth=6  loss=0.059117  time=274ms
+iter=189  trees=190  depth=6  loss=0.059091  time=277ms
+iter=190  trees=191  depth=6  loss=0.059071  time=288ms
+iter=191  trees=192  depth=6  loss=0.059051  time=321ms
+iter=192  trees=193  depth=6  loss=0.059028  time=281ms
+iter=193  trees=194  depth=6  loss=0.059000  time=279ms
+iter=194  trees=195  depth=6  loss=0.058978  time=286ms
+iter=195  trees=196  depth=6  loss=0.058961  time=271ms
+iter=196  trees=197  depth=6  loss=0.058936  time=282ms
+iter=197  trees=198  depth=6  loss=0.058917  time=268ms
+iter=198  trees=199  depth=6  loss=0.058902  time=247ms
+iter=199  trees=200  depth=6  loss=0.058886  time=273ms
+iter=200  trees=201  depth=6  loss=0.058870  time=291ms
+iter=201  trees=202  depth=6  loss=0.058845  time=238ms
+iter=202  trees=203  depth=6  loss=0.058823  time=279ms
+iter=203  trees=204  depth=6  loss=0.058806  time=250ms
+iter=204  trees=205  depth=6  loss=0.058790  time=279ms
+iter=205  trees=206  depth=6  loss=0.058777  time=269ms
+iter=206  trees=207  depth=6  loss=0.058755  time=286ms
+iter=207  trees=208  depth=6  loss=0.058738  time=298ms
+iter=208  trees=209  depth=6  loss=0.058722  time=303ms
+iter=209  trees=210  depth=6  loss=0.058698  time=268ms
+iter=210  trees=211  depth=6  loss=0.058678  time=262ms
+iter=211  trees=212  depth=6  loss=0.058653  time=248ms
+iter=212  trees=213  depth=6  loss=0.058637  time=290ms
+iter=213  trees=214  depth=6  loss=0.058617  time=313ms
+iter=214  trees=215  depth=6  loss=0.058599  time=311ms
+iter=215  trees=216  depth=6  loss=0.058579  time=305ms
+iter=216  trees=217  depth=6  loss=0.058559  time=291ms
+iter=217  trees=218  depth=6  loss=0.058540  time=290ms
+iter=218  trees=219  depth=6  loss=0.058525  time=307ms
+iter=219  trees=220  depth=6  loss=0.058509  time=279ms
+iter=220  trees=221  depth=6  loss=0.058486  time=281ms
+iter=221  trees=222  depth=6  loss=0.058470  time=284ms
+iter=222  trees=223  depth=6  loss=0.058448  time=301ms
+iter=223  trees=224  depth=6  loss=0.058429  time=270ms
+iter=224  trees=225  depth=6  loss=0.058416  time=284ms
+iter=225  trees=226  depth=6  loss=0.058395  time=282ms
+iter=226  trees=227  depth=6  loss=0.058377  time=287ms
+iter=227  trees=228  depth=6  loss=0.058361  time=237ms
+iter=228  trees=229  depth=6  loss=0.058342  time=260ms
+iter=229  trees=230  depth=6  loss=0.058328  time=305ms
+iter=230  trees=231  depth=6  loss=0.058313  time=264ms
+iter=231  trees=232  depth=6  loss=0.058295  time=253ms
+iter=232  trees=233  depth=6  loss=0.058274  time=250ms
+iter=233  trees=234  depth=6  loss=0.058256  time=274ms
+iter=234  trees=235  depth=6  loss=0.058242  time=286ms
+iter=235  trees=236  depth=6  loss=0.058228  time=303ms
+iter=236  trees=237  depth=6  loss=0.058216  time=278ms
+iter=237  trees=238  depth=6  loss=0.058200  time=281ms
+iter=238  trees=239  depth=6  loss=0.058185  time=272ms
+iter=239  trees=240  depth=6  loss=0.058167  time=235ms
+iter=240  trees=241  depth=6  loss=0.058154  time=299ms
+iter=241  trees=242  depth=6  loss=0.058136  time=243ms
+iter=242  trees=243  depth=6  loss=0.058122  time=270ms
+iter=243  trees=244  depth=6  loss=0.058107  time=276ms
+iter=244  trees=245  depth=6  loss=0.058090  time=290ms
+iter=245  trees=246  depth=6  loss=0.058076  time=268ms
+iter=246  trees=247  depth=6  loss=0.058060  time=272ms
+iter=247  trees=248  depth=6  loss=0.058043  time=286ms
+iter=248  trees=249  depth=6  loss=0.058026  time=264ms
+iter=249  trees=250  depth=6  loss=0.058013  time=313ms
+iter=250  trees=251  depth=6  loss=0.057994  time=259ms
+iter=251  trees=252  depth=6  loss=0.057981  time=283ms
+iter=252  trees=253  depth=6  loss=0.057963  time=279ms
+iter=253  trees=254  depth=6  loss=0.057951  time=252ms
+iter=254  trees=255  depth=6  loss=0.057938  time=254ms
+iter=255  trees=256  depth=6  loss=0.057927  time=328ms
+iter=256  trees=257  depth=6  loss=0.057911  time=297ms
+iter=257  trees=258  depth=6  loss=0.057898  time=263ms
+iter=258  trees=259  depth=6  loss=0.057878  time=250ms
+iter=259  trees=260  depth=6  loss=0.057866  time=266ms
+iter=260  trees=261  depth=6  loss=0.057852  time=292ms
+iter=261  trees=262  depth=6  loss=0.057843  time=264ms
+iter=262  trees=263  depth=6  loss=0.057828  time=256ms
+iter=263  trees=264  depth=6  loss=0.057814  time=259ms
+iter=264  trees=265  depth=6  loss=0.057802  time=258ms
+iter=265  trees=266  depth=6  loss=0.057790  time=262ms
+iter=266  trees=267  depth=6  loss=0.057777  time=240ms
+iter=267  trees=268  depth=6  loss=0.057765  time=261ms
+iter=268  trees=269  depth=6  loss=0.057747  time=299ms
+iter=269  trees=270  depth=6  loss=0.057735  time=286ms
+iter=270  trees=271  depth=6  loss=0.057723  time=282ms
+iter=271  trees=272  depth=6  loss=0.057710  time=274ms
+iter=272  trees=273  depth=6  loss=0.057695  time=292ms
+iter=273  trees=274  depth=6  loss=0.057684  time=292ms
+iter=274  trees=275  depth=6  loss=0.057670  time=269ms
+iter=275  trees=276  depth=6  loss=0.057659  time=287ms
+iter=276  trees=277  depth=6  loss=0.057644  time=305ms
+iter=277  trees=278  depth=6  loss=0.057631  time=261ms
+iter=278  trees=279  depth=6  loss=0.057620  time=235ms
+iter=279  trees=280  depth=6  loss=0.057606  time=248ms
+iter=280  trees=281  depth=6  loss=0.057592  time=299ms
+iter=281  trees=282  depth=6  loss=0.057573  time=251ms
+iter=282  trees=283  depth=6  loss=0.057564  time=245ms
+iter=283  trees=284  depth=6  loss=0.057552  time=289ms
+iter=284  trees=285  depth=6  loss=0.057539  time=282ms
+iter=285  trees=286  depth=6  loss=0.057528  time=256ms
+iter=286  trees=287  depth=6  loss=0.057517  time=281ms
+iter=287  trees=288  depth=6  loss=0.057506  time=257ms
+iter=288  trees=289  depth=6  loss=0.057494  time=291ms
+iter=289  trees=290  depth=6  loss=0.057476  time=256ms
+iter=290  trees=291  depth=6  loss=0.057463  time=264ms
+iter=291  trees=292  depth=6  loss=0.057451  time=292ms
+iter=292  trees=293  depth=6  loss=0.057438  time=265ms
+iter=293  trees=294  depth=6  loss=0.057425  time=267ms
+iter=294  trees=295  depth=6  loss=0.057413  time=285ms
+iter=295  trees=296  depth=6  loss=0.057400  time=326ms
+iter=296  trees=297  depth=6  loss=0.057388  time=254ms
+iter=297  trees=298  depth=6  loss=0.057376  time=299ms
+iter=298  trees=299  depth=6  loss=0.057358  time=249ms
+iter=299  trees=300  depth=6  loss=0.057341  time=284ms
+iter=300  trees=301  depth=6  loss=0.057323  time=255ms
+iter=301  trees=302  depth=6  loss=0.057295  time=243ms
+iter=302  trees=303  depth=6  loss=0.057283  time=285ms
+iter=303  trees=304  depth=6  loss=0.057273  time=298ms
+iter=304  trees=305  depth=6  loss=0.057264  time=262ms
+iter=305  trees=306  depth=6  loss=0.057255  time=264ms
+iter=306  trees=307  depth=6  loss=0.057237  time=290ms
+iter=307  trees=308  depth=6  loss=0.057225  time=267ms
+iter=308  trees=309  depth=6  loss=0.057214  time=283ms
+iter=309  trees=310  depth=6  loss=0.057201  time=278ms
+iter=310  trees=311  depth=6  loss=0.057187  time=267ms
+iter=311  trees=312  depth=6  loss=0.057174  time=271ms
+iter=312  trees=313  depth=6  loss=0.057164  time=233ms
+iter=313  trees=314  depth=6  loss=0.057152  time=273ms
+iter=314  trees=315  depth=6  loss=0.057140  time=304ms
+iter=315  trees=316  depth=6  loss=0.057128  time=242ms
+iter=316  trees=317  depth=6  loss=0.057108  time=235ms
+iter=317  trees=318  depth=6  loss=0.057093  time=290ms
+iter=318  trees=319  depth=6  loss=0.057085  time=285ms
+iter=319  trees=320  depth=6  loss=0.057068  time=274ms
+iter=320  trees=321  depth=6  loss=0.057055  time=292ms
+iter=321  trees=322  depth=6  loss=0.057042  time=256ms
+iter=322  trees=323  depth=6  loss=0.057032  time=272ms
+iter=323  trees=324  depth=6  loss=0.057020  time=264ms
+iter=324  trees=325  depth=6  loss=0.057009  time=294ms
+iter=325  trees=326  depth=6  loss=0.056996  time=293ms
+iter=326  trees=327  depth=6  loss=0.056983  time=299ms
+iter=327  trees=328  depth=6  loss=0.056968  time=287ms
+iter=328  trees=329  depth=6  loss=0.056955  time=277ms
+iter=329  trees=330  depth=6  loss=0.056942  time=273ms
+iter=330  trees=331  depth=6  loss=0.056930  time=280ms
+iter=331  trees=332  depth=6  loss=0.056914  time=296ms
+iter=332  trees=333  depth=6  loss=0.056901  time=246ms
+iter=333  trees=334  depth=6  loss=0.056890  time=268ms
+iter=334  trees=335  depth=6  loss=0.056879  time=261ms
+iter=335  trees=336  depth=6  loss=0.056852  time=250ms
+iter=336  trees=337  depth=6  loss=0.056840  time=283ms
+iter=337  trees=338  depth=6  loss=0.056816  time=252ms
+iter=338  trees=339  depth=6  loss=0.056804  time=291ms
+iter=339  trees=340  depth=6  loss=0.056792  time=276ms
+iter=340  trees=341  depth=6  loss=0.056780  time=268ms
+iter=341  trees=342  depth=6  loss=0.056770  time=295ms
+iter=342  trees=343  depth=6  loss=0.056750  time=294ms
+iter=343  trees=344  depth=6  loss=0.056733  time=298ms
+iter=344  trees=345  depth=6  loss=0.056721  time=302ms
+iter=345  trees=346  depth=6  loss=0.056708  time=284ms
+iter=346  trees=347  depth=6  loss=0.056695  time=297ms
+iter=347  trees=348  depth=6  loss=0.056685  time=272ms
+iter=348  trees=349  depth=6  loss=0.056669  time=301ms
+iter=349  trees=350  depth=6  loss=0.056657  time=285ms
+iter=350  trees=351  depth=6  loss=0.056644  time=310ms
+iter=351  trees=352  depth=6  loss=0.056631  time=277ms
+iter=352  trees=353  depth=6  loss=0.056610  time=278ms
+iter=353  trees=354  depth=6  loss=0.056600  time=273ms
+iter=354  trees=355  depth=6  loss=0.056585  time=253ms
+iter=355  trees=356  depth=6  loss=0.056576  time=322ms
+iter=356  trees=357  depth=6  loss=0.056561  time=292ms
+iter=357  trees=358  depth=6  loss=0.056548  time=278ms
+iter=358  trees=359  depth=6  loss=0.056538  time=277ms
+iter=359  trees=360  depth=6  loss=0.056524  time=299ms
+iter=360  trees=361  depth=6  loss=0.056513  time=315ms
+iter=361  trees=362  depth=6  loss=0.056501  time=302ms
+iter=362  trees=363  depth=6  loss=0.056487  time=265ms
+iter=363  trees=364  depth=6  loss=0.056479  time=288ms
+iter=364  trees=365  depth=6  loss=0.056467  time=253ms
+iter=365  trees=366  depth=6  loss=0.056459  time=271ms
+iter=366  trees=367  depth=6  loss=0.056448  time=307ms
+iter=367  trees=368  depth=6  loss=0.056434  time=265ms
+iter=368  trees=369  depth=6  loss=0.056423  time=292ms
+iter=369  trees=370  depth=6  loss=0.056411  time=265ms
+iter=370  trees=371  depth=6  loss=0.056398  time=289ms
+iter=371  trees=372  depth=6  loss=0.056384  time=285ms
+iter=372  trees=373  depth=6  loss=0.056372  time=254ms
+iter=373  trees=374  depth=6  loss=0.056364  time=295ms
+iter=374  trees=375  depth=6  loss=0.056352  time=243ms
+iter=375  trees=376  depth=6  loss=0.056341  time=267ms
+iter=376  trees=377  depth=6  loss=0.056322  time=299ms
+iter=377  trees=378  depth=6  loss=0.056303  time=278ms
+iter=378  trees=379  depth=6  loss=0.056294  time=269ms
+iter=379  trees=380  depth=6  loss=0.056285  time=276ms
+iter=380  trees=381  depth=6  loss=0.056272  time=299ms
+iter=381  trees=382  depth=6  loss=0.056262  time=258ms
+iter=382  trees=383  depth=6  loss=0.056248  time=311ms
+iter=383  trees=384  depth=6  loss=0.056237  time=286ms
+iter=384  trees=385  depth=6  loss=0.056222  time=277ms
+iter=385  trees=386  depth=6  loss=0.056210  time=279ms
+iter=386  trees=387  depth=6  loss=0.056202  time=295ms
+iter=387  trees=388  depth=6  loss=0.056188  time=294ms
+iter=388  trees=389  depth=6  loss=0.056177  time=280ms
+iter=389  trees=390  depth=6  loss=0.056165  time=319ms
+iter=390  trees=391  depth=6  loss=0.056153  time=284ms
+iter=391  trees=392  depth=6  loss=0.056145  time=286ms
+iter=392  trees=393  depth=6  loss=0.056137  time=285ms
+iter=393  trees=394  depth=6  loss=0.056125  time=318ms
+iter=394  trees=395  depth=6  loss=0.056114  time=277ms
+iter=395  trees=396  depth=6  loss=0.056103  time=251ms
+iter=396  trees=397  depth=6  loss=0.056084  time=302ms
+iter=397  trees=398  depth=6  loss=0.056071  time=319ms
+iter=398  trees=399  depth=6  loss=0.056061  time=301ms
+iter=399  trees=400  depth=6  loss=0.056049  time=280ms
+iter=400  trees=401  depth=6  loss=0.056036  time=293ms
+iter=401  trees=402  depth=6  loss=0.056027  time=324ms
+iter=402  trees=403  depth=6  loss=0.056009  time=267ms
+iter=403  trees=404  depth=6  loss=0.055993  time=265ms
+iter=404  trees=405  depth=6  loss=0.055985  time=313ms
+iter=405  trees=406  depth=6  loss=0.055973  time=245ms
+iter=406  trees=407  depth=6  loss=0.055959  time=228ms
+iter=407  trees=408  depth=6  loss=0.055946  time=234ms
+iter=408  trees=409  depth=6  loss=0.055939  time=262ms
+iter=409  trees=410  depth=6  loss=0.055929  time=247ms
+iter=410  trees=411  depth=6  loss=0.055909  time=293ms
+iter=411  trees=412  depth=6  loss=0.055898  time=305ms
+iter=412  trees=413  depth=6  loss=0.055889  time=278ms
+iter=413  trees=414  depth=6  loss=0.055880  time=275ms
+iter=414  trees=415  depth=6  loss=0.055868  time=281ms
+iter=415  trees=416  depth=6  loss=0.055859  time=300ms
+iter=416  trees=417  depth=6  loss=0.055850  time=298ms
+iter=417  trees=418  depth=6  loss=0.055838  time=257ms
+iter=418  trees=419  depth=6  loss=0.055824  time=324ms
+iter=419  trees=420  depth=6  loss=0.055812  time=315ms
+iter=420  trees=421  depth=6  loss=0.055802  time=273ms
+iter=421  trees=422  depth=6  loss=0.055793  time=289ms
+iter=422  trees=423  depth=6  loss=0.055782  time=294ms
+iter=423  trees=424  depth=6  loss=0.055771  time=251ms
+iter=424  trees=425  depth=6  loss=0.055761  time=273ms
+iter=425  trees=426  depth=6  loss=0.055746  time=292ms
+iter=426  trees=427  depth=6  loss=0.055736  time=262ms
+iter=427  trees=428  depth=6  loss=0.055719  time=255ms
+iter=428  trees=429  depth=6  loss=0.055706  time=322ms
+iter=429  trees=430  depth=6  loss=0.055697  time=296ms
+iter=430  trees=431  depth=6  loss=0.055688  time=292ms
+iter=431  trees=432  depth=6  loss=0.055676  time=273ms
+iter=432  trees=433  depth=6  loss=0.055662  time=256ms
+iter=433  trees=434  depth=6  loss=0.055652  time=284ms
+iter=434  trees=435  depth=6  loss=0.055640  time=274ms
+iter=435  trees=436  depth=6  loss=0.055632  time=286ms
+iter=436  trees=437  depth=6  loss=0.055622  time=319ms
+iter=437  trees=438  depth=6  loss=0.055611  time=310ms
+iter=438  trees=439  depth=6  loss=0.055598  time=263ms
+iter=439  trees=440  depth=6  loss=0.055587  time=285ms
+iter=440  trees=441  depth=6  loss=0.055576  time=267ms
+iter=441  trees=442  depth=6  loss=0.055568  time=278ms
+iter=442  trees=443  depth=6  loss=0.055560  time=302ms
+iter=443  trees=444  depth=6  loss=0.055546  time=246ms
+iter=444  trees=445  depth=6  loss=0.055528  time=292ms
+iter=445  trees=446  depth=6  loss=0.055515  time=295ms
+iter=446  trees=447  depth=6  loss=0.055506  time=264ms
+iter=447  trees=448  depth=6  loss=0.055497  time=325ms
+iter=448  trees=449  depth=6  loss=0.055487  time=251ms
+iter=449  trees=450  depth=6  loss=0.055476  time=259ms
+iter=450  trees=451  depth=6  loss=0.055466  time=283ms
+iter=451  trees=452  depth=6  loss=0.055454  time=285ms
+iter=452  trees=453  depth=6  loss=0.055442  time=261ms
+iter=453  trees=454  depth=6  loss=0.055433  time=293ms
+iter=454  trees=455  depth=6  loss=0.055424  time=243ms
+iter=455  trees=456  depth=6  loss=0.055414  time=265ms
+iter=456  trees=457  depth=6  loss=0.055406  time=305ms
+iter=457  trees=458  depth=6  loss=0.055391  time=298ms
+iter=458  trees=459  depth=6  loss=0.055381  time=285ms
+iter=459  trees=460  depth=6  loss=0.055368  time=269ms
+iter=460  trees=461  depth=6  loss=0.055360  time=305ms
+iter=461  trees=462  depth=6  loss=0.055349  time=265ms
+iter=462  trees=463  depth=6  loss=0.055334  time=253ms
+iter=463  trees=464  depth=6  loss=0.055324  time=248ms
+iter=464  trees=465  depth=6  loss=0.055312  time=305ms
+iter=465  trees=466  depth=6  loss=0.055301  time=295ms
+iter=466  trees=467  depth=6  loss=0.055292  time=306ms
+iter=467  trees=468  depth=6  loss=0.055280  time=235ms
+iter=468  trees=469  depth=6  loss=0.055269  time=334ms
+iter=469  trees=470  depth=6  loss=0.055258  time=302ms
+iter=470  trees=471  depth=6  loss=0.055248  time=277ms
+iter=471  trees=472  depth=6  loss=0.055241  time=242ms
+iter=472  trees=473  depth=6  loss=0.055229  time=300ms
+iter=473  trees=474  depth=6  loss=0.055219  time=245ms
+iter=474  trees=475  depth=6  loss=0.055209  time=255ms
+iter=475  trees=476  depth=6  loss=0.055200  time=276ms
+iter=476  trees=477  depth=6  loss=0.055189  time=291ms
+iter=477  trees=478  depth=6  loss=0.055177  time=302ms
+iter=478  trees=479  depth=6  loss=0.055168  time=280ms
+iter=479  trees=480  depth=6  loss=0.055158  time=265ms
+iter=480  trees=481  depth=6  loss=0.055141  time=305ms
+iter=481  trees=482  depth=6  loss=0.055132  time=299ms
+iter=482  trees=483  depth=6  loss=0.055120  time=287ms
+iter=483  trees=484  depth=6  loss=0.055111  time=313ms
+iter=484  trees=485  depth=6  loss=0.055102  time=256ms
+iter=485  trees=486  depth=6  loss=0.055093  time=287ms
+iter=486  trees=487  depth=6  loss=0.055086  time=292ms
+iter=487  trees=488  depth=6  loss=0.055079  time=283ms
+iter=488  trees=489  depth=6  loss=0.055064  time=307ms
+iter=489  trees=490  depth=6  loss=0.055055  time=326ms
+iter=490  trees=491  depth=6  loss=0.055045  time=271ms
+iter=491  trees=492  depth=6  loss=0.055036  time=263ms
+iter=492  trees=493  depth=6  loss=0.055026  time=248ms
+iter=493  trees=494  depth=6  loss=0.055015  time=293ms
+iter=494  trees=495  depth=6  loss=0.055004  time=265ms
+iter=495  trees=496  depth=6  loss=0.054994  time=282ms
+iter=496  trees=497  depth=6  loss=0.054986  time=314ms
+iter=497  trees=498  depth=6  loss=0.054975  time=267ms
+iter=498  trees=499  depth=6  loss=0.054967  time=323ms
+iter=499  trees=500  depth=6  loss=0.054952  time=280ms
+---
+Training complete: 500 trees in 138.57s
+Phase breakdown (avg per iter): grad=2.8ms tree=268.7ms leaf=2.6ms apply=1.3ms
+
+Feature Importance (Gain-based):
+Rank  Feature                         Gain       %
+----  --------------------  --------------  ------
+1     f12                   3765714.7700295858   38.4%
+2     f11                   2046034.2937210030   20.9%
+3     f15                   1588592.4082836760   16.2%
+4     f13                   1309716.3697323408   13.4%
+5     f14                   657989.7071510681    6.7%
+6     f42                   93688.6138247335    1.0%
+7     f41                   54197.0511689207    0.6%
+8     f16                   44848.0237533532    0.5%
+9     f38                   38804.4357121443    0.4%
+10    f37                   35779.5794051409    0.4%
+11    f23                   25760.7154989327    0.3%
+12    f43                   20496.7059529942    0.2%
+13    f19                   12908.9021920125    0.1%
+14    f5                    10979.2660606569    0.1%
+15    f10                   10882.5654329327    0.1%
+16    f6                    10760.9584375910    0.1%
+17    f34                   8771.5390485365    0.1%
+18    f40                   7893.3457198922    0.1%
+19    f27                   7674.8574713903    0.1%
+20    f25                   7625.4372364173    0.1%
+21    f1                    5734.4542319657    0.1%
+22    f33                   4864.3761281071    0.0%
+23    f21                   4730.7097742657    0.0%
+24    f22                   3763.9863661103    0.0%
+25    f3                    2759.0441446794    0.0%
+26    f2                    2417.9161303482    0.0%
+27    f17                   2404.8903270355    0.0%
+28    f0                    2162.0957365173    0.0%
+29    f7                    2149.5700466664    0.0%
+30    f4                    1939.2402761307    0.0%
+31    f29                   1798.4345635975    0.0%
+32    f26                   1655.0127754572    0.0%
+33    f9                    1520.2918185938    0.0%
+34    f24                   1384.5384166861    0.0%
+35    f31                   1336.0858223396    0.0%
+36    f18                   1314.7872618225    0.0%
+37    f8                    1298.6080115017    0.0%
+38    f28                   1202.9493228291    0.0%
+39    f20                   932.7614592227    0.0%
+40    f39                   643.1062950826    0.0%
+41    f35                   459.0659128286    0.0%
+42    f44                   326.9113683573    0.0%
+43    f32                   178.1313829984    0.0%
+44    f36                   155.1006223449    0.0%
+45    f30                    27.0677089401    0.0%
+Model saved to: /var/folders/7s/rvrgpkk50xlfkqyqt2p334g40000gn/T/catboost_mlx_mj538ml6/model.json (500 trees, 45 features)
+
+MLX fit: 139.74s
+MLX predict: 3.99s
+
+=== RESULT (no cat_features) ===
+Agreement: 99.947778%  (269859/270000)
+Disagreement rows: 141
+Probability MAD: 2.202349e-03
+Probability max-abs diff: 5.549956e-01
+Class distribution:
+           cpu     mlx  delta
+High      8581    8569    -12
+Low     159942  159965     23
+Medium  101477  101466    -11
+
+Disagreement matrix (rows=CPU, cols=MLX):
+MLX     High     Low  Medium
+CPU                         
+High    8529       0      52
+Low        0  159929      13
+Medium    40      36  101401
+
+Verdict: M1_dominant_multiclass_dispatch_or_other
+
+Wrote /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Python/Machine Learning/Predicting Irrigation Need/experiments/s40_pre_lane_check/results/exp2_no_cat_features.json

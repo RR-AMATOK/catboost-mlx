@@ -1,0 +1,40 @@
+catboost 1.2.10
+train: (630000, 55)  test: (270000, 54)
+
+=== CPU seed 42 ===
+  fit=142.0s  dist=High:8590 Low:159933 Medium:101477
+
+=== CPU seed 43 ===
+  fit=133.5s  dist=High:8589 Low:159963 Medium:101448
+
+=== CPU seed 44 ===
+  fit=125.9s  dist=High:8582 Low:159967 Medium:101451
+
+=== CPU seed 45 ===
+  fit=126.4s  dist=High:8593 Low:159951 Medium:101456
+
+=== CPU seed 46 ===
+  fit=129.1s  dist=High:8584 Low:159936 Medium:101480
+
+=== Pairwise CPU-vs-CPU agreement (seed_i, seed_j) ===
+  seed 42 vs 43: agree=99.964815%  disagree=95  mad=9.7947e-04  highShift=1
+  seed 42 vs 44: agree=99.963704%  disagree=98  mad=9.5089e-04  highShift=8
+  seed 42 vs 45: agree=99.971481%  disagree=77  mad=8.7311e-04  highShift=3
+  seed 42 vs 46: agree=99.967778%  disagree=87  mad=8.6385e-04  highShift=6
+  seed 43 vs 44: agree=99.972222%  disagree=75  mad=9.7911e-04  highShift=7
+  seed 43 vs 45: agree=99.974815%  disagree=68  mad=8.6109e-04  highShift=4
+  seed 43 vs 46: agree=99.965185%  disagree=94  mad=1.0692e-03  highShift=5
+  seed 44 vs 45: agree=99.967778%  disagree=87  mad=9.3105e-04  highShift=11
+  seed 44 vs 46: agree=99.962593%  disagree=101  mad=9.4735e-04  highShift=2
+  seed 45 vs 46: agree=99.962963%  disagree=100  mad=1.0128e-03  highShift=9
+
+=== Summary ===
+CPU-vs-CPU mean agreement: 99.967333%
+CPU-vs-CPU mean disagree:  88.2
+CPU-vs-CPU mean proba MAD: 9.4680e-04
+CPU-vs-CPU mean High shift:5.6
+Baseline MLX-vs-CPU @42:   agree=99.917400% disagree=223 mad=3.7800e-03 highShift=64
+
+Verdict: INTERMEDIATE_lane_B_with_caveat
+
+Wrote /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Python/Machine Learning/Predicting Irrigation Need/experiments/s40_pre_lane_check/results/exp3_cpu_noise_floor.json

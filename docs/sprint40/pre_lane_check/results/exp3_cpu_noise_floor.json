@@ -1,0 +1,147 @@
+{
+  "experiment": "s40_exp3_cpu_noise_floor",
+  "config": {
+    "iterations": 500,
+    "depth": 6,
+    "lr": 0.05,
+    "l2": 3.0,
+    "random_strength": 0.0,
+    "seeds": [
+      42,
+      43,
+      44,
+      45,
+      46
+    ]
+  },
+  "per_seed_dist": {
+    "42": {
+      "High": 8590,
+      "Low": 159933,
+      "Medium": 101477
+    },
+    "43": {
+      "High": 8589,
+      "Low": 159963,
+      "Medium": 101448
+    },
+    "44": {
+      "High": 8582,
+      "Low": 159967,
+      "Medium": 101451
+    },
+    "45": {
+      "High": 8593,
+      "Low": 159951,
+      "Medium": 101456
+    },
+    "46": {
+      "High": 8584,
+      "Low": 159936,
+      "Medium": 101480
+    }
+  },
+  "per_seed_fit_s": {
+    "42": 142.0250967920001,
+    "43": 133.5378515409975,
+    "44": 125.86115758300002,
+    "45": 126.35529624999617,
+    "46": 129.07550962499954
+  },
+  "pairwise": [
+    {
+      "seed_i": 42,
+      "seed_j": 43,
+      "agreement": 0.9996481481481482,
+      "n_disagree": 95,
+      "proba_mad": 0.0009794652180415374,
+      "high_class_shift": 1
+    },
+    {
+      "seed_i": 42,
+      "seed_j": 44,
+      "agreement": 0.999637037037037,
+      "n_disagree": 98,
+      "proba_mad": 0.0009508879347626283,
+      "high_class_shift": 8
+    },
+    {
+      "seed_i": 42,
+      "seed_j": 45,
+      "agreement": 0.9997148148148148,
+      "n_disagree": 77,
+      "proba_mad": 0.0008731055413026906,
+      "high_class_shift": 3
+    },
+    {
+      "seed_i": 42,
+      "seed_j": 46,
+      "agreement": 0.9996777777777778,
+      "n_disagree": 87,
+      "proba_mad": 0.0008638510907689836,
+      "high_class_shift": 6
+    },
+    {
+      "seed_i": 43,
+      "seed_j": 44,
+      "agreement": 0.9997222222222222,
+      "n_disagree": 75,
+      "proba_mad": 0.0009791071067652619,
+      "high_class_shift": 7
+    },
+    {
+      "seed_i": 43,
+      "seed_j": 45,
+      "agreement": 0.9997481481481482,
+      "n_disagree": 68,
+      "proba_mad": 0.0008610919760032413,
+      "high_class_shift": 4
+    },
+    {
+      "seed_i": 43,
+      "seed_j": 46,
+      "agreement": 0.9996518518518519,
+      "n_disagree": 94,
+      "proba_mad": 0.0010692386167916875,
+      "high_class_shift": 5
+    },
+    {
+      "seed_i": 44,
+      "seed_j": 45,
+      "agreement": 0.9996777777777778,
+      "n_disagree": 87,
+      "proba_mad": 0.0009310522227311944,
+      "high_class_shift": 11
+    },
+    {
+      "seed_i": 44,
+      "seed_j": 46,
+      "agreement": 0.9996259259259259,
+      "n_disagree": 101,
+      "proba_mad": 0.0009473477208935214,
+      "high_class_shift": 2
+    },
+    {
+      "seed_i": 45,
+      "seed_j": 46,
+      "agreement": 0.9996296296296296,
+      "n_disagree": 100,
+      "proba_mad": 0.0010128223388753282,
+      "high_class_shift": 9
+    }
+  ],
+  "summary": {
+    "cpu_vs_cpu_mean_agreement": 0.9996733333333333,
+    "cpu_vs_cpu_mean_disagree": 88.2,
+    "cpu_vs_cpu_mean_proba_mad": 0.0009467969766936075,
+    "cpu_vs_cpu_mean_high_shift": 5.6
+  },
+  "baseline_mlx_vs_cpu_seed42": {
+    "label": "MLX_vs_CPU_seed42",
+    "agreement": 0.999174,
+    "n_disagree": 223,
+    "proba_mad": 0.00378,
+    "high_class_shift": 64
+  },
+  "verdict": "INTERMEDIATE_lane_B_with_caveat"
+}
