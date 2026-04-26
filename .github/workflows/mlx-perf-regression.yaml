@@ -57,9 +57,10 @@ concurrency:
 jobs:
   perf-regression-check:
     name: MLX perf regression check (50k RMSE, 128 bins)
-    # Apple Silicon only — Metal GPU required.  This condition is belt-and-
-    # suspenders; the runner image already constrains the platform.
-    if: runner.os == 'macOS'
+    # Apple Silicon only — Metal GPU required.  `runs-on: macos-14` constrains
+    # the platform; a job-level `if: runner.os == 'macOS'` would be invalid
+    # because the `runner` context is only available inside steps (per current
+    # GitHub Actions context schema — actionlint flagged this).
     runs-on: macos-14        # Apple M1, Metal GPU available
     timeout-minutes: 20
 
