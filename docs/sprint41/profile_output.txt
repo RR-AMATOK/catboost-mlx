@@ -1,0 +1,25 @@
+=== S41-T3 — predict() path profiling ===
+
+[1] Numeric-only model (cat_features=[]; in-process predict path)
+    predict trial 1 (50k rows)             53.7 ms
+    predict trial 2 (50k rows)             52.9 ms
+    predict trial 3 (50k rows)             53.2 ms
+
+[2] Model with 4 categorical features (subprocess predict path)
+    predict trial 1 (50k rows)            460.5 ms
+    predict trial 2 (50k rows)            450.7 ms
+    predict trial 3 (50k rows)            450.2 ms
+
+[3] Subprocess-path phase breakdown (50k rows × 12 features)
+  write model.json                          0.2 ms
+  write data.csv (50k×12)                 262.4 ms
+  subprocess csv_predict run              162.2 ms
+  read predictions.csv                      0.3 ms
+
+=== Summary ===
+in-process median: 53.2 ms / 50k rows
+subprocess median: 450.7 ms / 50k rows
+slowdown ratio   : 8.5×
+
+rows/s in-process: 940,238
+rows/s subprocess: 110,939

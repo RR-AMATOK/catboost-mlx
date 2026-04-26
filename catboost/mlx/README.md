@@ -980,6 +980,33 @@ The first Metal kernel dispatch per process triggers JIT shader compilation. Exp
 ### Python API uses subprocess
 `CatBoostMLXRegressor`/`CatBoostMLXClassifier` invoke `csv_train` and `csv_predict` via subprocess, passing data through temporary CSV files. This adds roughly 50 ms per `fit()`/`predict()` call. The C++ library path (`mlx_boosting.h/cpp`) is not affected.
 
+**`predict()` performance — two paths, asymmetric latency.** The Python `predict()`
+implementation chooses between two backends at call time:
+
+| Path | Triggered when | Throughput (50k rows × 12 features, 100-tree model, M-series) | Notes |
+|---|---|---|---|
+| **In-process** | `cat_features=[]` (numeric-only model) | ~940k rows/s (~53 ms / 50k rows) | NumPy tree evaluator at `python/catboost_mlx/_predict_utils.py`. Within ~1.5× of CatBoost-CPU's `predict()` throughput. |
+| **Subprocess (csv_predict)** | model has any categorical features (CTR encoding required) | ~111k rows/s (~450 ms / 50k rows) | ~58% of subprocess latency is CSV serialization of input data; ~35% is binary load + Metal init + actual predict. CSV-write time scales linearly in `n_rows × n_features`. |
+
+The cross-runtime slowdown ratio is **~8× at 50k×12 and grows with feature count** —
+the irrigation Kaggle benchmark (270k × 53 features, 6 chunks of 50k) measured 41×
+because CSV serialization dominated at that footprint.
+
+**Workarounds for subprocess-path predict latency**:
+
+1. **Pre-encode categoricals** to numeric (one-hot, target-encode at training time
+   with sklearn's `TargetEncoder`, etc.) and train with `cat_features=[]`. This routes
+   `predict()` through the in-process path. **Recommended when predict latency matters**.
+2. **Batch your prediction calls** — subprocess overhead is per-call, not per-row, so
+   one `predict(X_full)` is materially faster than `predict(X_chunk)` × N calls.
+3. **Use the underlying C++ library directly** via `mlx_boosting.h` if you're embedding
+   the model — bypasses Python and CSV entirely.
+
+Closing the categorical-predict gap to in-process speed requires either (a) a binary IPC
+format between `csv_predict` and Python (replacing CSV serialization), or (b) porting the
+C++ CTR-application logic to Python so the `_predict_inprocess` path can handle
+categoricals. Both are tracked as future engineering scope; neither is on a current sprint.
+
 ### Feature combinations (crosses) not implemented
 CatBoost's automatic feature cross search is not yet ported.
 
