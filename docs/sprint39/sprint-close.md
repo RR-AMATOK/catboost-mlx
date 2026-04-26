@@ -1,7 +1,7 @@
 # Sprint 39 Close — Housekeeping after S38 RESOLVED (DEC-045)
 
 **Sprint:** 39  |  **Status:** CLOSED  |  **Date:** 2026-04-25
-**Branch:** `mlx/sprint-39-housekeeping`  |  **Base:** master `679ef517a5`  |  **Tip:** `313115729c`
+**Branch:** `mlx/sprint-39-housekeeping`  |  **Base:** master `679ef517a5`  |  **Tip:** `1e3f2b34a7`
 **Authoritative record:** this file
 **Theme:** Housekeeping following the S38 DEC-045 resolution (harness asymmetry root-cause).
 No production code changes. No new features. All commits are docs, state, and test-coverage
@@ -155,8 +155,9 @@ Total anchors after refresh: 23 (AN-001–AN-023). Docs-only: 14. Live-test-back
 | `aa4cb9dccb` | Re-run PROBE-G scaling sweep at RS=0 parity |
 | `b03af34161` | Extend RS=1.0 parity verification to 10 seeds |
 | `313115729c` | Tighten README RS=1.0 paragraph with 10-seed CI result |
+| `1e3f2b34a7` | Close-out docs — sprint-close.md, HANDOFF, TODOS, CHANGELOG, LESSONS-LEARNED |
 
-6 commits. No production source code changes. No kernel changes. Kernel md5
+7 commits total. No production source code changes. No kernel changes. Kernel md5
 `9edaef45b99b9db3e2717da93800e76f` unchanged.
 
 ---
