@@ -1,11 +1,50 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-04-25 (**S39 housekeeping COMPLETE**). 7 items shipped (PROBE_H
-> instrumentation retired, scaling sweep re-run at RS=0 parity confirms 0.023% mean drift,
-> RS=1.0 10-seed verification proves −4.08% bias is real-not-noise, README updated,
-> anchor inventory refreshed through S38, branch audits SAFE-TO-DELETE pending user
-> confirmation). 6 commits on `mlx/sprint-39-housekeeping`. See
-> `docs/sprint39/sprint-close.md`. Branch ready for PR + merge.
+> Last updated: 2026-04-26 (**S40 IN PROGRESS — Lane B locked**). Branch
+> `mlx/sprint-40-lane-b-release` cut from master `02c98948bf`. Pre-lane-check
+> experiments complete (irrigation real-data 3-experiment decomposition):
+> arithmetic-anomaly resolved (metric was balanced accuracy, not plain accuracy);
+> M2 (CTR RNG ordering) confirmed dominant driver of rare-class asymmetry (81% of
+> the 64-row High shift); CPU 5-seed noise floor establishes ~88-disagreement /
+> 5.6-High-shift envelope. The 0.28pp irrigation gap is now fully decomposed:
+> 39% seed noise + 24% architectural floor + 37% CTR-attributable. **Decision
+> recorded as DEC-046**. See `docs/sprint40/pre_lane_check/FINDING.md`.
+>
+> ## Sprint 40 in-flight
+>
+> **Goal**: ship v0.5.0 as a *characterized-difference Apple Silicon CatBoost-Plain port*,
+> framed under "RS=0 deterministic moat" positioning (vs LightGBM/XGBoost on Apple
+> Silicon, not vs CatBoost-CPU on byte-faithfulness).
+>
+> **Sprint scope**:
+> 1. README rewrite — Known Limitations section adopts the 3-row decomposition table;
+>    `cat_features=[]` parity guarantee documented; Ordered Boosting absence stated.
+> 2. Version bump 0.2.0 → 0.3.0 in `python/catboost_mlx/__init__.py`.
+> 3. CHANGELOG-DEV release notes for v0.5.0.
+> 4. LESSONS-LEARNED entry on the decomposition methodology (seed-noise + arch-floor +
+>    cat-attributable) — applicable to any future cross-runtime ML port.
+> 5. Optional GitHub Release after PR merge.
+>
+> **Out of scope (deferred)**:
+> - M1/M3/M4 mechanism investigation — bounded contribution, no open question requires it.
+> - CTR RNG ordering alignment fix — 3-day Lane D sprint scoped post-release if pursued.
+> - Ordered Boosting implementation — future major work.
+>
+> **Pre-lane-check artifacts** (committed under `docs/sprint40/pre_lane_check/`):
+> - `FINDING.md` — authoritative writeup
+> - `scripts/exp2_no_cat_features.py`, `exp3_cpu_noise_floor.py`
+> - `results/exp2_no_cat_features.json`, `exp3_cpu_noise_floor.json`
+> - `results/exp2_run.log`, `exp3_run.log`
+>
+> **Source data referenced** (external): `Predicting Irrigation Need/submissions/catboost_{cpu,mlx}_v8_rs0_submission.csv` produced by `09_cpu_vs_mlx_submissions.ipynb` at RS=0.
+>
+> ## Sprint 39 close-out (PR #35 MERGED 2026-04-25)
+>
+> 7 items shipped (PROBE_H instrumentation retired, scaling sweep re-run at RS=0 parity
+> confirms 0.023% mean drift, RS=1.0 10-seed verification proves −4.08% bias is
+> real-not-noise, README updated, anchor inventory refreshed through S38, branch audits
+> SAFE-TO-DELETE pending user confirmation). 6 commits on `mlx/sprint-39-housekeeping`.
+> See `docs/sprint39/sprint-close.md`.
 >
 > ## Sprint 38 close-out
 >

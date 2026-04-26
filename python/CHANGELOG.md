@@ -7,6 +7,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-04-26
+
+This release closes the cross-runtime correctness arc (Sprints 15–40) and ships
+CatBoost-MLX as a *characterized-difference Apple Silicon CatBoost-Plain port*.
+Synthetic-anchor parity is now bit-identical to CatBoost-CPU at `RandomStrength=0`,
+and the real-world residual gap on multiclass-with-categoricals workloads is fully
+decomposed into seed-noise + architectural floor + categorical-encoding asymmetry
+(see `catboost/mlx/README.md` § Known Limitations and `docs/sprint40/pre_lane_check/FINDING.md`).
+
+### Added
+- **Cosine score function across all grow policies** (Sprint 33, DEC-042):
+  `score_function=Cosine` now ships for SymmetricTree, Depthwise, and Lossguide. The
+  prior ST+Cosine and LG+Cosine guards were removed once the underlying mechanism
+  (degenerate-child skip in `FindBestSplitPerPartition`) was identified and fixed
+  with a per-side mask. One-hot Cosine retains joint-skip (correct for parentless gain).
+- **Real-world cross-runtime characterization** (Sprint 40, DEC-046): a 3-experiment
+  decomposition methodology (arithmetic reconcile + `cat_features=[]` discriminator +
+  CPU 5-seed noise floor) that quantifies the prediction-disagreement floor on real
+  multiclass-with-categoricals data. Reproducibility scripts shipped under
+  `docs/sprint40/pre_lane_check/scripts/`.
+- **Numeric-only parity guarantee**: workloads with `cat_features=[]` converge to within
+  the architectural floor — 99.948% prediction agreement, mean absolute probability
+  difference 2.2e-3, no rare-class skew (DEC-046).
+- **Cross-runtime parity guidance** in README: explicit `RandomStrength=0` matching is
+  required for bit-identical synthetic-anchor agreement; default `RS=1.0` produces a
+  bounded (mean −4.08%, 95% CI [−4.78%, −3.39%]) RNG-implementation bias on a 10-seed
+  small-N anchor (DEC-045).
+- **README "When to use this backend" section**: positioning copy clarifying the
+  decision matrix (when to choose CatBoost-MLX vs CatBoost-CPU/CUDA), the
+  deterministic-greedy framing for Apple Silicon, and the characterized-difference
+  contract.
+
+### Fixed
+- **DEC-036**: ST+Cosine 52.6% → 0.027% iter=50 drift (1941× improvement). Root cause
+  was a `continue` statement at `csv_train.cpp:1980` skipping the entire partition's
+  contribution when one side was degenerate; the per-side mask fix adds the non-empty
+  side and zeros the empty side, matching CatBoost-CPU's `UpdateScoreBinKernelPlain`
+  semantics. Mechanism diagnosed in PROBE-E (Sprint 33), fix shipped in S33-L4-FIX.
+- **DEC-042**: per-side mask ported to FindBestSplitPerPartition (Sprint 38, commit
+  `a481972529`), closing the partition-state divergence class for both ordinal and
+  one-hot branches.
+- **DEC-045**: small-N "drift residual" from Sprints 30–37 root-caused as a harness
+  configuration mismatch — comparison scripts invoked CPU with `random_strength=0`
+  while leaving MLX `csv_train` at its default `RS=1.0`. With matched configuration,
+  drift collapses to near-zero. PROBE-G/H/F2/Q-1 verdicts retracted as causal
+  interpretations of the same artifact; their captured data remains valid for what it
+  observed.
+- **DEC-038/039** (Sprint 32): `GreedyLogSumBestSplit` now operates on all-doc values
+  (not deduplicated); histogram kernel `fold_count` capped at 127 to avoid
+  `VALID_BIT` aliasing.
+- **BUG-007 mitigated** (commit `71aabaa842`): `group_id` sorting via `np.argsort`
+  ensures rows are grouped before training; ranking without `group_id` raises a clear
+  `ValueError` instead of producing silent garbage.
+
+### Changed
+- **Known Limitations rewrite**: the README section now documents the Ordered Boosting
+  absence (`boosting_type='Ordered'` not implemented; only `Plain` supported) and the
+  real-world cross-runtime characterization with the 3-row decomposition table. Prior
+  references to "13–44% small-N drift" are retired as historical-only.
+- **Probe methodology lessons** captured in `.claude/state/LESSONS-LEARNED.md`:
+  counterfactual-vs-observational distinction, cross-runtime configuration symmetry,
+  RNG-bias multi-seed verification, and the new 3-experiment decomposition triage for
+  cross-runtime ML port release-readiness.
+
+### Known limitations (carry-forward and new)
+- `boosting_type='Ordered'` not implemented (only `Plain`). Ordered CTR (online target
+  encoding for categoricals) IS implemented — these are different features.
+- `NewtonL2`/`NewtonCosine` score functions explicitly rejected at the Python API.
+- `max_depth` capped at 6 (kernel constraint, DEC-003 era).
+- 16M-row dataset limit (`ComputePartitionLayout` int32 ceiling).
+- 41× MLX vs CPU `predict()` slowdown via subprocess path; the in-process nanobind
+  path (`_HAS_NANOBIND=True`) does not have this overhead.
+- On real multiclass-with-categoricals workloads, expect ~99.92% prediction agreement
+  with CatBoost-CPU at matched `RS=0`; rare-class asymmetry concentrated near the
+  CTR-encoded categorical features (DEC-046).
+
+### Internal
+- ~26 sprints of work landed since 0.4.0. Source-of-truth sprint records under
+  `.claude/state/HANDOFF.md` (current state) and `.claude/state/DECISIONS.md`
+  (DEC-005 through DEC-046).
+
 ## [0.4.0] - 2026-04-12
 
 ### Added

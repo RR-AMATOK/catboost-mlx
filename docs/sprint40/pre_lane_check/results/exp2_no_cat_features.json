@@ -1,0 +1,59 @@
+{
+  "experiment": "s40_exp2_no_cat_features",
+  "config": {
+    "iterations": 500,
+    "depth": 6,
+    "lr": 0.05,
+    "l2": 3.0,
+    "seed": 42,
+    "random_strength": 0.0,
+    "n_features_used": 45,
+    "n_cat_dropped": 8
+  },
+  "timing_seconds": {
+    "cpu_fit": 31.607964124996215,
+    "cpu_predict": 0.06027741699654143,
+    "mlx_fit": 139.7359179999985,
+    "mlx_predict": 3.9947464579963707
+  },
+  "result": {
+    "agreement": 0.9994777777777778,
+    "n_disagree": 141,
+    "proba_mad": 0.0022023494105495524,
+    "proba_max_abs_diff": 0.5549956468656395,
+    "class_dist_cpu": {
+      "High": 8581,
+      "Low": 159942,
+      "Medium": 101477
+    },
+    "class_dist_mlx": {
+      "High": 8569,
+      "Low": 159965,
+      "Medium": 101466
+    },
+    "disagreement_matrix": {
+      "High": {
+        "High": 8529,
+        "Low": 0,
+        "Medium": 40
+      },
+      "Low": {
+        "High": 0,
+        "Low": 159929,
+        "Medium": 36
+      },
+      "Medium": {
+        "High": 52,
+        "Low": 13,
+        "Medium": 101401
+      }
+    }
+  },
+  "verdict": "M1_dominant_multiclass_dispatch_or_other",
+  "baseline_with_cat_features": {
+    "agreement": 0.999174,
+    "n_disagree": 223,
+    "proba_mad": 0.00378,
+    "high_class_concentration_pct": 74.4
+  }
+}

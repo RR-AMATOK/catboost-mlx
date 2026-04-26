@@ -279,6 +279,84 @@ verification 2026-04-25)*
 
 ---
 
+## Cross-Runtime Triage
+
+### Decompose a cross-runtime ML port "floor" into seed-noise + architectural + encoding layers before opening a mechanism investigation
+
+**Date**: 2026-04-26
+**Sprint**: [sprint-40]
+**Tags**: [cross-runtime] [decomposition] [triage] [methodology] [release-readiness]
+
+When a port (CatBoost-MLX vs CatBoost-CPU, or any analogous cross-runtime ML
+implementation) shows a residual prediction-disagreement floor that cannot be
+attributed by code reading alone, the temptation is to open a mechanism
+investigation — a multi-week PROBE-style escalation that examines candidates
+sequentially (M1 multiclass dispatch, M2 encoding RNG, M3 fp precision, M4
+quantization borders, …). Sprint 38 history shows this approach has a base rate
+of ~50% verdict retraction and routinely overruns its time-box (5-day cap →
+4-week reality). Three cheap experiments, run in ~1 day combined, can replace
+the multi-week investigation entirely *for the purpose of a release decision*
+and often partially *for the purpose of mechanism identification*.
+
+**The triage**:
+
+1. **Arithmetic reconciliation** (5 min): if the residual gap is reported via a
+   single headline metric, verify the metric definition and confirm the gap
+   magnitude is consistent with the disagreement count. Mismatches frequently
+   trace to (a) plain-vs-balanced accuracy confusion on imbalanced data,
+   (b) public-vs-private leaderboard subset scoring, (c) tie-breaking
+   differences. *All three are silent; all three look like algorithm bugs.*
+
+2. **Encoding-mechanism discriminator** (~30 min wall time): re-train both
+   runtimes with the suspected encoding mechanism removed (for CatBoost,
+   `cat_features=[]`; for any port with categorical/embedding/CTR paths, drop
+   to numeric-only). The delta in disagreement count and rare-class shift
+   isolates the encoding-attributable contribution from the architectural
+   floor. If the rare-class asymmetry collapses dramatically, the encoding
+   path is the dominant driver — and the architectural floor is bounded by
+   the residual.
+
+3. **Same-runtime noise floor** (~10–15 min wall time): train the *reference*
+   runtime alone at 5 different seeds (with the same noise-injection settings
+   as the comparison run); compute pairwise prediction agreement and rare-class
+   shift across all 10 pairs. This establishes the irreducible RNG-driven floor
+   for that algorithm class on that dataset. Cross-runtime gaps of less than
+   ~2× this floor in disagreement count rarely require mechanism investigation;
+   gaps of 5–10× in rare-class shift point at a specific encoding asymmetry
+   rather than uniform architectural drift.
+
+**Why this works**: the three experiments produce a *3-row decomposition table*
+that names every component and bounds its contribution. A release narrative
+built on "X% of the gap is seed-noise, Y% is architectural floor, Z% is one
+specific identified mechanism" is materially stronger than "we couldn't close
+a 0.28pp gap, but synthetic anchors agree." The decomposition either
+sufficiently characterizes the variant for a release (Lane B exit) or sharpens
+the mechanism investigation to a single isolated component (narrow Lane D
+scope) — in either case, the 1-day investment dominates the multi-week
+alternative.
+
+**How to apply**: at the end of a sprint that closes synthetic-anchor parity
+but leaves a real-world floor open, run all three experiments before triggering
+a follow-on mechanism sprint. Report the decomposition. If the three layers add
+to ≥80% of the observed gap and no single layer is unbounded, the variant is
+characterized — proceed to release. If a single layer dominates and is
+isolatable (e.g. CTR encoding path), open a *narrow* targeted investigation
+limited to that mechanism only, with a 3-day kill-switch. Skip the multi-month
+PROBE-style cascade unless the decomposition shows a layer larger than 50% AND
+not isolatable AND likely to grow on different datasets.
+
+**Counter-example check** (when this triage is insufficient): if disagreements
+are concentrated on the *common* classes rather than rare classes, OR if
+removing categoricals does *not* meaningfully reduce the rare-class shift, OR
+if same-seed CPU-vs-CPU comparison is suspiciously deterministic
+(suggesting RNG was somehow disabled), then the decomposition is not
+representative and a mechanism investigation IS warranted. The triage is a
+release-readiness filter, not a substitute for fundamental correctness review.
+
+*(source: `docs/sprint40/pre_lane_check/FINDING.md`; `docs/sprint40/pre_lane_check/scripts/exp{2,3}_*.py`; `docs/sprint40/pre_lane_check/results/exp{2,3}_*.json`; DEC-046)*
+
+---
+
 ## Contribution Log
 
 | Date | Change | Contributor |
@@ -290,3 +368,4 @@ verification 2026-04-25)*
 | 2026-04-25 | Added § Probe Design — counterfactual vs observational confusion lesson (PROBE-H v2) | sprint-38 |
 | 2026-04-25 | Added § Probe Design — cross-runtime configuration symmetry (PROBE-Q phase 2) | sprint-38 |
 | 2026-04-25 | Added § Noise-Driven Algorithms — RNG-implementation bias multi-seed verification | sprint-39 |
+| 2026-04-26 | Added § Cross-Runtime Triage — 3-experiment decomposition methodology (release-readiness filter) | sprint-40 |
