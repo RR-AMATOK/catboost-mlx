@@ -872,26 +872,18 @@ trees with feature- and border-aligned splits to fp32 precision against CPU CatB
 train RMSE is bit-identical at the standard test anchor (N=1k seed=42 LG+Cosine, 50 iters).
 
 **Default behavior**: MLX `csv_train` defaults `RandomStrength=1.0` to match CatBoost's
-upstream default. With both runtimes at default `RS=1.0`, single-seed RMSE drift is
-typically ±3-5% (a mix of RNG-implementation differences and seed-noise variance).
-Across multiple seeds, this drift averages to a small bias (≈3% on the canonical N=1k
-anchor — MLX slightly better than CPU at this anchor), reflecting subtle differences
-in how each runtime injects noise into the gain comparison. Both implementations are
-valid; the bias is bounded and not a correctness issue.
+upstream default. With both runtimes at default `RS=1.0`, single-seed RMSE drift across
+10 seeds at the canonical N=1k anchor is **mean −4.08% (95% CI [−4.78%, −3.39%])** —
+MLX consistently lower RMSE than CPU CatBoost. This is a bounded, real difference in
+how each runtime injects noise into the gain comparison; not a correctness issue. For
+bit-identical reproducibility, set RS=0 on both.
 
 **Important historical note**: prior versions of this README documented a 13–44% small-N
 drift "residual mechanism" that was localized in Sprint 38 (DEC-045) to a harness
 configuration mismatch — comparison scripts were invoking CPU with `RS=0` while leaving
 MLX at the default `RS=1.0`. The asymmetric configuration produced phantom drift that
 appeared seed-stable. With matched configuration, the drift collapses to near-zero. See
-`docs/sprint38/probe-q/PHASE-2-FINDING.md` and DEC-045 for the full root-cause analysis.
-
-See `docs/sprint38/probe-g/FINDING.md` and #130 (S38-LG-SMALL-N-RESIDUAL) for the ongoing
-investigation.
-
-For production use with `Lossguide + Cosine`, use N >= 10k or validate drift against CPU
-CatBoost on your specific dataset. The empirical N* boundary (where drift crosses 2%) is
-approximately N = 19,000.
+`docs/sprint38/probe-q/PHASE-2-FINDING.md` (DEC-045) for the full root-cause analysis.
 
 ## Troubleshooting
 

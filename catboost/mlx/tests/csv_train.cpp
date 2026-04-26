@@ -158,18 +158,6 @@ struct TCosineResidualInstrument {
         double mlxTermDen;
         double cpuTermNum;     // contribution CPU's mask-formula would add (per-side independent)
         double cpuTermDen;
-#ifdef PROBE_H_INSTRUMENT
-        // S38-PROBE-H: split cpuTermNum/Den into per-side components so the downstream
-        // analyst can independently recompute under CPU's CalcScoreOnSide formula for
-        // the left leaf and the right leaf separately. Each side contributes iff its
-        // weight > 1e-15 (same threshold as the post-DEC-042 mask).
-        // Left side: sum²/(w+λ) for cosNum; sum²·w/(w+λ)² for cosDen — or 0 if w≤0.
-        // Right side: same formula applied to (sumRight, weightRight).
-        double cosNumL;  // left-side  cosNum contribution this partition
-        double cosDenL;  // left-side  cosDen contribution this partition
-        double cosNumR;  // right-side cosNum contribution this partition
-        double cosDenR;  // right-side cosDen contribution this partition
-#endif  // PROBE_H_INSTRUMENT
     };
     std::vector<TLeafRecord> leafRecords;  // flushed per FindBestSplit call alongside binRecords
 #endif  // PROBE_E_INSTRUMENT
@@ -228,54 +216,6 @@ static void WriteLeafRecordsCSV(const std::string& path,
 }
 #endif  // PROBE_E_INSTRUMENT
 
-#ifdef PROBE_H_INSTRUMENT
-// S38-PROBE-H: write per-(feat, bin, partition) records with split per-side accumulators.
-// Schema: feat,bin,partition,cosNumL,cosDenL,cosNumR,cosDenR,cosNumTotal,cosDenTotal,
-//         gain_mlx,picked_by_mlx
-// cosNumTotal = cosNumL + cosNumR (= cpu_termNum from PROBE-E).
-// cosDenTotal = cosDenL + cosDenR (= cpu_termDen from PROBE-E).
-// gain_mlx: cosine gain that MLX computed for this (feat,bin) candidate (fp64 path).
-//           Looked up from COSINE_RESIDUAL_INSTRUMENT's binRecords by (feat,bin).
-//           Set to NaN if not found (shouldn't happen when both flags are compiled in).
-// picked_by_mlx: 1 if this (feat,bin) is the argmax MLX chose at this depth, else 0.
-static void WriteProbeHCSV(
-    const std::string& path,
-    const std::vector<TCosineResidualInstrument::TLeafRecord>& leafRows,
-    const std::vector<TCosineResidualInstrument::TBinRecord>& binRows,
-    uint32_t bestFeat, uint32_t bestBin)
-{
-    // Build gain_mlx lookup from binRecords: keyed on (featIdx, bin).
-    std::unordered_map<uint64_t, double> gainLookup;
-    gainLookup.reserve(binRows.size());
-    for (const auto& br : binRows) {
-        uint64_t key = (static_cast<uint64_t>(br.featIdx) << 32) | br.bin;
-        gainLookup[key] = br.gain_f64;
-    }
-
-    std::filesystem::create_directories(std::filesystem::path(path).parent_path());
-    FILE* f = fopen(path.c_str(), "w");
-    if (!f) { fprintf(stderr, "[PROBE-H] ERROR: cannot open %s\n", path.c_str()); return; }
-    fprintf(f, "feat,bin,partition,"
-               "cosNumL,cosDenL,cosNumR,cosDenR,"
-               "cosNumTotal,cosDenTotal,"
-               "gain_mlx,picked_by_mlx\n");
-    for (const auto& r : leafRows) {
-        uint64_t key = (static_cast<uint64_t>(r.featIdx) << 32) | r.bin;
-        auto it = gainLookup.find(key);
-        double gain_mlx = (it != gainLookup.end()) ? it->second
-                                                    : std::numeric_limits<double>::quiet_NaN();
-        int picked = (r.featIdx == bestFeat && r.bin == bestBin) ? 1 : 0;
-        fprintf(f, "%u,%u,%u,%.15g,%.15g,%.15g,%.15g,%.15g,%.15g,%.15g,%d\n",
-                r.featIdx, r.bin, r.partition,
-                r.cosNumL, r.cosDenL, r.cosNumR, r.cosDenR,
-                r.cosNumL + r.cosNumR, r.cosDenL + r.cosDenR,
-                gain_mlx, picked);
-    }
-    fclose(f);
-    fprintf(stderr, "[PROBE-H] wrote %zu rows → %s (best=(feat=%u,bin=%u))\n",
-            leafRows.size(), path.c_str(), bestFeat, bestBin);
-}
-#endif  // PROBE_H_INSTRUMENT
 
 #ifdef COSINE_D2_INSTRUMENT
 // S30-D2-INSTRUMENT: write gain_scalar CSV — subset of cos_accum with only gain columns.
@@ -1990,22 +1930,12 @@ TBestSplitProperties FindBestSplit(
                             }
                             // CPU-style: each side contributes independently, masked when its weight ≤ 0
                             double cpuN = 0.0, cpuD = 0.0;
-#ifdef PROBE_H_INSTRUMENT
-                            // S38-PROBE-H: capture per-side contributions before summing so the
-                            // downstream analyst can apply CPU's CalcScoreOnSide independently.
-                            double hNumL = 0.0, hDenL = 0.0;
-                            double hNumR = 0.0, hDenR = 0.0;
-#endif  // PROBE_H_INSTRUMENT
                             if (weightLeft > 1e-15f) {
                                 const double dSL2 = static_cast<double>(sumLeft);
                                 const double dWL2 = static_cast<double>(weightLeft);
                                 const double inv  = 1.0 / (dWL2 + dL2_e);
                                 cpuN += dSL2 * dSL2 * inv;
                                 cpuD += dSL2 * dSL2 * dWL2 * inv * inv;
-#ifdef PROBE_H_INSTRUMENT
-                                hNumL = dSL2 * dSL2 * inv;
-                                hDenL = dSL2 * dSL2 * dWL2 * inv * inv;
-#endif  // PROBE_H_INSTRUMENT
                             }
                             if (weightRight > 1e-15f) {
                                 const double dSR2 = static_cast<double>(sumRight);
@@ -2013,19 +1943,9 @@ TBestSplitProperties FindBestSplit(
                                 const double inv  = 1.0 / (dWR2 + dL2_e);
                                 cpuN += dSR2 * dSR2 * inv;
                                 cpuD += dSR2 * dSR2 * dWR2 * inv * inv;
-#ifdef PROBE_H_INSTRUMENT
-                                hNumR = dSR2 * dSR2 * inv;
-                                hDenR = dSR2 * dSR2 * dWR2 * inv * inv;
-#endif  // PROBE_H_INSTRUMENT
                             }
                             lr.cpuTermNum = cpuN;
                             lr.cpuTermDen = cpuD;
-#ifdef PROBE_H_INSTRUMENT
-                            lr.cosNumL = hNumL;
-                            lr.cosDenL = hDenL;
-                            lr.cosNumR = hNumR;
-                            lr.cosDenR = hDenR;
-#endif  // PROBE_H_INSTRUMENT
                             g_cosInstr.leafRecords.push_back(lr);
                         }
 #endif  // PROBE_E_INSTRUMENT
@@ -5025,11 +4945,7 @@ TTrainResult RunTraining(
                     PrintResidualSummary("[INSTR]   cosNum", numRes);
                     PrintResidualSummary("[INSTR]   cosDen", denRes);
                     PrintResidualSummary("[INSTR]   gain  ", gainRes);
-#ifndef PROBE_H_INSTRUMENT
-                    // Under PROBE_H_INSTRUMENT, binRecords are consumed by WriteProbeHCSV
-                    // below (for gain_mlx lookup) before being cleared.
                     g_cosInstr.binRecords.clear();
-#endif  // !PROBE_H_INSTRUMENT
                     g_cosInstr.dumpCosDen = false;
                 }
 #ifdef PROBE_E_INSTRUMENT
@@ -5044,30 +4960,9 @@ TTrainResult RunTraining(
                     fprintf(stderr, "[PROBE-E] depth=%u leaf rows=%zu skipped=%zu (%.1f%%)\n",
                             depth, g_cosInstr.leafRecords.size(), skipped,
                             100.0 * skipped / std::max<size_t>(1, g_cosInstr.leafRecords.size()));
-#ifndef PROBE_H_INSTRUMENT
-                    // Clear here only when PROBE-H is NOT compiled in; PROBE-H needs the
-                    // leafRecords below to write its own CSV and clears them afterwards.
                     g_cosInstr.leafRecords.clear();
-#endif  // !PROBE_H_INSTRUMENT
                 }
 #endif  // PROBE_E_INSTRUMENT
-#ifdef PROBE_H_INSTRUMENT
-                // S38-PROBE-H: write per-(feat, bin, partition) per-side accumulator capture.
-                // armed at the same iter/depth as PROBE_E_INSTRUMENT (controlled by
-                // PROBE_D_ARM_AT_ITER, default 0 = first tree = iter=1 in user terminology).
-                // binRecords are still populated here because their clear was deferred above.
-                if (!g_cosInstr.leafRecords.empty()) {
-                    std::string probehPath = g_cosInstr.outDir + "/probe_h_iter1_depth"
-                        + std::to_string(depth) + ".csv";
-                    uint32_t bFeat = bestSplit.Defined() ? bestSplit.FeatureId : static_cast<uint32_t>(-1);
-                    uint32_t bBin  = bestSplit.Defined() ? bestSplit.BinId     : static_cast<uint32_t>(-1);
-                    WriteProbeHCSV(probehPath, g_cosInstr.leafRecords, g_cosInstr.binRecords,
-                                   bFeat, bBin);
-                    g_cosInstr.leafRecords.clear();
-                }
-                // Now safe to clear binRecords (deferred from above).
-                g_cosInstr.binRecords.clear();
-#endif  // PROBE_H_INSTRUMENT
 #endif  // COSINE_RESIDUAL_INSTRUMENT
 #ifdef ITER1_AUDIT
                 // S31-T3b: flush completed layer record after FindBestSplit returns.

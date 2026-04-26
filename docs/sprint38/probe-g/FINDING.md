@@ -364,7 +364,8 @@ All files verified present on disk under `docs/sprint38/probe-g/`.
 - `data/anchor_n1000_seed42.csv` — N=1k anchor data
 - `data/cos_leaf_seed42_depth{0..5}.csv` — per-(feat, bin, partition) capture (6 files)
 - `data/cos_accum_seed42_depth{0..5}.csv` — per-bin fp32 vs fp64 shadow (6 files)
-- `data/scaling_sweep.csv` — per-(N, seed) drift table for ST+Cosine
+- `data/scaling_sweep.csv` — per-(N, seed) drift table, HISTORICAL: generated under asymmetric RS (MLX RS=1.0 vs CPU RS=0.0); mean drift ranged 1.2%–18.7% across N values
+- `data/scaling_sweep_parity.csv` — canonical RS=0 parity rerun (S39); 35 rows, mean drift 0.023%, max 0.086% — confirms near-zero MLX-vs-CPU drift once RS is matched
 - `data/diagnostics.json` — Phase 3 structured output (per-depth skip rates, picks, gaps)
 - `data/diagnostics_summary.txt` — Phase 3 human-readable summary
 - `data/boundary.json` — Phase 4 N* estimate (n_cross=19231, interpolated log-N)
