@@ -1,0 +1,10 @@
+dataset,framework,metric,n_seeds,metric_mean,metric_std,train_s_mean,train_s_std,predict_s_mean,predict_s_std,rss_mb_mean,n_train,n_test,n_features,framework_version,hardware
+adult,catboost_cpu,logloss,3,0.276921,0.000354396,3.02183,2.27667,0.016218,0.00664807,362.616,32561,16281,14,1.2.10,Apple M3 Max | macOS 26.3.1
+adult,catboost_mlx,logloss,3,0.446401,1.65609e-07,4.99133,2.48837,0.319801,0.106752,240.288,32561,16281,14,0.4.0,Apple M3 Max | macOS 26.3.1
+adult,catboost_mlx_no_cat,logloss,3,0.343259,0.000125831,3.19141,0.00128178,0.0248799,0.00103383,219.032,32561,16281,6,0.5.0,Apple M3 Max | macOS 26.3.1
+adult,lightgbm,logloss,3,0.277008,0,1.90156,0.712084,0.0142199,0.000775147,243.936,32561,16281,14,4.6.0,Apple M3 Max | macOS 26.3.1
+adult,xgboost,logloss,3,0.275925,0,0.633493,0.296504,0.00435814,0.00119799,229.245,32561,16281,14,3.2.0,Apple M3 Max | macOS 26.3.1
+higgs,catboost_cpu,logloss,3,0.529035,0.00015433,4.91031,0.00795118,0.00450706,0.000345272,1146.08,1000000,100000,28,1.2.10,Apple M3 Max | macOS 26.3.1
+higgs,catboost_mlx,logloss,3,0.530166,7.04588e-10,26.5705,0.0603025,0.239709,0.0137933,1592.44,1000000,100000,28,0.4.0,Apple M3 Max | macOS 26.3.1
+higgs,lightgbm,logloss,3,0.517025,0.000321419,5.10621,0.0494634,0.0594292,0.00314208,1005.26,1000000,100000,28,4.6.0,Apple M3 Max | macOS 26.3.1
+higgs,xgboost,logloss,3,0.51689,0,2.24462,0.0229685,0.0154696,0.00178617,1313.31,1000000,100000,28,3.2.0,Apple M3 Max | macOS 26.3.1

@@ -130,30 +130,36 @@ jobs:
             --hardware "macos-14-ci" \
             --output /tmp/ci_bench.json
 
-      # ── Regression check ───────────────────────────────────────────────────
-      # Compare the measured MLX time against the committed baseline.
+      # ── Regression check (Sprint 42 redesign) ─────────────────────────────
+      # Compare the measured MLX/CPU SPEEDUP RATIO against the committed
+      # baseline ratio, instead of comparing absolute MLX wall-clock.
       #
-      # Bridge mode (S41, 2026-04-26): `continue-on-error: true` makes this step
-      # report-only rather than a hard gate. The Sprint 16 baseline
-      # (`.cache/benchmarks/sprint16_baseline.json`, dated 2026-04-16) was
-      # captured on unknown M-series hardware and the GitHub-hosted macos-14
-      # runner produces wall-clock times that diverge from it by 4× or more
-      # (CI: ~210s vs baseline 48.75s vs local M3 Max: ~2.6s for the same
-      # 50k × 50 × 100-iter × 128-bins RMSE workload). That's heterogeneous
-      # hardware, not a code regression — kernel sources md5 unchanged from
-      # S30 → S41. Sprint 42 (Upstream Benchmark Adoption) will rebuild the
-      # gate on CI-runner-matched baselines and the proper apples-to-apples
-      # comparison; until then, this step records the delta in the log without
-      # blocking PRs.
-      - name: Check for performance regression
+      # Why this matters (per S41 close-out): the GitHub-hosted macos-14
+      # runner produces absolute wall-clock numbers that diverge from any
+      # baseline captured on a different M-series machine by 4× or more.
+      # Comparing absolute MLX time made the gate hardware-dependent and
+      # unstable across runner pool changes (S40 fix re-activated the gate
+      # against a 5-month-old baseline; the gate immediately fired at +330%
+      # regression that was actually heterogeneous-hardware variance).
+      #
+      # The cpu_time_s and mlx_time_s in the bench output BOTH scale with
+      # runner speed; their RATIO (`speedup = cpu / mlx` in
+      # bench_mlx_vs_cpu.py) is invariant to the absolute speed of the
+      # runner, as long as CPU and MLX paths are uniformly slowed. A real
+      # MLX regression shows as: mlx_time_s grows faster than cpu_time_s on
+      # the same hardware → ratio drops. A runner-swap that makes everything
+      # 4× slower preserves the ratio.
+      #
+      # Threshold: 5% degradation in the speedup ratio. Hard-fail
+      # (continue-on-error: false) restored.
+      - name: Check for performance regression (speedup-ratio gate)
         id: regression_check
-        continue-on-error: true
         run: |
           python - <<'PYEOF'
           import json
           import sys
 
-          THRESHOLD = 0.05          # 5% regression limit
+          THRESHOLD = 0.05          # 5% relative degradation in speedup ratio
           TASK      = "RMSE"
           SCALE     = 50000
           BINS      = 128
@@ -175,13 +181,16 @@ jobs:
               )
               sys.exit(1)
 
-          measured = ci_run.get("mlx_time_s")
-          if measured is None:
+          cpu_t = ci_run.get("cpu_time_s")
+          mlx_t = ci_run.get("mlx_time_s")
+          if cpu_t is None or mlx_t is None or mlx_t <= 0 or cpu_t <= 0:
               print(
-                  "ERROR: mlx_time_s is null in CI result — MLX backend may not have run.",
+                  f"ERROR: cpu_time_s or mlx_time_s is null/non-positive in CI result "
+                  f"(cpu={cpu_t!r}, mlx={mlx_t!r}). Both backends must run.",
                   file=sys.stderr,
               )
               sys.exit(1)
+          measured_ratio = cpu_t / mlx_t
 
           # ── Load baseline ───────────────────────────────────────────────
           baseline_path = ".cache/benchmarks/sprint16_baseline.json"
@@ -208,26 +217,47 @@ jobs:
               )
               sys.exit(1)
 
-          reference = baseline_run.get("mlx_time_s")
-          if reference is None or reference <= 0:
-              print(
-                  "ERROR: Baseline mlx_time_s is null or zero — baseline is corrupt.",
-                  file=sys.stderr,
-              )
-              sys.exit(1)
+          baseline_ratio = baseline_run.get("speedup")
+          if baseline_ratio is None or baseline_ratio <= 0:
+              # Backward compatibility: derive ratio from cpu_time_s / mlx_time_s
+              b_cpu = baseline_run.get("cpu_time_s")
+              b_mlx = baseline_run.get("mlx_time_s")
+              if b_cpu and b_mlx and b_mlx > 0:
+                  baseline_ratio = b_cpu / b_mlx
+              else:
+                  print(
+                      "ERROR: Baseline has no speedup or cpu/mlx times — corrupt baseline.",
+                      file=sys.stderr,
+                  )
+                  sys.exit(1)
 
-          # ── Compute regression ──────────────────────────────────────────
-          regression = (measured - reference) / reference
+          # ── Compute regression in the speedup ratio ─────────────────────
+          # If MLX got SLOWER relative to CPU, measured_ratio < baseline_ratio.
+          # regression > 0 ⇒ MLX is relatively slower than baseline.
+          regression = (baseline_ratio - measured_ratio) / baseline_ratio
 
-          print(f"Baseline: {reference:.3f}s  |  Measured: {measured:.3f}s  |  Delta: {regression:+.1%}")
+          print(
+              f"Speedup ratio (cpu/mlx) — baseline: {baseline_ratio:.4g}  |  "
+              f"measured: {measured_ratio:.4g}  |  Δ: {regression:+.1%}"
+          )
+          print(
+              f"  CI absolute times: cpu={cpu_t:.3f}s  mlx={mlx_t:.3f}s  "
+              f"(absolute times intentionally NOT gated; runner-dependent)"
+          )
 
           if regression > THRESHOLD:
               print(
-                  f"\nPERFORMANCE REGRESSION DETECTED\n"
-                  f"  Task      : {TASK} @ {SCALE:,} rows, {BINS} bins\n"
-                  f"  Baseline  : {reference:.3f}s  ({baseline.get('meta', {}).get('date', 'unknown date')})\n"
-                  f"  Measured  : {measured:.3f}s\n"
-                  f"  Regression: {regression:+.1%}  (limit: +{THRESHOLD:.0%})\n"
+                  f"\nPERFORMANCE REGRESSION DETECTED (speedup-ratio gate)\n"
+                  f"  Task              : {TASK} @ {SCALE:,} rows, {BINS} bins\n"
+                  f"  Baseline ratio    : {baseline_ratio:.4g}  "
+                  f"({baseline.get('meta', {}).get('date', 'unknown date')})\n"
+                  f"  Measured ratio    : {measured_ratio:.4g}\n"
+                  f"  Relative Δ        : {regression:+.1%}  (limit: +{THRESHOLD:.0%})\n"
+                  f"  CI absolute times : cpu={cpu_t:.3f}s  mlx={mlx_t:.3f}s\n"
+                  f"\n"
+                  f"MLX slowed down RELATIVE to CPU on the same machine. This is\n"
+                  f"hardware-invariant (a uniformly-slower runner would preserve\n"
+                  f"the ratio), so this is a real MLX regression to investigate.\n"
                   f"\n"
                   f"To investigate: compare stage timings with --mlx-stage-profile.\n"
                   f"If this is an intentional perf change, update the baseline:\n"
@@ -237,7 +267,7 @@ jobs:
               )
               sys.exit(1)
 
-          print(f"OK: regression {regression:+.1%} is within the {THRESHOLD:.0%} limit.")
+          print(f"OK: speedup ratio degradation {regression:+.1%} is within the {THRESHOLD:.0%} limit.")
           PYEOF
 
       # ── Histogram-stage gate (S17-05) ─────────────────────────────────────────
@@ -255,12 +285,16 @@ jobs:
       #   (seeded from Sprint 17 after-JSONs; bare names, no prefix).
       # The after-snapshots are produced fresh on every PR run.
       #
-      # Bridge mode (S41, 2026-04-26): `continue-on-error: true`. Like the
-      # wall-clock gate above, the Sprint 18 histogram baselines were captured
-      # on hardware whose identity is no longer recorded; the GitHub-hosted
-      # macos-14 runner produces histogram_ms numbers that may diverge by
-      # large factors. Sprint 42 (Upstream Benchmark Adoption) will rebuild
-      # both gates on CI-runner-matched baselines.
+      # Informational (S41 → S42): `continue-on-error: true`. The wall-clock
+      # gate above was rebuilt in S42-T4 as a hardware-invariant
+      # speedup-ratio comparison. The histogram-stage gate, by contrast,
+      # compares absolute histogram_ms values and is therefore still
+      # runner-dependent. Making it hardware-invariant requires a deeper
+      # redesign (e.g. comparing histogram_ms as a fraction of total iter
+      # time, or tracking absolute Δ in iter throughput across the 18-config
+      # grid). Until that redesign lands, this stage runs in informational
+      # mode — the JSON output is captured and any regression is logged,
+      # but it does not block PRs. Tracked as S42 follow-up.
       - name: Capture stage-profile run (18-config, histogram gate)
         id: stage_profile_run
         continue-on-error: true

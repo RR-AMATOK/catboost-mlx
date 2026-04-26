@@ -2,6 +2,88 @@
 
 > Coverage: Sprints 0–15 reconstructed from git log on 2026-04-15. Sprint 16+ is source of truth.
 
+## 2026-04-26 — Sprint 42: Upstream Benchmark Adoption
+
+Branch: `mlx/sprint-42-benchmarks` (8 commits, PR pending). No production
+source code changes. No kernel changes. Kernel sources md5
+`9edaef45b99b9db3e2717da93800e76f` unchanged from S30 → S42.
+
+### Commits (8)
+
+| SHA | Description |
+|-----|-------------|
+| `1ba0d55edf` | T0 — Sprint scaffold (sprint-plan + benchmarks/upstream/ skeleton + state) |
+| `13088f517a` | T1 — Dataset adapters for 5 upstream benchmark targets |
+| `fd00d1a321` | T1.1 — Higgs adapter supports row-count subsetting |
+| `4823b024e6` | T2 — 4-framework runners + driver, validated end-to-end on Adult |
+| `bee28d02c4` | T3 (partial) — Pareto-frontier writeup + aggregator + plot generator |
+| `71ef53c54b` | T3 (Higgs-1M added) — DEC-046 numeric-only-bounded-gap claim validated |
+| `4391cee586` | T4 — perf-regression gate rebuilt as hardware-invariant speedup-ratio |
+| (this commit) | T5 — close-out doc + post-merge HANDOFF/TODOS/CHANGELOG-DEV |
+
+### Headline finding — DEC-046 numeric-only-bounded-gap claim cross-validated
+
+Two of five upstream-canonical GBDT benchmark datasets shipped with full
+4-framework × 3-seed sweeps on the same M-series machine. The MLX-vs-CPU
+logloss gap depends almost entirely on whether the dataset has categorical
+features — exactly as DEC-046 predicted from the irrigation reference:
+
+| Dataset       | n_train × n_features | cat features | MLX vs CPU gap | Mechanism |
+|---------------|----------------------|--------------|----------------|-----------|
+| Adult         | 32k × 14             | 8 (57%)      | +0.1695 logloss | 39% architectural + 61% categorical |
+| Higgs (1M)    | 1M × 28              | 0 (0%)       | +0.0012 logloss | architectural floor only |
+
+This is the cross-dataset validation the S40 advisory-board synthesis demanded
+before any "characterized variant" public-facing claim could stand. Mechanism
+unchanged across the two datasets; magnitude scales with cat-feature density.
+
+### Headline finding — XGBoost dominates Pareto frontier on both datasets
+
+XGBoost (CPU hist, tree_method=hist) is the only framework on the Pareto
+frontier on both Adult and Higgs-1M — fastest train AND best logloss.
+LightGBM is virtually identical in metric on both datasets but ~2-3× slower
+in train. The CatBoost family (CPU + MLX) is ~0.012 logloss behind
+LightGBM/XGBoost on Higgs-1M at 200 iterations, which is a known CatBoost
+characteristic at low iter count and NOT MLX-specific (CPU CatBoost shows
+the same gap).
+
+### Perf-regression CI gate rebuilt (T4)
+
+Retired the S41 bridge mode (`continue-on-error: true`). Wall-clock-vs-
+baseline comparison replaced with hardware-invariant CPU/MLX speedup-ratio
+comparison. The S41-trigger case (CI runner ~4× uniformly slower than
+baseline-capture machine) now correctly passes (+0.0% Δ ratio); a real MLX
++10% slowdown vs CPU on the same machine still fires (+9.1% Δ).
+`continue-on-error: false` restored on the wall-clock gate. Histogram-stage
+gate retains continue-on-error: true (informational) pending its own
+deeper redesign.
+
+### What shipped
+
+- `benchmarks/upstream/` — 5 adapters + 4 framework runners + driver +
+  aggregator + plot generator (~2700 lines).
+- 27 result JSONs (15 Adult including the no-cat MLX variant for the
+  DEC-046 decomposition; 12 Higgs-1M).
+- `docs/benchmarks/v0.5.x-pareto.md` — head-to-head writeup with cross-
+  dataset summary table, per-dataset Pareto plots, methodology, honest-
+  framing constraints, pending-dataset table.
+- `docs/sprint42/{sprint-plan.md, sprint-close.md}`.
+- `.github/workflows/mlx-perf-regression.yaml` — T4 redesign.
+
+### Out of scope (deferred)
+
+- Full 11M Higgs run (data on disk; needs longer compute window)
+- Epsilon / Amazon / MSLR (data acquisition gating)
+- Histogram-stage gate redesign (deeper refactor)
+- MLX-Adult absolute gap mechanism investigation (Lane D scope per DEC-046)
+
+### Optional v0.5.2 patch tag
+
+Post-merge, an optional v0.5.2 tag covers the benchmark suite + writeup +
+CI gate redesign. User-discoverable additions; no Python API changes.
+
+---
+
 ## 2026-04-26 — Sprint 41: Polish-to-Trust (E1)
 
 Branch: `mlx/sprint-41-polish` (6 commits, PR pending). No production source code

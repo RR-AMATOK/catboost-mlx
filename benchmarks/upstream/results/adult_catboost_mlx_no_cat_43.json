@@ -1,0 +1,27 @@
+{
+  "framework": "catboost_mlx_no_cat",
+  "framework_version": "0.5.0",
+  "dataset": "adult",
+  "task": "classification",
+  "metric_name": "logloss",
+  "metric_value": 0.34318958194786664,
+  "seed": 43,
+  "train_seconds": 3.1901539160026005,
+  "predict_seconds": 0.023713375005172566,
+  "peak_rss_bytes": 218808320,
+  "n_train": 32561,
+  "n_test": 16281,
+  "n_features": 6,
+  "cat_indices": [],
+  "hyperparameters": {
+    "iterations": 200,
+    "depth": 6,
+    "learning_rate": 0.1,
+    "l2_reg": 3.0,
+    "random_strength": 0.0,
+    "bootstrap_type": "no"
+  },
+  "hardware": "Apple M3 Max | macOS 26.3.1",
+  "python_version": "3.13.2",
+  "notes": "MLX with all cat columns DROPPED (numeric-only path; reveals DEC-046 categorical share)."
+}
