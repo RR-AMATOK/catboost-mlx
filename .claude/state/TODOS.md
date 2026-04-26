@@ -1,18 +1,18 @@
 # Active Tasks — CatBoost-MLX
 
 > Coverage: Sprints 0–15 reconstructed from git/agent-memory on 2026-04-15. Sprint 16+ is source of truth.
-> Last header refresh: 2026-04-26 (S40 IN PROGRESS — Lane B locked, branch `mlx/sprint-40-lane-b-release` cut. Pre-lane-check 3-experiment decomposition complete. DEC-046 ACCEPTED.)
+> Last header refresh: 2026-04-26 (S40 SHIPPED — PR #36 merged at master `96ed224b35`. v0.5.0 public release. Branch `mlx/sprint-40-close-out` carries close-out doc + state updates only.)
 
-## Current state (2026-04-26, S40 kickoff)
+## Current state (2026-04-26, S40 close-out)
 
-- **Active branch**: `mlx/sprint-40-lane-b-release` at `02c98948bf` (cut from master, 0 commits ahead so far — pre-lane-check artifacts staged for first commit).
-- **S39 status**: CLOSED (PR #35 merged `02c98948bf`). 7 housekeeping items shipped.
-- **S40 status**: IN PROGRESS. Pre-lane-check experiments complete (`docs/sprint40/pre_lane_check/FINDING.md`). Decision: Lane B (public release as characterized variant) per DEC-046.
-- **Production kernel**: v5 (`784f82a891`), shipped S24 D0. ULP=0 structural parity across DEC-008 envelope. Kernel sources md5 `9edaef45b99b9db3e2717da93800e76f` byte-identical S30 → S39.
+- **Active branch**: `mlx/sprint-40-close-out` (close-out doc + state updates; no source code changes).
+- **S40 status**: SHIPPED (PR #36 merged at `96ed224b35`). v0.5.0 published. See `docs/sprint40/sprint-close.md`.
+- **S39 status**: CLOSED (PR #35 merged `02c98948bf`).
+- **Production kernel**: v5 (`784f82a891`), shipped S24 D0. ULP=0 structural parity across DEC-008 envelope. Kernel sources md5 `9edaef45b99b9db3e2717da93800e76f` byte-identical S30 → S40 (no kernel changes in S40).
 - **R8 (honest)**: 1.01× e2e vs S16 baseline. Unchanged.
-- **Open PRs**: none.
+- **Open PRs**: pending close-out PR for `mlx/sprint-40-close-out`.
 - **Active DEC**: **DEC-046 ACCEPTED** (S40 lane lock); DEC-045 RESOLVED, DEC-044 WITHDRAWN, DEC-042/036/040 CLOSED.
-- **Open backlog**: #113 S31-T3-MEASURE re-run, #114 S31-T-CLEANUP, S31-T-LATENT-P11 (Logloss/Poisson/Tweedie), SA carry-forwards (SA-L1-S33 hard-coded paths, SA-L3-S30/SA-N2-S33 instrumentation env-var hardening, SA-I2-S29 #95 CLI exit wrap).
+- **Open backlog (carry-forward)**: `mlx-perf-regression.yaml` chronic 0s failure (red since S36; not blocking but should be fixed); narrow Lane D CTR-RNG investigation (3-day kill-switch, optional per DEC-046); `predict()` 41× slowdown via subprocess; `bootstrap_type='No'` validator case sensitivity; #113 S31-T3-MEASURE re-run; #114 S31-T-CLEANUP; S31-T-LATENT-P11 (Logloss/Poisson/Tweedie); SA carry-forwards (SA-L1-S33 hard-coded paths, SA-L3-S30/SA-N2-S33 instrumentation env-var hardening, SA-I2-S29 #95 CLI exit wrap).
 
 ## Sprint 40 — Lane B public release (IN PROGRESS)
 
@@ -53,9 +53,34 @@
   as a release-readiness filter that replaces multi-week PROBE-style cascades.
   Cross-project applicability noted.
 
-- [ ] **S40-T6 PR-AND-RELEASE** — Open PR `mlx/sprint-40-lane-b-release` → master.
-  After merge, optionally cut a GitHub Release on `RR-AMATOK/catboost-mlx` tagged
-  `v0.5.0` with release notes drawn from the CHANGELOG entry.
+- [x] **S40-T6 PR-AND-RELEASE** — DONE 2026-04-26. PR #36 opened, CI green (modulo
+  pre-existing chronic perf-regression flake and one re-run on the Python suite),
+  merged at master `96ed224b35`. **Optional GitHub Release v0.5.0 still pending** —
+  not auto-cut; awaiting user confirmation before publishing the first public Release
+  on `RR-AMATOK/catboost-mlx`.
+
+## Sprint 40 close-out (PR pending)
+
+**Branch**: `mlx/sprint-40-close-out`
+
+- [x] **S40-CLOSE-1 SPRINT-CLOSE-DOC** — DONE 2026-04-26. Authored
+  `docs/sprint40/sprint-close.md` per S39 close-out template — items completed table,
+  decomposition headline, decision recorded (DEC-046), out-of-scope deferrals, CI
+  status, files changed, branch lifecycle, next-session entry points.
+
+- [x] **S40-CLOSE-2 STATE-UPDATES** — DONE 2026-04-26. HANDOFF S40 in-flight → SHIPPED
+  block; TODOS header refreshed; this close-out section appended.
+
+- [x] **S40-CLOSE-3 CHANGELOG-DEV-SESSION** — DONE 2026-04-26. Appended Sprint 40
+  session entry to `.claude/state/CHANGELOG-DEV.md` (commit chain, headline finding,
+  decision record, documentation deliverables, version bump, CI status, source of
+  truth pointers).
+
+- [ ] **S40-CLOSE-4 BRANCH-CLEANUP** — Delete local `mlx/sprint-40-lane-b-release`
+  branch (remote auto-deleted on PR merge).
+
+- [ ] **S40-CLOSE-5 PR-AND-MERGE** — Open close-out PR for `mlx/sprint-40-close-out`,
+  merge after CI passes.
 
 **Out of scope (deferred to future sprints)**:
 - M1/M3/M4 mechanism investigation (bounded contribution, no open question requires it).
