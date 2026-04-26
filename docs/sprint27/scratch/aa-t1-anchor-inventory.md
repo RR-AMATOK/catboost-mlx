@@ -1,6 +1,7 @@
 # S27-AA-T1 — Numeric Anchor Inventory
 
 **Produced:** 2026-04-22 (Sprint 27, Track B)
+**Last refreshed:** 2026-04-25 (Sprint 39) — added AN-019 through AN-023 (Sprints 28–38)
 **Agent:** @qa-engineer
 **Purpose:** Enumerate every committed numeric anchor for T2 re-run and T3 drift classification.
 **Scope:** live assertions + documented canonical values that would drift if generating code changed.
@@ -29,6 +30,25 @@
 | AN-016 | `docs/sprint26/d0/g1-g3-g4-report.md` | 101 | `0.19457837` | RMSE | Run `python benchmarks/sprint26/d0/g4_determinism.py` (S26 G5 determinism, 100 runs at N=10k/seed=1337/rs=0) | `cbbfc29257` | S26 G5 determinism: 100 runs of Python-path SymmetricTree, N=10k, seed=1337, rs=0; mean and median RMSE converge to 0.19457837 / 0.19457836. Not asserted in automated tests — docs-only anchor. |
 | AN-017 | `benchmarks/sprint26/fu2/fu2-gate-report.md` | 101 | `0.17222003` | RMSE | Run `python benchmarks/sprint26/d0/g4_determinism.py` or analogous script at FU-2 config (N=10k, seed=1337, rs=0, iterations=50, depth=6, max_bin=128, grow_policy=SymmetricTree, FU-2 binary) | `2d806d0fa4` | FU-2 G5 determinism: 100 runs; mean/median RMSE 0.17222003 / 0.17222002. Not asserted in automated tests — docs-only anchor. Represents current production-tip Python-path SymmetricTree output. |
 | AN-018 | `docs/sprint19/scratch/algorithmic/a1_empirical_drop.md` | 31 | `0.48047778` | RMSE | Build bench_boosting at commit `0f992cf863` or nearby S19 tip then: same 50k/RMSE/d6/128b/seed42 config | `0f992cf863` | Parity gate value at S19 intermediate tip (post-EvalAtBoundary removal, pre-T1); used as parity reference during A1 production port. Also appears in sprint21 d0_attribution.md run output. Not asserted in live tests. |
+| AN-019 | `docs/sprint33/l1-determinism/verdict.md` | 104–105 | CPU RMSE seed=42: `0.1936264503`; MLX pre-fix RMSE seed=42: `0.2956260000` (pre-fix, superseded) | RMSE | Re-run requires: N=50k, 20 features, y=0.5·X[0]+0.3·X[1]+0.1·noise, np.random.default_rng(42), ST/Cosine/RMSE, depth=6, bins=128, l2=3, lr=0.03, random_strength=0.0. CPU value: catboost 1.2.10; MLX value: csv_train at S33 baseline tip `9dfd62ccc3` (pre-L4-fix) | `9dfd62ccc3` | Sprint 33 L1 determinism probe anchor — shared base config for all sprint33 probes (A through E) and the L0–L4 scaffold. CPU RMSE is the "ground truth" ST+Cosine N=50k target. MLX value captures pre-L4-fix state; superseded by the DEC-042 post-fix output (~0.214 range per S33 Commit 3b). Docs-only. |
+| AN-020 | `docs/sprint33/l2-graft/verdict.md` | 124 | `0.29299000` | RMSE | Re-run requires: graft_snapshot_seed42.json (CPU iter=1 cursor injected into MLX run) at the AN-019 config; see run_l2_graft.py | `9dfd62ccc3` | Sprint 33 L2 graft diagnostic: MLX iter=50 RMSE after receiving CPU iter=1 cursor (graft). Used to isolate iter≥2 divergence source. Intermediate diagnostic value; superseded by L4-fix resolution. Docs-only. |
+| AN-021 | `docs/sprint33/sprint-close/cr-report.md` | 89 | Pre-fix iter=49 loss: `0.479101`; post-fix iter=49 loss: `0.493401` | loss (one-hot smoke) | Run csv_train on 8k one-hot anchor: 1 cat feature × 4 levels + 2 numeric, ST+Cosine, 50 iters, depth=6, bins=32, lr=0.05, l2=3, seed=42, max-onehot-size=8. Requires S33-L4-FIX commits 3a/3b present. | `e1d72d64e8` (Commit 3a) | Sprint 33 CR one-hot smoke anchor: applied the per-side mask pattern to one-hot path (L1698) as a sanity check; loss increased ~3% post-patch, which drove the "investigate before fixing one-hot" Path B decision. Pre-fix value is the S33 baseline; post-fix value is the patched output. The patch was reverted — neither value reflects current production code for the one-hot path (joint-skip retained per S34-PROBE-F-LITE). Docs-only. Status: SUPERSEDED — patched branch was reverted; one-hot Cosine retains joint-skip per PROBE-F-LITE verdict. |
+| AN-022 | `docs/sprint38/probe-g/data/anchor_n1000_seed42.csv` | (committed CSV file) | MD5: `0976a75cb621a74e55eb9480d35935b3`; 1000 rows × 20 features | data file | `cp docs/sprint38/probe-g/data/anchor_n1000_seed42.csv` to working dir; generate via: `np.random.default_rng(42)`, N=1000, 20 features, y=0.5·X[0]+0.3·X[1]+0.1·N(0,1) | `a481972529` (S38 FBSPP fix commit) | Sprint 38 canonical small-N probe data file. Shared by PROBE-G (phase 1), F2, PROBE-H, fix-verify, and PROBE-Q as the N=1k seed=42 training set. Config: same feature/target formula as AN-019 but at N=1k. The committed CSV is the byte-identical artifact. Docs-only (no live test asserts against this CSV directly). |
+| AN-023 | `docs/sprint38/probe-q/PHASE-2-FINDING.md` | 17–21 | MLX RMSE (RS=0): `0.204238`; CPU RMSE (RS=0): `0.204238`; drift: `0.000%` | RMSE | Run `./csv_train docs/sprint38/f2/data/anchor_n1000_seed42.csv --iterations 50 --depth 6 --lr 0.03 --bins 128 --l2 3 --loss rmse --score-function Cosine --seed 42 --random-strength 0`; compare with `catboost.CatBoost(iterations=50, depth=6, learning_rate=0.03, border_count=128, l2_leaf_reg=3, loss_function='RMSE', score_function='Cosine', random_strength=0.0, random_seed=42)` | `a481972529` | DEC-045 resolution anchor: bit-identical RMSE at matched RS=0. LG+Cosine, N=1k seed=42, 50 iters. Demonstrates that the 13–44% small-N drift observed in Sprints 37–38 was entirely a harness configuration asymmetry (CPU at RS=0, MLX at default RS=1.0). With RS matched, drift collapses to zero. Docs-only. |
+
+---
+
+## Sprint 28–38 additions: notes on classification
+
+**AN-019 (docs-only, sprint33):** The N=50k ST+Cosine probe anchor is shared across all sprint33 investigations (PROBE-A through PROBE-E, L0–L4). The CPU value (`0.1936264503`) is a stable reference; the MLX pre-fix value (`0.2956260000`) is historical. No live test asserts either value. The fix (DEC-042 via S33-L4-FIX) brought MLX inline; current production output at this config is not separately anchored in a live test.
+
+**AN-020 (docs-only, sprint33):** Graft diagnostic RMSE `0.29299000` is an intermediate L2 diagnostic. Not a production-meaningful anchor — generated from an artificial hybrid run (CPU iter=1 cursor in MLX run). Class-d by DEC-031 Rule 4 (dead anchor: unreachable without reconstructing the L2 graft harness). Retained as a historical record.
+
+**AN-021 (superseded, sprint33):** One-hot smoke values `0.479101` / `0.493401` are from a patched branch that was reverted. The post-patch value does not reflect any committed code path. Per DEC-031 class-c (documented-supersession): the one-hot Cosine path retains joint-skip by intent (S34-PROBE-F-LITE). Neither value is a valid regression baseline for current code.
+
+**AN-022 (data-file anchor, sprint38):** The committed CSV `anchor_n1000_seed42.csv` is a new type of anchor (data file, not a scalar). Not yet wired to any live test assertion. DEC-031 Rule 1 applies: if this CSV is used as a gate anchor in future harnesses, the test must include a MD5 or row-count assertion. As of S38, all uses are in probe scripts under `docs/`.
+
+**AN-023 (docs-only, sprint38):** The DEC-045 bit-identical RMSE (`0.204238` at RS=0) is the resolution anchor for the small-N investigation. It should become a live test assertion (DEC-031 Rule 1) in a future sprint: wire it to `python/tests/` to catch any regression in RS=0 parity at N=1k. Currently docs-only.
 
 ---
 
@@ -50,14 +70,16 @@
 
 | Dimension | Count |
 |-----------|-------|
-| Total anchors | 18 |
+| Total anchors | 23 (AN-001–023; AN-019–023 added S39 refresh) |
 | Live test assertions (code throws on mismatch) | 9 (AN-001…007, AN-015 × 2 values, AN-006, AN-007) |
-| Docs-only anchors (no automated enforcement) | 9 (AN-008…014, AN-016…018) |
-| RMSE kind | 9 |
-| Prediction / proba kind | 4 |
-| Logloss / loss (binary/multiclass) | 5 |
+| Docs-only anchors (no automated enforcement) | 14 (AN-008…014, AN-016…023) |
+| Superseded / retired anchors | AN-021 (one-hot patch reverted; superseded), AN-020 (graft diagnostic; class-d) |
+| Data-file anchors (committed CSV, no scalar assertion) | 1 (AN-022) |
+| RMSE kind | 13 (AN-001, AN-009, AN-010, AN-016, AN-017, AN-018, AN-019 ×2 values, AN-020, AN-022 data, AN-023 ×2 values) |
+| Prediction / proba kind | 4 (AN-002–005) |
+| Logloss / loss (binary/multiclass) | 5 (AN-006–008, AN-011 bulk, AN-021 loss) |
 | Predating DEC-028 merge (`634a72134d`) | 13 (AN-006–018; all captured before S26-D0-9) |
-| Touched Sprint 16+ (sha order) | 7 (AN-006 via f804c, AN-009–012 via S19/S18 commits, AN-016–017 via S26) |
+| Added Sprint 28–38 | 5 (AN-019–023) |
 | DEC-028 anchor-update group (AN-001–005) | 5 (updated AT 634a72134d, i.e. these ARE the DEC-028-aware values) |
 
 ---
