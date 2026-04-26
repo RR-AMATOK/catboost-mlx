@@ -1,20 +1,51 @@
 # Active Tasks — CatBoost-MLX
 
 > Coverage: Sprints 0–15 reconstructed from git/agent-memory on 2026-04-15. Sprint 16+ is source of truth.
-> Last header refresh: 2026-04-26 (S40 SHIPPED — PR #36 merged at master `96ed224b35`. v0.5.0 public release. Branch `mlx/sprint-40-close-out` carries close-out doc + state updates only.)
+> Last header refresh: 2026-04-26 (S41 READY-TO-CLOSE — Polish-to-Trust E1, branch `mlx/sprint-41-polish`, PR pending. T1–T5 done; T6 close-out being staged. Next: optional v0.5.1 tag, then S42 Upstream Benchmark Adoption.)
 
-## Current state (2026-04-26, S40 close-out)
+## Sprint 41 — Polish-to-Trust (E1) — READY-TO-CLOSE
 
-- **Active branch**: `mlx/sprint-40-close-out` (close-out doc + state updates; no source code changes).
-- **S40 status**: SHIPPED (PR #36 merged at `96ed224b35`). v0.5.0 published. See `docs/sprint40/sprint-close.md`.
-- **S39 status**: CLOSED (PR #35 merged `02c98948bf`).
-- **Production kernel**: v5 (`784f82a891`), shipped S24 D0. ULP=0 structural parity across DEC-008 envelope. Kernel sources md5 `9edaef45b99b9db3e2717da93800e76f` byte-identical S30 → S40 (no kernel changes in S40).
+**Branch**: `mlx/sprint-41-polish` (6 commits, PR pending)
+**Authoritative record**: `docs/sprint41/sprint-close.md`
+
+- [x] **S41-T1 BOOTSTRAP-TYPE-CASE-INSENSITIVE** — DONE 2026-04-26. `python/catboost_mlx/core.py:632` validator accepts `'No'`/`'NO'`/`'no'`/`'Bayesian'`/etc.; normalizes to lowercase. New test in `tests/test_basic.py`. Commit `d0bc7a1a87`.
+- [x] **S41-T2 README-INSTALL-QUICK-START** — DONE 2026-04-26. New top-of-document § Installation & Quick Start (prerequisites, source install, 30-sec smoke test, optional CPU parity check, CLI quick test). Smoke test verified end-to-end. Commit `b570d5c154`.
+- [x] **S41-T3 PREDICT-SUBPROCESS-PROFILE** — DONE 2026-04-26. Mechanism identified: numeric-only models already in-process at ~940k rows/s; subprocess only triggers on categoricals. CSV-write dominates at 58% of subprocess latency. README §"Python API uses subprocess" rewritten with two-row mechanism table + 3 workarounds. No code change shipped — documented + steered. Commit `50e2c7f9d4`.
+- [x] **S41-T4 PYPI-PUBLISH-READINESS-AUDIT** — DONE 2026-04-26. Sdist (382 KB) + wheel (421 KB) build cleanly. Sdist hygienic (47 files; no secrets/state). Fresh-venv wheel install passes smoke test. Must-fix at publish time: `MACOSX_DEPLOYMENT_TARGET=14.0`. Recorded in `docs/sprint41/T4-pypi-readiness.md`. Commit `118d63246e`.
+- [x] **S41-T5 UPSTREAM-RFC-DRAFT-REFRESH** — DONE 2026-04-26. `docs/upstream_issue_draft.md` refreshed for post-S30/S40 reality (DEC-036/042/045/046 closures, v0.5.0 framing, characterized-difference positioning, five trigger conditions before submission). STAGED — NOT POSTED. Commit `c08fa10cda`.
+- [ ] **S41-T6 CLOSE-OUT-PR-AND-V051-TAG** — `docs/sprint41/sprint-close.md` written; HANDOFF + TODOS updated; CHANGELOG-DEV session entry pending; close-out commit + push + PR pending; optional v0.5.1 tag post-merge.
+
+## Current state (2026-04-26, S41 close-out)
+
+- **Active branch**: `mlx/sprint-41-polish` (6 commits ahead of master `aac00046a1`).
+- **S40 status**: CLOSED (PR #36 + #37 + #38 merged at `aac00046a1`). v0.5.0 GitHub Release published.
+- **S41 status**: READY-TO-CLOSE.
+- **Production kernel**: v5 (`784f82a891`), shipped S24 D0. ULP=0 structural parity across DEC-008 envelope. Kernel sources md5 `9edaef45b99b9db3e2717da93800e76f` byte-identical S30 → S41 (no kernel changes in S41).
 - **R8 (honest)**: 1.01× e2e vs S16 baseline. Unchanged.
-- **Open PRs**: pending close-out PR for `mlx/sprint-40-close-out`.
 - **Active DEC**: **DEC-046 ACCEPTED** (S40 lane lock); DEC-045 RESOLVED, DEC-044 WITHDRAWN, DEC-042/036/040 CLOSED.
-- **Open backlog (carry-forward)**: narrow Lane D CTR-RNG investigation (3-day kill-switch, optional per DEC-046); `predict()` 41× slowdown via subprocess; `bootstrap_type='No'` validator case sensitivity; #113 S31-T3-MEASURE re-run; #114 S31-T-CLEANUP; S31-T-LATENT-P11 (Logloss/Poisson/Tweedie); SA carry-forwards (SA-L1-S33 hard-coded paths, SA-L3-S30/SA-N2-S33 instrumentation env-var hardening, SA-I2-S29 #95 CLI exit wrap). (`mlx-perf-regression.yaml` chronic 0s failure fixed inline in S40 close-out PR #37.)
 
-## Sprint 40 — Lane B public release (IN PROGRESS)
+## Sprint 42 (planned) — Upstream Benchmark Adoption
+
+Per @ml-product-owner advisory 2026-04-26 (recorded in S41 close-out doc):
+
+- **Subset**: Higgs (depth 6), Epsilon, MSLR-WEB10K, Yahoo-LTR, Amazon
+- **Effort**: ~1 sprint (1.5d adapters + 2d compute + 1.5d Pareto-frontier writeup)
+- **Deliverable**: `benchmarks/upstream/` adapters + `docs/benchmarks/v0.5.x-pareto.md`
+- **Honest framing**: M-series only; include Amazon (the unflattering one) with DEC-046 footnote
+- **Output**: cited backbone for the staged upstream RFC (T5) and the E3 launch when v0.6.0 ships
+
+(Detailed plan to be written when S42 opens.)
+
+## Open backlog (carry-forward; not on any current sprint)
+
+- narrow Lane D CTR-RNG investigation (3-day kill-switch, optional per DEC-046)
+- `predict()` 41× slowdown via subprocess — DOCUMENTED in S41-T3; real fix (binary IPC or port CTR to Python) is non-trivial future engineering
+- Ordered Boosting (`boosting_type='Ordered'`) — major future work, hero feature for v0.6.0
+- PyPI publish itself (audit complete in S41-T4; publish gated on `MACOSX_DEPLOYMENT_TARGET=14.0` build env + per-Python wheel matrix)
+- Posting the upstream RFC draft (gated on DEC-046 trigger conditions)
+- #113 S31-T3-MEASURE re-run; #114 S31-T-CLEANUP; S31-T-LATENT-P11 (Logloss/Poisson/Tweedie); SA carry-forwards (SA-L1-S33, SA-L3-S30/SA-N2-S33, SA-I2-S29 #95 CLI exit wrap)
+
+## Sprint 40 — Lane B public release (CLOSED)
 
 **Branch**: `mlx/sprint-40-lane-b-release`
 **Authoritative record**: `docs/sprint40/pre_lane_check/FINDING.md` + DEC-046

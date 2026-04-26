@@ -2,6 +2,81 @@
 
 > Coverage: Sprints 0–15 reconstructed from git log on 2026-04-15. Sprint 16+ is source of truth.
 
+## 2026-04-26 — Sprint 41: Polish-to-Trust (E1)
+
+Branch: `mlx/sprint-41-polish` (6 commits, PR pending). No production source code
+changes. No kernel changes. Kernel sources md5 `9edaef45b99b9db3e2717da93800e76f`
+unchanged from S30 → S41.
+
+### Commits (6)
+
+| SHA | Description |
+|-----|-------------|
+| `9264080e8c` | Sprint plan scaffold (`docs/sprint41/sprint-plan.md`) |
+| `d0bc7a1a87` | T1 — `bootstrap_type` validator case-insensitive (matches CatBoost-CPU) |
+| `b570d5c154` | T2 — README "Installation & Quick Start" + 30-second smoke test |
+| `50e2c7f9d4` | T3 — `predict()` subprocess slowdown profiled and documented |
+| `118d63246e` | T4 — PyPI publish-readiness audit (GREEN with one must-fix gate) |
+| `c08fa10cda` | T5 — refresh upstream RFC draft for post-S30 reality (STAGED, not posted) |
+
+### Headline finding — `predict()` subprocess decomposition (T3)
+
+The 41× MLX-vs-CPU `predict()` slowdown observed in the irrigation Kaggle notebook
+is bounded by `core.py:1769` to *categorical* models only — numeric-only models
+already route through an in-process NumPy tree evaluator at ~940k rows/s (within
+~1.5× of CatBoost-CPU's predict throughput).
+
+Phase breakdown of the categorical subprocess path (50k × 12 features, M-series):
+- write data.csv: **262 ms (58%)** — *dominant cost*
+- subprocess csv_predict run (binary load + Metal init + actual predict): 153 ms (35%)
+- write model.json + read predictions.csv: <1%
+
+CSV serialization scales linearly with `n_rows × n_features` — that's why the
+irrigation 270k×53 footprint produced 41× while the smaller 50k×12 produced 8.5×.
+
+### What shipped
+
+- `bootstrap_type` validator now case-insensitive (T1) — `'No'`, `'NO'`, `'no'`,
+  `'Bayesian'`, etc. accepted; normalized to lowercase internally. Resolves a
+  paper-cut hit on the irrigation Kaggle notebook.
+- README has a top-of-document **§ Installation & Quick Start** (T2) — prerequisites,
+  source install, 30-second smoke test, optional CPU parity verification, CLI quick
+  test. Single source of truth for new users; smoke test verified end-to-end on
+  both dev install AND fresh-venv wheel install.
+- README **§ Python API uses subprocess** rewritten with profile-derived two-row
+  mechanism table, per-path throughput numbers, and three concrete workarounds
+  (T3).
+- `docs/sprint41/T4-pypi-readiness.md` records the PyPI publish audit (sdist + wheel
+  build clean; sdist hygienic; fresh-venv install passes smoke test). One must-fix
+  at publish time: `MACOSX_DEPLOYMENT_TARGET=14.0` for production wheels.
+- `docs/upstream_issue_draft.md` refreshed for v0.5.0 / DEC-036/042/045/046 reality
+  and reframed as informational discussion (not feature proposal). Status: STAGED —
+  NOT POSTED. Includes the five trigger conditions before any actual PR submission.
+
+### CI status
+
+C++ build green; Python test suite green (incl. new
+`test_bootstrap_type_case_insensitive`); `mlx-perf-regression.yaml` correctly
+skips on doc-only branches per the path filter (the S40 close-out fix is now
+visibly working).
+
+### Source-of-truth pointers
+
+- Sprint plan: `docs/sprint41/sprint-plan.md`
+- Sprint close: `docs/sprint41/sprint-close.md`
+- T3 profile artifacts: `docs/sprint41/profile_predict.py`, `profile_output.txt`
+- T4 audit: `docs/sprint41/T4-pypi-readiness.md`
+- T5 RFC stage: `docs/upstream_issue_draft.md`
+
+### Optional v0.5.1 patch tag
+
+Post-merge, an optional `v0.5.1` tag covers T1 (validator) + T3 (predict() doc)
++ T5 (RFC stage). Not yet decided whether to publish a GitHub Release for it
+(unlike v0.5.0, T1 is the only user-facing behavior change; everything else is
+documentation).
+
+---
+
 ## 2026-04-26 — Sprint 40: Lane B v0.5.0 public release (DEC-046)
 
 Branches: `mlx/sprint-40-lane-b-release` (4 commits, merged via PR #36 at master
