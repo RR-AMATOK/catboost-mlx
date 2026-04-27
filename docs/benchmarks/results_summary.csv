@@ -1,6 +1,7 @@
 dataset,framework,metric,n_seeds,metric_mean,metric_std,train_s_mean,train_s_std,predict_s_mean,predict_s_std,rss_mb_mean,n_train,n_test,n_features,framework_version,hardware
 adult,catboost_cpu,logloss,3,0.276921,0.000354396,3.02183,2.27667,0.016218,0.00664807,362.616,32561,16281,14,1.2.10,Apple M3 Max | macOS 26.3.1
 adult,catboost_mlx,logloss,3,0.446401,9.92494e-09,3.56905,0.0644103,0.0532075,0.000919042,241.26,32561,16281,14,0.4.0,Apple M3 Max | macOS 26.3.1
+adult,catboost_mlx_no_cat,logloss,3,0.343259,0.000125831,3.19141,0.00128178,0.0248799,0.00103383,219.032,32561,16281,6,0.5.0,Apple M3 Max | macOS 26.3.1
 adult,lightgbm,logloss,3,0.277008,0,1.90156,0.712084,0.0142199,0.000775147,243.936,32561,16281,14,4.6.0,Apple M3 Max | macOS 26.3.1
 adult,xgboost,logloss,3,0.275925,0,0.633493,0.296504,0.00435814,0.00119799,229.245,32561,16281,14,3.2.0,Apple M3 Max | macOS 26.3.1
 higgs_11m,catboost_cpu,logloss,3,0.529094,0.00015526,47.2653,1.49949,0.0222478,0.00126469,9055.12,10500000,500000,28,1.2.10,Apple M3 Max | macOS 26.3.1
