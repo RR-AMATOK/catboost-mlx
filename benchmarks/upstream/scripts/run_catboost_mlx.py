@@ -21,6 +21,7 @@ from catboost_mlx import CatBoostMLXClassifier, CatBoostMLX
 from ._runner_common import (
     BENCH_HP,
     BenchResult,
+    apply_iterations_override,
     hardware_string,
     load_csv_pair,
     load_xy,
@@ -115,7 +116,10 @@ def main() -> int:
         default=str(Path(__file__).resolve().parents[1] / "results"),
     )
     ap.add_argument("--cache-root", default=None)
+    ap.add_argument("--iterations", type=int, default=None,
+                    help="Override BENCH_HP['iterations']; non-default runs are tagged in the output.")
     args = ap.parse_args()
+    dataset_tag = apply_iterations_override(args)
 
     cache_root = Path(args.cache_root) if args.cache_root else None
     train_csv, test_csv, meta = load_csv_pair(args.dataset, cache_root=cache_root)
@@ -148,7 +152,7 @@ def main() -> int:
     result = BenchResult(
         framework=FRAMEWORK,
         framework_version=getattr(catboost_mlx, "__version__", "<unset>"),
-        dataset=args.dataset,
+        dataset=dataset_tag,
         task=task,
         metric_name=metric_name,
         metric_value=float(metric_value),

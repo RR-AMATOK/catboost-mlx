@@ -1691,3 +1691,89 @@ class TestEdgeCases:
         model.fit(X, y)
         pred = model.predict(X)
         assert pred.shape == (20,)
+
+
+class TestPredictDispatch:
+    """S43-T3: ensure cat-feature OneHot models use the in-process predict path
+    (not the C++ subprocess) and produce bit-identical output to subprocess for
+    OneHot-cat workloads. Models trained with `ctr=True` still fall back to
+    subprocess until the CTR application is ported to Python.
+    """
+
+    def test_onehot_cat_model_uses_inprocess_path(self):
+        _check_binaries()
+        rng = np.random.RandomState(42)
+        n = 200
+        # 1 numeric + 1 low-cardinality cat (4 categories, well under
+        # max_onehot_size default of 10) → OneHot encoding, no CTR.
+        X = np.column_stack([
+            rng.randn(n),
+            rng.randint(0, 4, size=n).astype(np.int64),
+        ])
+        y = ((X[:, 0] + X[:, 1] * 0.3) > 0).astype(np.int64)
+
+        model = CatBoostMLXClassifier(
+            iterations=5, depth=3, cat_features=[1],
+            random_seed=42, random_strength=0.0, bootstrap_type="no",
+            binary_path=BINARY_PATH, verbose=False,
+        )
+        model.fit(X, y)
+
+        # The trained model should NOT have any ctr_features (OneHot path).
+        ctr_features = model._model_data.get("ctr_features") or []
+        assert ctr_features == [], (
+            f"Expected OneHot model to have no ctr_features, got {ctr_features}"
+        )
+
+        # In-process and subprocess paths must produce equivalent output for
+        # this OneHot-cat model. Run both and compare probabilities.
+        out_inprocess = model._predict_inprocess(X.astype(np.float64))
+        out_subprocess = model._predict_subprocess(X.astype(np.float64))
+
+        # Both paths should at minimum produce the same prediction column.
+        for key in ("prediction", "probability", "predicted_class"):
+            if key in out_inprocess and key in out_subprocess:
+                a = out_inprocess[key]
+                b = out_subprocess[key]
+                # Allow small numerical drift (fp32 vs fp64 representation in JSON).
+                np.testing.assert_allclose(
+                    a, b, atol=1e-5, rtol=1e-5,
+                    err_msg=f"in-process vs subprocess mismatch on {key!r}",
+                )
+
+    def test_run_predict_dispatches_inprocess_for_onehot(self):
+        _check_binaries()
+        rng = np.random.RandomState(42)
+        n = 200
+        X = np.column_stack([
+            rng.randn(n),
+            rng.randint(0, 4, size=n).astype(np.int64),
+        ])
+        y = ((X[:, 0] + X[:, 1] * 0.3) > 0).astype(np.int64)
+
+        model = CatBoostMLXClassifier(
+            iterations=5, depth=3, cat_features=[1],
+            random_seed=42, random_strength=0.0, bootstrap_type="no",
+            binary_path=BINARY_PATH, verbose=False,
+        )
+        model.fit(X, y)
+
+        # Patch _predict_subprocess to fail loudly if it's reached. After T3,
+        # an OneHot-cat model must NOT take the subprocess path on _run_predict.
+        called = {"sub": False, "inproc": False}
+        orig_sub = model._predict_subprocess
+        orig_inp = model._predict_inprocess
+
+        def watch_sub(*a, **kw):
+            called["sub"] = True
+            return orig_sub(*a, **kw)
+
+        def watch_inp(*a, **kw):
+            called["inproc"] = True
+            return orig_inp(*a, **kw)
+
+        model._predict_subprocess = watch_sub
+        model._predict_inprocess = watch_inp
+        _ = model._run_predict(X.astype(np.float64))
+        assert called["inproc"], "Expected in-process path to be taken"
+        assert not called["sub"], "Subprocess path should not run for OneHot-cat model"

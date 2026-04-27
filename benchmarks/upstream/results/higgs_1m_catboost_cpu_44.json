@@ -1,7 +1,7 @@
 {
   "framework": "catboost_cpu",
   "framework_version": "1.2.10",
-  "dataset": "higgs",
+  "dataset": "higgs_1m",
   "task": "classification",
   "metric_name": "logloss",
   "metric_value": 0.5291732820771425,

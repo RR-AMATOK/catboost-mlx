@@ -472,27 +472,59 @@ class TestDispatchCorrectness:
         if model._model_json_cache is None:
             pass  # Confirmed in-process was used
 
-    def test_cat_features_uses_subprocess(self):
-        """Categorical model should use _predict_subprocess."""
+    def test_ctr_encoded_model_uses_subprocess(self):
+        """CTR-encoded models (ctr=True with high-cardinality cats) route to
+        _predict_subprocess — the only remaining subprocess path post-S43-T3.
+
+        Pre-S43-T3 dispatch was `if not self.cat_features: in-process else
+        subprocess`, which forced even OneHot-cat models through subprocess.
+        Post-S43-T3 dispatch is `if not model_data.ctr_features: in-process
+        else subprocess`. Only models trained with ctr=True populate
+        ctr_features in the model JSON, and only those still need the C++
+        runtime CTR table that lives in csv_predict.
+
+        This test forces ctr_features to be populated by training on a
+        high-cardinality cat with ctr=True and max_onehot_size below the
+        cardinality, then asserts the subprocess path runs (verified via
+        _model_json_cache being populated as a subprocess side effect).
+        """
         _skip_no_binaries()
+        rng = np.random.RandomState(42)
+        n = 200
+        # 1 numeric + 1 high-cardinality cat (50 unique values, well above
+        # the default max_onehot_size=10) → ctr=True forces CTR encoding.
+        X = np.column_stack([
+            rng.randn(n),
+            rng.randint(0, 50, size=n).astype(np.int64),
+        ])
+        y = rng.randn(n)
+
         model = CatBoostMLXRegressor(
-            iterations=10, cat_features=[0], binary_path=BINARY_PATH
+            iterations=10, cat_features=[1],
+            ctr=True, ctr_prior=0.5, max_onehot_size=10,
+            random_seed=42, random_strength=0.0, bootstrap_type="no",
+            binary_path=BINARY_PATH, verbose=False,
         )
-        X = np.array(
-            [["a", 1.0], ["b", 2.0], ["c", 3.0],
-             ["a", 4.0], ["b", 5.0], ["c", 1.0],
-             ["a", 2.0], ["b", 3.0], ["c", 4.0],
-             ["a", 5.0]],
-            dtype=object,
-        )
-        y = np.random.randn(10)
         model.fit(X, y)
+
+        # Sanity: training with ctr=True + high-cardinality cat must populate
+        # model_data.ctr_features (otherwise the test wouldn't exercise the
+        # CTR/subprocess dispatch branch at all).
+        ctr_features = model._model_data.get("ctr_features") or []
+        assert ctr_features, (
+            "Expected ctr_features to be populated for a ctr=True "
+            "high-cardinality cat model, got empty list"
+        )
 
         model._model_json_cache = None
         model.predict(X[:3])
 
-        # Subprocess path sets _model_json_cache
-        assert model._model_json_cache is not None
+        # Subprocess path sets _model_json_cache; in-process does not.
+        # Post-T3, only CTR-encoded models reach subprocess.
+        assert model._model_json_cache is not None, (
+            "_model_json_cache should be populated by the subprocess predict "
+            "path on a CTR-encoded model"
+        )
 
     def test_feature_count_check_before_dispatch(self):
         """Feature count check should happen before dispatch, catching errors

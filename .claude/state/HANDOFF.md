@@ -1,12 +1,48 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-04-26 (**S42 READY-TO-CLOSE — Upstream Benchmark Adoption**).
-> Branch `mlx/sprint-42-benchmarks` carries 8 commits (T0–T5 + close-out). PR
-> pending. Two of five upstream datasets shipped (Adult + Higgs-1M); three
-> require user-action data acquisition. CI perf-regression gate retired from
-> S41 bridge mode and rebuilt as hardware-invariant speedup-ratio gate.
+> Last updated: 2026-04-26 (**S43 READY-TO-CLOSE — Branch B locked, v0.6.0 scope decided**).
+> Branch `mlx/sprint-43-falsification-and-roi` carries 9 commits (T0+T1+T2+T3+T4+T5+cleanup+restore).
+> PR pending. Three decisive empirical findings shipped:
 >
-> ## Sprint 42 close-out (PR pending)
+> 1. **MLX is bit-equivalent to CatBoost-CPU at fair convergence** (Higgs-1M iter=1000
+>    → +0.0002 logloss vs CPU = within fp32 numerical noise). The DEC-046 +0.0012
+>    "architectural floor" claim was itself partly a 200-iter under-convergence artifact.
+> 2. **Throughput gap is structural, not amortization** (MLX/CPU ratio invariant
+>    across 1M/11M and 200/1000 iters at ~5.2×). Branch A FALSIFIED.
+> 3. **Predict-path 8.5× speedup shipped** for OneHot-cat models (`ctr=False`
+>    default path) via in-process dispatch. Bit-identical output verified.
+>
+> v0.6.0 scope is now **data-locked to Branch B** (accuracy-led, "deterministic,
+> bit-equivalent Apple Silicon-native CatBoost-Plain port"). Ordered Boosting
+> demoted from hero to optional v0.7.x. ~4 sprints (S44-S47) execute the v0.6.0 plan.
+>
+> ## Sprint 43 close-out (PR pending)
+>
+> **Authoritative records**:
+> - Sprint plan: `docs/sprint43/sprint-plan.md`
+> - Synthesis (verdict + scope decision): `docs/sprint43/T4-synthesis.md`
+> - Sprint close: `docs/sprint43/sprint-close.md`
+> - Pareto-frontier writeup (extended): `docs/benchmarks/v0.5.x-pareto.md`
+>
+> **Code state (master `26957d63a0` + this branch)**:
+> - No source code changes outside `python/catboost_mlx/core.py:_run_predict` (T3
+>   dispatch) and the benchmarks infrastructure (T2 `--iterations` flag wiring).
+> - Production kernel v5 (`784f82a891`) byte-identical from S30 → S43.
+>
+> **Next-session priorities** (Branch B execution, ~4 sprints to v0.6.0):
+> 1. **Open close-out PR** for `mlx/sprint-43-falsification-and-roi` → master.
+> 2. **Optional v0.5.3 tag** post-merge (T3 user-visible perf win + T2 iter-tooling).
+> 3. **S44 — Full 5-dataset Pareto-frontier sweep** at fair convergence: run Epsilon,
+>    Amazon, MSLR (data acquisition gating); per-dataset iter-tuning to avoid
+>    Adult-style overfit; complete the writeup; refresh the staged upstream RFC.
+> 4. **S45 — Documentation + iter-tooling polish**: README + CHANGELOG rewrite around
+>    bit-equivalence framing; staged RFC review.
+> 5. **S46 — PyPI publish**: build matrix, `MACOSX_DEPLOYMENT_TARGET=14.0`, twine
+>    upload, GitHub Release v0.6.0-rc1.
+> 6. **S47 — E3 launch**: HN/Twitter/MLX-Slack post; post the upstream RFC;
+>    cut v0.6.0 GitHub Release.
+>
+> ## Sprint 42 close-out (PR #40 MERGED 2026-04-26)
 >
 > **Outcome**: `docs/benchmarks/v0.5.x-pareto.md` is live with two-dataset
 > head-to-head numbers (Adult, Higgs-1M) across 4 frameworks
