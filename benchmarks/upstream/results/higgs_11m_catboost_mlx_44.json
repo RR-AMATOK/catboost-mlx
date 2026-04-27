@@ -1,0 +1,27 @@
+{
+  "framework": "catboost_mlx",
+  "framework_version": "0.4.0",
+  "dataset": "higgs_11m",
+  "task": "classification",
+  "metric_name": "logloss",
+  "metric_value": 0.5302694108769106,
+  "seed": 44,
+  "train_seconds": 236.9698174590012,
+  "predict_seconds": 1.7349541249859612,
+  "peak_rss_bytes": 10253582336,
+  "n_train": 10500000,
+  "n_test": 500000,
+  "n_features": 28,
+  "cat_indices": [],
+  "hyperparameters": {
+    "iterations": 200,
+    "depth": 6,
+    "learning_rate": 0.1,
+    "l2_reg": 3.0,
+    "random_strength": 0.0,
+    "bootstrap_type": "no"
+  },
+  "hardware": "Apple M3 Max | macOS 26.3.1",
+  "python_version": "3.13.2",
+  "notes": "UCI Higgs Boson, binary classification, all numeric. Split: first 10,500,000 rows train, next 500,000 rows test. Canonical full-scale upstream split is 10,500,000 train / 500,000 test; this prep is that."
+}

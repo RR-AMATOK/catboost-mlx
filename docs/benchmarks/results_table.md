@@ -12,7 +12,18 @@ _n_train=32,561, n_test=16,281, n_features=14, hardware: Apple M3 Max | macOS 26
 | lightgbm | 4.6.0 | 0.2770 ± 0.0000 (logloss) | 1.90 ± 0.71 | 0.014 ± 0.001 | 244 |
 | xgboost | 3.2.0 | 0.2759 ± 0.0000 (logloss) | 0.63 ± 0.30 | 0.004 ± 0.001 | 229 |
 
-### higgs
+### higgs_11m
+
+_n_train=10,500,000, n_test=500,000, n_features=28, hardware: Apple M3 Max | macOS 26.3.1_
+
+| Framework | Version | Metric (mean ± std) | Train (s) | Predict (s) | Peak RSS (MB) |
+|---|---|---|---|---|---|
+| catboost_cpu | 1.2.10 | 0.5291 ± 0.0002 (logloss) | 47.27 ± 1.50 | 0.022 ± 0.001 | 9055 |
+| catboost_mlx | 0.4.0 | 0.5304 ± 0.0002 (logloss) | 243.74 ± 6.24 | 1.780 ± 0.046 | 10579 |
+| lightgbm | 4.6.0 | 0.5155 ± 0.0003 (logloss) | 40.78 ± 0.94 | 0.302 ± 0.016 | 6723 |
+| xgboost | 3.2.0 | 0.5162 ± 0.0000 (logloss) | 22.67 ± 0.17 | 0.077 ± 0.007 | 9694 |
+
+### higgs_1m
 
 _n_train=1,000,000, n_test=100,000, n_features=28, hardware: Apple M3 Max | macOS 26.3.1_
 
