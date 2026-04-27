@@ -48,6 +48,28 @@ BENCH_HP = {
     "bootstrap_type": "no",
 }
 
+# Default iteration count — runs that override via `--iterations` get a
+# dataset-name suffix so the aggregator groups them separately from the
+# canonical 200-iter sweep (see apply_iterations_override below).
+_DEFAULT_ITERATIONS = BENCH_HP["iterations"]
+
+
+def apply_iterations_override(args) -> str:
+    """Each runner calls this once after argparse. If `--iterations` was
+    passed and differs from the default, mutate BENCH_HP['iterations'] in
+    place and return a tagged dataset name (e.g. 'adult_iter1000') so the
+    result JSON files group separately from the default sweep. Otherwise
+    return args.dataset unchanged.
+
+    Used by S43-T2 to re-run benchmarks at iters=1000 (the mathematician's
+    fair-convergence reframe) without losing the canonical 200-iter data.
+    """
+    iters = getattr(args, "iterations", None)
+    if iters and iters != _DEFAULT_ITERATIONS:
+        BENCH_HP["iterations"] = iters
+        return f"{args.dataset}_iter{iters}"
+    return args.dataset
+
 
 # ── Result record ───────────────────────────────────────────────────────────
 

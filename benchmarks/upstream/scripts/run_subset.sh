@@ -27,6 +27,7 @@ DATASETS="${DATASETS:-${1:-adult amazon higgs epsilon mslr}}"
 SEEDS="${SEEDS:-42 43 44}"
 FRAMEWORKS="${FRAMEWORKS:-lightgbm xgboost catboost_cpu catboost_mlx}"
 RESULTS_DIR="${RESULTS_DIR:-benchmarks/upstream/results}"
+ITERATIONS="${ITERATIONS:-}"  # if set, passed to runners; non-default (≠200) tags output as <ds>_iter<N>_<fw>_<seed>
 
 mkdir -p "$RESULTS_DIR"
 
@@ -59,16 +60,24 @@ for DATASET in $DATASETS; do
   for FW in $FRAMEWORKS; do
     for SEED in $SEEDS; do
       TOTAL=$((TOTAL + 1))
-      OUT_JSON="$RESULTS_DIR/${DATASET}_${FW}_${SEED}.json"
+      # Tag the output filename with _iter<N> when iterations is overridden,
+      # mirroring what apply_iterations_override does to the dataset field.
+      if [ -n "$ITERATIONS" ] && [ "$ITERATIONS" != "200" ]; then
+        OUT_JSON="$RESULTS_DIR/${DATASET}_iter${ITERATIONS}_${FW}_${SEED}.json"
+      else
+        OUT_JSON="$RESULTS_DIR/${DATASET}_${FW}_${SEED}.json"
+      fi
       if [ -f "$OUT_JSON" ]; then
         echo "[$DATASET/$FW/$SEED] cached → $OUT_JSON" >&2
         OK=$((OK + 1))
         continue
       fi
       echo "[$DATASET/$FW/$SEED] running..." >&2
+      ITER_ARGS=()
+      if [ -n "$ITERATIONS" ]; then ITER_ARGS=(--iterations "$ITERATIONS"); fi
       if python3 -m "benchmarks.upstream.scripts.run_$FW" \
             --dataset "$DATASET" --seed "$SEED" \
-            --results-dir "$RESULTS_DIR"; then
+            --results-dir "$RESULTS_DIR" "${ITER_ARGS[@]}"; then
         OK=$((OK + 1))
       else
         echo "[$DATASET/$FW/$SEED] FAILED" >&2

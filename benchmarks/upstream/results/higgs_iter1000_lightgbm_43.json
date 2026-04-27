@@ -1,0 +1,27 @@
+{
+  "framework": "lightgbm",
+  "framework_version": "4.6.0",
+  "dataset": "higgs_iter1000",
+  "task": "classification",
+  "metric_name": "logloss",
+  "metric_value": 0.5007192591939248,
+  "seed": 43,
+  "train_seconds": 22.62445991599816,
+  "predict_seconds": 0.3417202080017887,
+  "peak_rss_bytes": 1059192832,
+  "n_train": 1000000,
+  "n_test": 100000,
+  "n_features": 28,
+  "cat_indices": [],
+  "hyperparameters": {
+    "iterations": 1000,
+    "depth": 6,
+    "learning_rate": 0.1,
+    "l2_reg": 3.0,
+    "random_strength": 0.0,
+    "bootstrap_type": "no"
+  },
+  "hardware": "Apple M3 Max | macOS 26.3.1",
+  "python_version": "3.13.2",
+  "notes": "UCI Higgs Boson (SUBSET), binary classification, all numeric. Split: first 1,000,000 rows train, next 100,000 rows test. Canonical full-scale upstream split is 10,500,000 train / 500,000 test; this prep is a subset of that."
+}
