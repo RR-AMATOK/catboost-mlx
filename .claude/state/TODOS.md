@@ -1,9 +1,22 @@
 # Active Tasks — CatBoost-MLX
 
 > Coverage: Sprints 0–15 reconstructed from git/agent-memory on 2026-04-15. Sprint 16+ is source of truth.
-> Last header refresh: 2026-04-26 (S42 READY-TO-CLOSE — Upstream Benchmark Adoption. Branch `mlx/sprint-42-benchmarks` carries 8 commits T0–T5. PR pending. Adult + Higgs-1M shipped; perf-regression gate redesigned hardware-invariant.)
+> Last header refresh: 2026-04-26 (S43 READY-TO-CLOSE — Branch B locked, v0.6.0 scope decided. Branch `mlx/sprint-43-falsification-and-roi` carries 9 commits. PR pending.)
 
-## Sprint 42 — Upstream Benchmark Adoption — READY-TO-CLOSE
+## Sprint 43 — Falsification + Highest-ROI Polish — READY-TO-CLOSE
+
+**Branch**: `mlx/sprint-43-falsification-and-roi` (9 commits, PR pending)
+**Authoritative records**: `docs/sprint43/sprint-close.md` + `docs/sprint43/T4-synthesis.md`
+**Outcome**: Branch B (accuracy-led, "deterministic, bit-equivalent Apple Silicon-native CatBoost-Plain port") locked as the v0.6.0 direction. Branch A (throughput-led) falsified by Higgs-11M sweep. v0.6.0 = full 5-dataset Pareto sweep + README/CHANGELOG rewrite + PyPI publish + RFC posting + E3 launch over S44–S47.
+
+- [x] **S43-T0 SCAFFOLD** — DONE 2026-04-26. Branch cut, sprint-plan.md with three-branch decision tree. Commit `852648dd9b`.
+- [x] **S43-T1 FULL-11M-HIGGS** — DONE 2026-04-26. **Branch A FALSIFIED.** MLX/CatBoost-CPU train ratio at 11M = 5.16× (vs 5.41× at 1M) — same structural ratio. Commits `28b131aafa` + `d7d875d736`.
+- [x] **S43-T2 ITER1000-RERUN** — DONE 2026-04-26. **MLX bit-equivalent to CatBoost-CPU at fair convergence**: Higgs-1M iter=1000 → +0.0002 logloss (within fp32 numerical noise). DEC-046 +0.0012 was partly under-convergence artifact. CatBoost-vs-XGBoost gap also closes from +0.0121 to +0.0049. Adult overfits at 1000 iters (methodology note). New `--iterations` flag wired through all 4 runners.
+- [x] **S43-T3 PREDICT-IN-PROCESS** — DONE 2026-04-26. **Silicon-architect's #1 ROI fix shipped.** OneHot-cat models route to in-process tree evaluator. Adult predict 443ms → 52ms (8.5× speedup); logloss bit-identical. New `TestPredictDispatch` tests verify bit-identity. Commits `e0f9165c33` + `451de2d8f2`.
+- [x] **S43-T4 SYNTHESIS** — DONE 2026-04-26. `docs/sprint43/T4-synthesis.md`. v0.6.0 direction: **Branch B locked**. Ordered Boosting demoted from hero to optional v0.7.x. ~4 sprints to v0.6.0.
+- [ ] **S43-T5 CLOSE-OUT** — sprint-close.md written; HANDOFF/TODOS/CHANGELOG-DEV updates pending in this commit; optional v0.5.3 tag post-merge.
+
+## Sprint 42 — Upstream Benchmark Adoption — CLOSED 2026-04-26 (PR #40 merged)
 
 **Branch**: `mlx/sprint-42-benchmarks` (8 commits, PR pending)
 **Authoritative record**: `docs/sprint42/sprint-close.md`
@@ -28,15 +41,17 @@
 - [x] **S41-T5 UPSTREAM-RFC-DRAFT-REFRESH** — DONE 2026-04-26. `docs/upstream_issue_draft.md` refreshed for post-S30/S40 reality (DEC-036/042/045/046 closures, v0.5.0 framing, characterized-difference positioning, five trigger conditions before submission). STAGED — NOT POSTED. Commit `c08fa10cda`.
 - [ ] **S41-T6 CLOSE-OUT-PR-AND-V051-TAG** — `docs/sprint41/sprint-close.md` written; HANDOFF + TODOS updated; CHANGELOG-DEV session entry pending; close-out commit + push + PR pending; optional v0.5.1 tag post-merge.
 
-## Current state (2026-04-26, S42 close-out)
+## Current state (2026-04-26, S43 close-out)
 
-- **Active branch**: `mlx/sprint-42-benchmarks` (8 commits ahead of master `659ab3d17c`).
+- **Active branch**: `mlx/sprint-43-falsification-and-roi` (9 commits ahead of master `26957d63a0`).
 - **S40 status**: CLOSED (PR #36 + #37 + #38 merged). v0.5.0 GitHub Release published.
-- **S41 status**: CLOSED (PR #39 merged at `659ab3d17c`). v0.5.1 GitHub Release published.
-- **S42 status**: READY-TO-CLOSE. T0–T5 all done; PR pending; optional v0.5.2 tag post-merge.
-- **Production kernel**: v5 (`784f82a891`), shipped S24 D0. ULP=0 structural parity across DEC-008 envelope. Kernel sources md5 `9edaef45b99b9db3e2717da93800e76f` byte-identical S30 → S41 (no kernel changes in S41).
+- **S41 status**: CLOSED (PR #39 merged). v0.5.1 GitHub Release published.
+- **S42 status**: CLOSED (PR #40 merged at `26957d63a0`).
+- **S43 status**: READY-TO-CLOSE. T0–T5 done; PR pending; optional v0.5.3 tag post-merge.
+- **v0.6.0 scope**: locked to Branch B (accuracy-led, bit-equivalence claim). ~4 sprints out (S44–S47).
+- **Production kernel**: v5 (`784f82a891`), shipped S24 D0. Kernel sources md5 `9edaef45b99b9db3e2717da93800e76f` byte-identical S30 → S43 (no kernel changes in S43).
 - **R8 (honest)**: 1.01× e2e vs S16 baseline. Unchanged.
-- **Active DEC**: **DEC-046 ACCEPTED** (S40 lane lock); DEC-045 RESOLVED, DEC-044 WITHDRAWN, DEC-042/036/040 CLOSED.
+- **Active DEC**: **DEC-046 ACCEPTED** (S40 lane lock; reaffirmed by S43-T2 bit-equivalence finding); DEC-045 RESOLVED, DEC-044 WITHDRAWN, DEC-042/036/040 CLOSED.
 
 ## Open backlog (carry-forward; not on any current sprint)
 

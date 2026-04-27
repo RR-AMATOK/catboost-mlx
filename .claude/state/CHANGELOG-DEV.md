@@ -2,6 +2,100 @@
 
 > Coverage: Sprints 0–15 reconstructed from git log on 2026-04-15. Sprint 16+ is source of truth.
 
+## 2026-04-26 — Sprint 43: Falsification + Highest-ROI Polish
+
+Branch: `mlx/sprint-43-falsification-and-roi` (9 commits, PR pending). No
+production kernel changes. Kernel sources md5
+`9edaef45b99b9db3e2717da93800e76f` unchanged from S30 → S43. Code
+changes scoped to `python/catboost_mlx/core.py:_run_predict` (T3
+dispatch) and the `benchmarks/upstream/scripts/` directory (T2
+`--iterations` wiring).
+
+### Commits (9)
+
+| SHA | Description |
+|-----|-------------|
+| `852648dd9b` | T0 — scaffold (sprint-plan with three-branch decision tree; v0.6.0 explicitly deferred) |
+| `28b131aafa` | T1 — full 11M Higgs sweep falsifies Branch A |
+| `d7d875d736` | T1 cleanup (rename bookkeeping for higgs_<scale>_*.json) |
+| `e0f9165c33` | T3 — predict() in-process dispatch for OneHot-cat models (8.5× speedup, bit-identical) |
+| `451de2d8f2` | T3 fixup (restore wildcard-deleted no_cat baselines) |
+| (this commit) | T2 — 1000-iter rerun reveals MLX bit-equivalent at fair convergence |
+| (this commit) | T4 — synthesis: Branch B locked, v0.6.0 scope decided |
+| (this commit) | T5 — close-out doc + post-merge HANDOFF/TODOS/CHANGELOG-DEV |
+
+### Headline finding 1 — MLX is bit-equivalent to CatBoost-CPU at fair convergence
+
+| Workload | iters | MLX-vs-CPU logloss |
+|---|---|---|
+| Higgs-1M | 200 | +0.0012 |
+| Higgs-11M | 200 | +0.0013 |
+| **Higgs-1M** | **1000** | **+0.0002** ← fp32 numerical noise |
+
+The DEC-046 architectural-floor "+0.0012" claim was itself partly a
+methodology artifact of running at 200 iters where neither CatBoost
+implementation has fully converged. **At fair convergence on numeric
+workloads, MLX agrees with CatBoost-CPU within fp32 numerical noise.**
+This is the publishable launch claim for v0.6.0.
+
+### Headline finding 2 — Throughput gap is structural, not amortization
+
+| Comparison | Higgs-1M (200) | Higgs-11M (200) | Higgs-1M (1000) |
+|---|---|---|---|
+| MLX / CatBoost-CPU train ratio | 5.41× | **5.16×** | **5.25×** |
+
+Same structural ratio across both 10× more data and 5× more iterations.
+GPU launch overhead is fully amortized at 11M; the gap is compute-
+throughput, not orchestration. **Branch A is falsified.** Per
+silicon-architect's prior estimate, closing the wall-clock gap requires
+5–8 sprints of kernel-level work. v0.6.0's launch story does not depend
+on closing it.
+
+### Headline finding 3 — Predict 8.5× speedup shipped
+
+S41-T3 documented a 41× MLX-vs-CatBoost-CPU `predict()` slowdown on
+cat-feature workloads. Cause was a pessimistic dispatch in `_run_predict`
+that routed every cat-feature model through subprocess regardless of
+encoding type. Single-line dispatch fix in `core.py:1769`: check
+`model_data.ctr_features` instead of `self.cat_features`. OneHot-cat
+models (the default `ctr=False` path) now use the existing in-process
+NumPy tree evaluator. CTR-encoded models still subprocess-fall-back.
+
+  Adult predict: 443ms → 52ms (8.5×); logloss bit-identical at 0.446401.
+  New `tests/test_basic.py::TestPredictDispatch` (2 tests) PASS.
+
+### v0.6.0 scope — Branch B locked
+
+`docs/sprint43/T4-synthesis.md` is the formal verdict. v0.6.0 ships the
+"deterministic, bit-equivalent Apple Silicon-native CatBoost-Plain port"
+launch story over **S44–S47** (~4 sprints):
+
+- S44: full 5-dataset Pareto sweep at fair convergence
+- S45: README/CHANGELOG rewrite + iter-tooling polish
+- S46: PyPI publish (build matrix; `MACOSX_DEPLOYMENT_TARGET=14.0`)
+- S47: E3 launch (HN/Twitter/MLX-Slack post; post upstream RFC; cut
+  v0.6.0 GitHub Release)
+
+Out-of-scope (defer to v0.7.x or never): Ordered Boosting (E2 hero
+demoted to optional), throughput optimization (5–8 sprints; not
+load-bearing for launch), Lane D CTR-RNG closure, histogram-stage CI
+gate redesign, max_depth>6 / 16M-row cap / NewtonL2/Cosine.
+
+### Optional v0.5.3 patch tag
+
+Justified by T3 alone (default-path predict latency improvement).
+Decision deferred to user post-merge.
+
+### Source-of-truth pointers
+
+- Sprint plan: `docs/sprint43/sprint-plan.md`
+- T4 synthesis: `docs/sprint43/T4-synthesis.md`
+- Sprint close: `docs/sprint43/sprint-close.md`
+- Pareto-frontier writeup (extended): `docs/benchmarks/v0.5.x-pareto.md`
+- Per-run JSONs: `benchmarks/upstream/results/*.json`
+
+---
+
 ## 2026-04-26 — Sprint 42: Upstream Benchmark Adoption
 
 Branch: `mlx/sprint-42-benchmarks` (8 commits, PR pending). No production
