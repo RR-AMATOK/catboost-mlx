@@ -23,6 +23,50 @@ _n_train=32,561, n_test=16,281, n_features=14, hardware: Apple M3 Max | macOS 26
 | lightgbm | 4.6.0 | 0.2919 ± 0.0000 (logloss) | 7.52 ± 0.16 | 0.066 ± 0.004 | 281 |
 | xgboost | 3.2.0 | 0.2871 ± 0.0000 (logloss) | 2.21 ± 0.02 | 0.013 ± 0.001 | 240 |
 
+### epsilon
+
+_n_train=400,000, n_test=100,000, n_features=2000, hardware: Apple M3 Max | macOS 26.3.1_
+
+| Framework | Version | Metric (mean ± std) | Train (s) | Predict (s) | Peak RSS (MB) |
+|---|---|---|---|---|---|
+| catboost_cpu | 1.2.10 | 0.3557 ± 0.0001 (logloss) | 32.27 ± 0.19 | 0.009 ± 0.001 | 13170 |
+| catboost_mlx | 0.4.0 | 0.3592 ± 0.0000 (logloss) | 473.62 ± 12.62 | 8.713 ± 0.335 | 20174 |
+| lightgbm | 4.6.0 | 0.3452 ± 0.0003 (logloss) | 80.06 ± 1.76 | 0.120 ± 0.016 | 15473 |
+| xgboost | 3.2.0 | 0.3457 ± 0.0000 (logloss) | 62.05 ± 3.11 | 0.033 ± 0.004 | 19814 |
+
+### epsilon_iter1000
+
+_n_train=400,000, n_test=100,000, n_features=2000, hardware: Apple M3 Max | macOS 26.3.1_
+
+| Framework | Version | Metric (mean ± std) | Train (s) | Predict (s) | Peak RSS (MB) |
+|---|---|---|---|---|---|
+| catboost_cpu | 1.2.10 | 0.2805 ± 0.0001 (logloss) | 144.81 ± 1.84 | 0.023 ± 0.001 | 12791 |
+| catboost_mlx | 0.4.0 | 0.2813 ± 0.0001 (logloss) | 2211.80 ± 7.07 | 11.180 ± 0.555 | 19520 |
+| lightgbm | 4.6.0 | 0.2782 ± 0.0003 (logloss) | 279.25 ± 1.83 | 0.411 ± 0.059 | 15179 |
+| xgboost | 3.2.0 | 0.2784 ± 0.0000 (logloss) | 240.46 ± 5.15 | 0.097 ± 0.003 | 19173 |
+
+### epsilon_iter2000
+
+_n_train=400,000, n_test=100,000, n_features=2000, hardware: Apple M3 Max | macOS 26.3.1_
+
+| Framework | Version | Metric (mean ± std) | Train (s) | Predict (s) | Peak RSS (MB) |
+|---|---|---|---|---|---|
+| catboost_cpu | 1.2.10 | 0.2676 ± 0.0003 (logloss) | 281.86 ± 2.33 | 0.095 ± 0.002 | 12758 |
+| catboost_mlx | 0.4.0 | 0.2682 ± 0.0002 (logloss) | 4482.34 ± 175.11 | 14.982 ± 2.253 | 19296 |
+| lightgbm | 4.6.0 | 0.2736 ± 0.0003 (logloss) | 500.99 ± 4.09 | 0.720 ± 0.039 | 15486 |
+| xgboost | 3.2.0 | 0.2743 ± 0.0000 (logloss) | 459.48 ± 3.78 | 0.205 ± 0.004 | 20789 |
+
+### epsilon_iter500
+
+_n_train=400,000, n_test=100,000, n_features=2000, hardware: Apple M3 Max | macOS 26.3.1_
+
+| Framework | Version | Metric (mean ± std) | Train (s) | Predict (s) | Peak RSS (MB) |
+|---|---|---|---|---|---|
+| catboost_cpu | 1.2.10 | 0.3050 ± 0.0000 (logloss) | 75.36 ± 1.43 | 0.016 ± 0.000 | 12786 |
+| catboost_mlx | 0.4.0 | 0.3064 ± 0.0000 (logloss) | 1124.77 ± 5.08 | 9.844 ± 0.479 | 19625 |
+| lightgbm | 4.6.0 | 0.2963 ± 0.0003 (logloss) | 160.13 ± 1.50 | 0.214 ± 0.007 | 15569 |
+| xgboost | 3.2.0 | 0.2963 ± 0.0000 (logloss) | 130.04 ± 2.98 | 0.052 ± 0.002 | 19760 |
+
 ### higgs_11m
 
 _n_train=10,500,000, n_test=500,000, n_features=28, hardware: Apple M3 Max | macOS 26.3.1_
