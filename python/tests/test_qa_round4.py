@@ -534,3 +534,34 @@ class TestDispatchCorrectness:
 
         with pytest.raises(ValueError, match="features"):
             model.predict(X_wrong)
+
+    def test_high_cardinality_cat_predict_no_overflow(self):
+        """Predict must not raise OverflowError when a cat feature has >255
+        unique values. Regression for S44 Amazon failure: cat_hash_map values
+        are uint32 but the in-process binned buffer is uint8; without masking,
+        cardinality 799 (Amazon RESOURCE) overflows the assignment.
+
+        The fix mirrors csv_train.cpp's static_cast<uint8_t> on cat bin
+        values via & 0xFF, keeping Python predict consistent with C++ training
+        truncation semantics.
+        """
+        _skip_no_binaries()
+        rng = np.random.RandomState(0)
+        n = 500
+        # 300 unique cat values - well above uint8 max of 255.
+        cats = rng.randint(0, 300, size=n).astype(np.int64)
+        nums = rng.randn(n)
+        X = np.column_stack([nums, cats])
+        y = (cats % 2).astype(np.int64)
+
+        model = CatBoostMLXClassifier(
+            iterations=5, depth=3, cat_features=[1],
+            random_seed=0, random_strength=0.0, bootstrap_type="no",
+            binary_path=BINARY_PATH, verbose=False,
+        )
+        model.fit(X, y)
+
+        # Must not raise OverflowError on the in-process predict path.
+        proba = model.predict_proba(X)
+        assert proba.shape == (n, 2), f"Expected (n, 2) proba, got {proba.shape}"
+        assert np.all(proba >= 0.0) and np.all(proba <= 1.0)

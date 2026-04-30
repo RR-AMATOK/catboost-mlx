@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-04-30
+
+Patch release. Fixes a hard-fail in the in-process predict path for
+high-cardinality categorical features (cardinality > 255). Surfaced by
+the S44-T2 Amazon iter-grid sweep, where every catboost-mlx run on
+Amazon (RESOURCE column, cardinality 799) raised
+`OverflowError: Python integer 799 out of bounds for uint8` from
+`_predict_utils.quantize_features`.
+
+### Fixed
+- **High-cardinality cat predict overflow** (S44-T2):
+  `_predict_utils.quantize_features` now masks `cat_hash_map[val] & 0xFF`
+  before assigning into the uint8 binned buffer. This mirrors the
+  `static_cast<uint8_t>` truncation that `csv_train.cpp` already applies
+  at fit time, keeping the Python in-process predict path consistent
+  with the trained splits. The C++ training path's 8-bit-per-bin
+  architectural assumption (and the resulting cat-aliasing for
+  cardinality > 255) is unchanged in this release; widening the bin
+  width is tracked as a separate v0.6.x DEC item.
+- **Regression test** at
+  `python/tests/test_qa_round4.py::TestDispatchCorrectness::test_high_cardinality_cat_predict_no_overflow`
+  trains on a 300-cardinality cat feature and asserts predict_proba
+  returns valid probabilities without raising.
+
+### Note
+This release is a focused patch on top of v0.5.3; no API changes, no
+benchmark methodology changes, and no v0.6.0 framing implications.
+Sprint 44's full 5-dataset Pareto sweep continues separately.
+
 ## [0.5.3] - 2026-04-26
 
 Polish-and-perf release covering Sprints 41–43. The headline win is an
