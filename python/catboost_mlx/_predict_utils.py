@@ -61,7 +61,10 @@ def quantize_features(X: np.ndarray, features: List[dict],
             for d in range(n_samples):
                 val = str(X[d, f])
                 if val in cat_map:
-                    binned[d, f] = cat_map[val]
+                    # Mask to 8 bits to mirror csv_train.cpp's static_cast<uint8_t>
+                    # on cat_hash_map values; high-cardinality cats (>255) are
+                    # truncated identically at fit time, so predict must match.
+                    binned[d, f] = cat_map[val] & 0xFF
                 else:
                     binned[d, f] = 0  # unknown category -> bin 0
         else:
