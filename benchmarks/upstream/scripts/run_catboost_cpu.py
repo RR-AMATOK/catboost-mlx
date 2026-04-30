@@ -49,7 +49,17 @@ def _coerce_cats_to_int(X: np.ndarray, cat_indices) -> np.ndarray:
     return df
 
 
-def _train_classifier(X_tr, y_tr, X_te, cat_indices, seed):
+def _train_classifier(X_tr, y_tr, X_te, cat_indices, seed,
+                      metric_period=0, y_te_eval=None):
+    """Train CatBoost classifier; optionally emit per-iter logloss trajectory.
+
+    When metric_period == 1 and y_te_eval is provided, the model is fit with
+    eval_set=[(X_te, y_te_eval)] and metric_period=1; the resulting
+    `evals_result_["validation"][...]` list is returned as the trajectory
+    (Axis C experiment, S44 follow-up). The trajectory adds zero wall-time:
+    CatBoost computes per-iter eval logloss internally during the same
+    training pass.
+    """
     n_classes = int(np.max(y_tr)) + 1 if y_tr.dtype.kind in "iu" else 2
     loss = "MultiClass" if n_classes > 2 else "Logloss"
     X_tr = _coerce_cats_to_int(X_tr, cat_indices)
@@ -66,9 +76,13 @@ def _train_classifier(X_tr, y_tr, X_te, cat_indices, seed):
         task_type="CPU",
         verbose=False,
         allow_writing_files=False,
+        metric_period=1 if metric_period == 1 else 1,
     )
+    fit_kwargs = {"cat_features": cat_indices}
+    if metric_period == 1 and y_te_eval is not None:
+        fit_kwargs["eval_set"] = [(X_te, y_te_eval)]
     with timer() as elapsed_train:
-        model.fit(X_tr, y_tr, cat_features=cat_indices)
+        model.fit(X_tr, y_tr, **fit_kwargs)
     train_seconds = elapsed_train()
     with timer() as elapsed_pred:
         y_proba = model.predict_proba(X_te)
@@ -76,7 +90,18 @@ def _train_classifier(X_tr, y_tr, X_te, cat_indices, seed):
     if n_classes == 2:
         # CatBoost returns shape (n, 2); we use prob of class=1 for logloss
         y_proba = y_proba[:, 1]
-    return y_proba, train_seconds, predict_seconds, n_classes
+    trajectory = None
+    if metric_period == 1 and y_te_eval is not None:
+        evals = getattr(model, "evals_result_", {}) or {}
+        validation = evals.get("validation", {}) or {}
+        # Binary uses "Logloss"; multiclass uses "MultiClass".
+        traj_logloss = validation.get("Logloss") or validation.get("MultiClass")
+        if traj_logloss:
+            trajectory = {
+                "iter": list(range(1, len(traj_logloss) + 1)),
+                "logloss": [float(v) for v in traj_logloss],
+            }
+    return y_proba, train_seconds, predict_seconds, n_classes, trajectory
 
 
 def _train_ranker(X_tr, y_tr, g_tr, X_te, y_te, g_te, seed):
@@ -119,8 +144,21 @@ def main() -> int:
     ap.add_argument("--cache-root", default=None)
     ap.add_argument("--iterations", type=int, default=None,
                     help="Override BENCH_HP['iterations']; non-default runs are tagged in the output.")
+    ap.add_argument("--metric-period", type=int, default=0,
+                    help="When set to 1, capture per-iter eval logloss trajectory "
+                         "(Axis C experiment). Tags output filename with '_axisC'. "
+                         "Zero wall-time overhead; CatBoost computes the trajectory "
+                         "internally via metric_period=1 + eval_set.")
     args = ap.parse_args()
     dataset_tag = apply_iterations_override(args)
+    if args.metric_period == 1:
+        # Insert the _axisC tag right after the dataset stem (before any _iter<N>
+        # suffix), so the aggregator can group axisC runs separately.
+        if "_iter" in dataset_tag:
+            stem, _, rest = dataset_tag.partition("_iter")
+            dataset_tag = f"{stem}_axisC_iter{rest}"
+        else:
+            dataset_tag = f"{dataset_tag}_axisC"
 
     cache_root = Path(args.cache_root) if args.cache_root else None
     train_csv, test_csv, meta = load_csv_pair(args.dataset, cache_root=cache_root)
@@ -133,11 +171,14 @@ def main() -> int:
     print(f"[catboost_cpu/{args.dataset}/seed={args.seed}] "
           f"train={X_tr.shape}  test={X_te.shape}  task={task}", file=sys.stderr)
 
+    trajectory = None
     if task == "classification":
         y_tr_int = y_tr.astype(np.int64)
         y_te_int = y_te.astype(np.int64)
-        y_proba, train_s, pred_s, n_classes = _train_classifier(
+        y_proba, train_s, pred_s, n_classes, trajectory = _train_classifier(
             X_tr, y_tr_int, X_te, cat_indices, args.seed,
+            metric_period=args.metric_period,
+            y_te_eval=y_te_int if args.metric_period == 1 else None,
         )
         metric_value = logloss(y_te_int, y_proba)
         metric_name = "logloss"
@@ -169,6 +210,7 @@ def main() -> int:
         hardware=hardware_string(),
         python_version=sys.version.split()[0],
         notes=meta.get("notes", ""),
+        trajectory=trajectory,
     )
     out = result.write(Path(args.results_dir))
     print(f"  {metric_name}={metric_value:.6f}  "
