@@ -2417,3 +2417,68 @@ Decomposition of the 223-row baseline:
 - Reference submissions: `Predicting Irrigation Need/submissions/catboost_{cpu,mlx}_v8_rs0_submission.csv` (Kaggle balanced-accuracy 0.95994 / 0.95710)
 - Reproducibility scripts (committed): `docs/sprint40/pre_lane_check/scripts/exp2_no_cat_features.py`, `exp3_cpu_noise_floor.py`
 - Committee inputs: strategist, devils-advocate, visionary advisory rounds (this session); mathematician's mechanism prior (M2 > M1 > M4 > M3) — empirically confirmed.
+
+## DEC-047: Axis C cross-over not significant at n=5; v0.6.0 frame defaults to "reproducibility-grade"
+
+**Sprint**: 44
+**Date**: 2026-04-30
+**Status**: ACCEPTED
+**Companion**: `docs/benchmarks/v0.6.0-pareto.md §4`
+
+### Context
+
+The mathematician hypothesized that CatBoost-MLX's GPU-deterministic leaf statistics
+would produce lower gradient variance, allowing convergence in fewer iterations than
+CatBoost-CPU — a cross-over at sufficiently long horizons (Axis C variance-reduction
+hypothesis). S44 ran the test: 5 seeds × 5 iter levels × 2 backends = 50 runs on
+Epsilon (2,000 features). This is the full Axis C experiment.
+
+### Findings
+
+| iter | MLX mean | CPU mean | MLX − CPU |
+|---|---|---|---|
+| 200 | 0.359249 | 0.355680 | +0.003570 |
+| 500 | 0.306369 | 0.304993 | +0.001376 |
+| 1000 | 0.281287 | 0.280515 | +0.000772 |
+| 2000 | 0.268070 | 0.267634 | +0.000436 |
+| **4000** | **0.263756** | **0.263882** | **−0.000126** |
+
+**Paired-t at iter=4000:** t = −0.968, n=5, df=4. Two-tailed critical value at
+α=0.05: 2.776. **Not statistically significant.** Seed 43 reverses sign (+0.000315);
+the other four seeds favor MLX (−0.000465, −0.000174, −0.000264, −0.000042).
+
+The trend is real (monotone from +0.0036 to −0.0001 over the iter grid). A
+well-powered test (n ≈ 25–30) would be needed to confirm or rule out the
+variance-reduction effect. The wall-clock cost at iter=4000 is 8,765s (~2.4 hours)
+for MLX vs 511s for CPU (17.2× ratio) — prohibitive for any practical use case.
+
+### Decision
+
+**v0.6.0 frame is "reproducibility-grade CatBoost on MLX", not "iter-budget-Pareto".**
+
+- The Axis C cross-over is reported as evidence supporting the "fair convergence"
+  claim, not as a performance claim. The conservative statement is: at fair
+  convergence, CatBoost-MLX is statistically indistinguishable from CatBoost-CPU.
+- The prior "characterized-difference port" framing (DEC-046) is superseded in
+  public-facing language by "reproducibility-grade" — the v0.6.0 benchmark suite
+  supports the stronger statement on numeric workloads.
+- The upstream RFC draft is updated accordingly (still STAGED — NOT POSTED).
+- A note is added to the v0.6.0 writeup that a well-powered Axis C test (n ≈ 25–30)
+  is a v0.6.x experiment, not a v0.6.0 launch item.
+
+### Amazon cat-aliasing (related DEC item, v0.6.x)
+
+The Amazon uint8 bin aliasing (`csv_train.cpp:static_cast<uint8_t>`) for categorical
+features with cardinality > 255 is a v0.6.x fix tracked under this decision entry.
+The symptom is std=0.000000 across seeds and a +0.088 logloss gap to CatBoost-CPU.
+Fix path: change bin representation from uint8 to uint16 or uint32 throughout the
+CSV training path and update the corresponding kernel dispatch. Users affected: any
+categorical feature with cardinality > 255. Users not affected: Adult (cats < 100
+cardinality) and all numeric-only workloads.
+
+### Authority
+
+- Empirical basis: `benchmarks/axisC/results/epsilon_iter4000_catboost_mlx_*.json`,
+  `benchmarks/axisC/results/epsilon_axisC_iter4000_catboost_cpu_*.json`
+- Per-seed table and reproducibility script: `docs/benchmarks/v0.6.0-pareto.md §4`
+- Amazon aliasing evidence: `benchmarks/upstream/results/amazon_iter*.json`

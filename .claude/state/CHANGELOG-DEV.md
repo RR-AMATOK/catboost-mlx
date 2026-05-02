@@ -2,6 +2,89 @@
 
 > Coverage: Sprints 0–15 reconstructed from git log on 2026-04-15. Sprint 16+ is source of truth.
 
+## 2026-05-02 — Sprint 44: Full 5-Dataset Pareto Sweep + v0.6.0 Frame Lock
+
+Branch: `mlx/sprint-44-pareto-5dataset`. No production kernel changes. Kernel
+sources md5 `9edaef45b99b9db3e2717da93800e76f` unchanged from S30 → S44.
+
+### v0.5.4 patch (mid-sprint, separate release branch)
+
+Shipped 2026-04-30. Fixes `OverflowError: Python integer 799 out of bounds for
+uint8` on predict when a model is loaded that was trained with high-cardinality
+categorical features (cardinality > 255). The training-time uint8 aliasing
+(`csv_train.cpp:static_cast<uint8_t>`) is a separate v0.6.x DEC item.
+
+### T0 — Scaffold + Stage 1 falsification gate
+
+Sprint plan at `docs/sprint44/sprint-plan.md`. The Stage 1 gate pre-registered
+three guardrails: (1) |MLX-vs-CPU Δlogloss| ≤ 0.0005 strict / ≤ 0.005 bounded
+/ > 0.005 hard-falsifies; (2) report `argmin_iter` per (framework, dataset);
+(3) drop strict bit-equivalence wording if any dataset's grid-optimum gap exceeds
+the threshold. Commits include `a447f806e1`.
+
+### T1 — Epsilon iter-grid sweep
+
+4-iter-level × 4-framework × 3-seed sweep on Epsilon (400k × 2000 features).
+
+| iter | MLX-vs-CPU | Note |
+|---|---|---|
+| 200 | +0.0036 | under-converged |
+| 500 | +0.0014 | |
+| 1000 | +0.0008 | |
+| 2000 | +0.0006 | **architectural floor** |
+
+CatBoost overtakes LightGBM and XGBoost at iter=2000 (CB-CPU 0.2676 vs LGB
+0.2736). Both CPU and MLX hit the same optimal iter=2000. MLX/CPU train ratio:
+14.7–15.9×. All 3 seeds confirm the floor; Stage 1 gate PASSED (no dataset > 0.005).
+
+### T2 — Amazon iter-grid sweep
+
+4-iter-level × 4-framework × 3-seed sweep on Amazon Employee Access (26k rows,
+9 categorical features, no numeric features). Key finding: catboost_mlx produces
+`logloss=0.219453` identically across all 3 seeds and all 4 iter levels. Root
+cause confirmed as `csv_train.cpp:static_cast<uint8_t>` aliasing Amazon's
+`RESOURCE` feature (cardinality 799, overflows uint8 max 255). This is a
+documented v0.6.x DEC item, not a general categorical asymmetry.
+
+### T3 — MSLR-WEB10K
+
+SKIPPED. Deferred: ~6h compute + separate ranking-objective methodology (NDCG@10
+early-stopping). Out of scope for v0.6.0. Planned v0.6.x.
+
+### T4 — Axis C cross-over test (Epsilon iter=4000, 5 seeds)
+
+50/50 runs completed (required 2 restarts; `caffeinate -dimsu` wrap). Paired-t
+on iter=4000: mean MLX-CPU = −0.000126 (MLX nominally ahead), t = −0.968, n=5,
+not significant at α=0.05 (critical value 2.776). Seed 43 reverses sign.
+
+**Verdict:** The Axis C variance-reduction hypothesis is consistent with the
+trajectory data but not confirmed at n=5. v0.6.0 frame defaults to
+"reproducibility-grade", not "iter-budget-Pareto". DEC-047 records this verdict.
+
+### T4 (continued) — v0.6.0 Pareto writeup
+
+`docs/benchmarks/v0.6.0-pareto.md` (4,736 words). Covers all 5 datasets,
+full Axis C results, 8-claim summary table, reproducibility receipts. Honest
+limitations: training 5–16× slower; predict 3–140× slower; categorical workloads
+not the target audience; uint8 aliasing documented; MSLR deferred.
+
+### T5 — Upstream RFC refresh + close-out
+
+`docs/upstream_issue_draft.md` refreshed for v0.6.0 (still STAGED — NOT POSTED).
+Key updates: title → v0.6.0; framing → "reproducibility-grade"; all numbers
+updated; Axis C cross-over added as evidence for fair-convergence claim; Amazon
+uint8 cat-aliasing added as honest limitation; Performance section replaced with
+full 5-dataset table. DEC-047 added to DECISIONS.md. State files updated.
+
+### Source-of-truth pointers
+
+- v0.6.0 writeup: `docs/benchmarks/v0.6.0-pareto.md`
+- Upstream RFC: `docs/upstream_issue_draft.md`
+- DEC-047: `.claude/state/DECISIONS.md`
+- Per-run JSONs: `benchmarks/upstream/results/`, `benchmarks/axisC/results/`
+
+---
+
 ## 2026-04-26 — Sprint 43: Falsification + Highest-ROI Polish
 
 Branch: `mlx/sprint-43-falsification-and-roi` (9 commits, PR pending). No

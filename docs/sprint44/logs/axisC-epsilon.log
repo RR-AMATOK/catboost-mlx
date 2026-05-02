@@ -1,0 +1,135 @@
+=== Axis C — argmin_iter parity sweep on Epsilon ===
+  ROOT:        /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx
+  RESULTS_DIR: benchmarks/axisC/results
+  SEEDS:       0 1 42 43 44
+  ITERS:       200 500 1000 2000 4000
+  Estimated:   ~5 hours on M3 Max (10 seeds × 5 iters × 2 backends)
+
+[axisC/cpu/iter=200/seed=0] cached
+[axisC/cpu/iter=200/seed=1] running...
+[catboost_cpu/epsilon/seed=1] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.355806  train=33.69s  predict=0.010s  rss=13226 MB  -> epsilon_axisC_catboost_cpu_1.json
+[axisC/cpu/iter=200/seed=42] running...
+[catboost_cpu/epsilon/seed=42] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.355657  train=32.84s  predict=0.009s  rss=12803 MB  -> epsilon_axisC_catboost_cpu_42.json
+[axisC/cpu/iter=200/seed=43] running...
+[catboost_cpu/epsilon/seed=43] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.355801  train=31.43s  predict=0.010s  rss=13284 MB  -> epsilon_axisC_catboost_cpu_43.json
+[axisC/cpu/iter=200/seed=44] running...
+[catboost_cpu/epsilon/seed=44] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.355510  train=30.93s  predict=0.010s  rss=13230 MB  -> epsilon_axisC_catboost_cpu_44.json
+[axisC/cpu/iter=500/seed=0] running...
+[catboost_cpu/epsilon/seed=0] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.304982  train=72.31s  predict=0.017s  rss=13176 MB  -> epsilon_axisC_iter500_catboost_cpu_0.json
+[axisC/cpu/iter=500/seed=1] running...
+[catboost_cpu/epsilon/seed=1] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.305101  train=71.62s  predict=0.019s  rss=13180 MB  -> epsilon_axisC_iter500_catboost_cpu_1.json
+[axisC/cpu/iter=500/seed=42] running...
+[catboost_cpu/epsilon/seed=42] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.304975  train=73.21s  predict=0.015s  rss=13254 MB  -> epsilon_axisC_iter500_catboost_cpu_42.json
+[axisC/cpu/iter=500/seed=43] running...
+[catboost_cpu/epsilon/seed=43] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.304972  train=73.63s  predict=0.016s  rss=13220 MB  -> epsilon_axisC_iter500_catboost_cpu_43.json
+[axisC/cpu/iter=500/seed=44] running...
+[catboost_cpu/epsilon/seed=44] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.304935  train=73.15s  predict=0.016s  rss=13067 MB  -> epsilon_axisC_iter500_catboost_cpu_44.json
+[axisC/cpu/iter=1000/seed=0] running...
+[catboost_cpu/epsilon/seed=0] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.280536  train=139.02s  predict=0.026s  rss=13227 MB  -> epsilon_axisC_iter1000_catboost_cpu_0.json
+[axisC/cpu/iter=1000/seed=1] running...
+[catboost_cpu/epsilon/seed=1] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.280606  train=139.66s  predict=0.025s  rss=13264 MB  -> epsilon_axisC_iter1000_catboost_cpu_1.json
+[axisC/cpu/iter=1000/seed=42] running...
+[catboost_cpu/epsilon/seed=42] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.280382  train=138.13s  predict=0.027s  rss=13044 MB  -> epsilon_axisC_iter1000_catboost_cpu_42.json
+[axisC/cpu/iter=1000/seed=43] running...
+[catboost_cpu/epsilon/seed=43] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.280412  train=141.80s  predict=0.022s  rss=13272 MB  -> epsilon_axisC_iter1000_catboost_cpu_43.json
+[axisC/cpu/iter=1000/seed=44] running...
+[catboost_cpu/epsilon/seed=44] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.280641  train=138.51s  predict=0.025s  rss=13230 MB  -> epsilon_axisC_iter1000_catboost_cpu_44.json
+[axisC/cpu/iter=2000/seed=0] running...
+[catboost_cpu/epsilon/seed=0] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.267659  train=267.73s  predict=0.100s  rss=12956 MB  -> epsilon_axisC_iter2000_catboost_cpu_0.json
+[axisC/cpu/iter=2000/seed=1] running...
+[catboost_cpu/epsilon/seed=1] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.267613  train=272.30s  predict=0.085s  rss=12834 MB  -> epsilon_axisC_iter2000_catboost_cpu_1.json
+[axisC/cpu/iter=2000/seed=42] running...
+[catboost_cpu/epsilon/seed=42] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.267732  train=263.12s  predict=0.101s  rss=12845 MB  -> epsilon_axisC_iter2000_catboost_cpu_42.json
+[axisC/cpu/iter=2000/seed=43] running...
+[catboost_cpu/epsilon/seed=43] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.267276  train=266.42s  predict=0.088s  rss=12776 MB  -> epsilon_axisC_iter2000_catboost_cpu_43.json
+[axisC/cpu/iter=2000/seed=44] running...
+[catboost_cpu/epsilon/seed=44] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.267891  train=269.86s  predict=0.083s  rss=12910 MB  -> epsilon_axisC_iter2000_catboost_cpu_44.json
+[axisC/cpu/iter=4000/seed=0] running...
+[catboost_cpu/epsilon/seed=0] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.264110  train=505.64s  predict=0.165s  rss=12847 MB  -> epsilon_axisC_iter4000_catboost_cpu_0.json
+[axisC/cpu/iter=4000/seed=1] running...
+[catboost_cpu/epsilon/seed=1] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.263893  train=516.02s  predict=0.175s  rss=13051 MB  -> epsilon_axisC_iter4000_catboost_cpu_1.json
+[axisC/cpu/iter=4000/seed=42] running...
+[catboost_cpu/epsilon/seed=42] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.263931  train=516.15s  predict=0.172s  rss=12986 MB  -> epsilon_axisC_iter4000_catboost_cpu_42.json
+[axisC/cpu/iter=4000/seed=43] running...
+[catboost_cpu/epsilon/seed=43] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.263409  train=511.36s  predict=0.174s  rss=12683 MB  -> epsilon_axisC_iter4000_catboost_cpu_43.json
+[axisC/cpu/iter=4000/seed=44] running...
+[catboost_cpu/epsilon/seed=44] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.264068  train=505.75s  predict=0.169s  rss=12781 MB  -> epsilon_axisC_iter4000_catboost_cpu_44.json
+[axisC/mlx/iter=200/seed=0] cached
+[axisC/mlx/iter=200/seed=1] running...
+[catboost_mlx/epsilon/seed=1] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.359249  train=472.99s  predict=8.679s  rss=20928 MB  -> epsilon_catboost_mlx_1.json
+[axisC/mlx/iter=200/seed=42] cached
+[axisC/mlx/iter=200/seed=43] cached
+[axisC/mlx/iter=200/seed=44] cached
+[axisC/mlx/iter=500/seed=0] running...
+[catboost_mlx/epsilon/seed=0] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.306342  train=1115.28s  predict=9.171s  rss=22271 MB  -> epsilon_iter500_catboost_mlx_0.json
+[axisC/mlx/iter=500/seed=1] running...
+[catboost_mlx/epsilon/seed=1] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.306316  train=1118.64s  predict=9.290s  rss=22064 MB  -> epsilon_iter500_catboost_mlx_1.json
+[axisC/mlx/iter=500/seed=42] cached
+[axisC/mlx/iter=500/seed=43] cached
+[axisC/mlx/iter=500/seed=44] cached
+[axisC/mlx/iter=1000/seed=0] running...
+[catboost_mlx/epsilon/seed=0] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.281242  train=2211.92s  predict=11.282s  rss=21821 MB  -> epsilon_iter1000_catboost_mlx_0.json
+[axisC/mlx/iter=1000/seed=1] running...
+[catboost_mlx/epsilon/seed=1] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.281344  train=2207.76s  predict=10.741s  rss=19163 MB  -> epsilon_iter1000_catboost_mlx_1.json
+[axisC/mlx/iter=1000/seed=42] cached
+[axisC/mlx/iter=1000/seed=43] cached
+[axisC/mlx/iter=1000/seed=44] cached
+[axisC/mlx/iter=2000/seed=0] running...
+[catboost_mlx/epsilon/seed=0] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.267920  train=4366.49s  predict=13.814s  rss=18219 MB  -> epsilon_iter2000_catboost_mlx_0.json
+[axisC/mlx/iter=2000/seed=1] running...
+[catboost_mlx/epsilon/seed=1] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.267892  train=4377.95s  predict=14.203s  rss=19077 MB  -> epsilon_iter2000_catboost_mlx_1.json
+[axisC/mlx/iter=2000/seed=42] cached
+[axisC/mlx/iter=2000/seed=43] cached
+[axisC/mlx/iter=2000/seed=44] cached
+[axisC/mlx/iter=4000/seed=0] running...
+[catboost_mlx/epsilon/seed=0] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.263645  train=8700.03s  predict=19.805s  rss=19995 MB  -> epsilon_iter4000_catboost_mlx_0.json
+[axisC/mlx/iter=4000/seed=1] running...
+[catboost_mlx/epsilon/seed=1] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.263719  train=8695.28s  predict=20.755s  rss=19630 MB  -> epsilon_iter4000_catboost_mlx_1.json
+[axisC/mlx/iter=4000/seed=42] running...
+[catboost_mlx/epsilon/seed=42] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.263667  train=8711.58s  predict=19.449s  rss=20679 MB  -> epsilon_iter4000_catboost_mlx_42.json
+[axisC/mlx/iter=4000/seed=43] running...
+[catboost_mlx/epsilon/seed=43] train=(400000, 2000)  test=(100000, 2000)  task=classification
+  logloss=0.263724  train=8758.55s  predict=18.829s  rss=20979 MB  -> epsilon_iter4000_catboost_mlx_43.json
+[axisC/mlx/iter=4000/seed=44] running...
+[catboost_mlx/epsilon/seed=44] train=(400000, 2000)  test=(100000, 2000)  task=classification
+Terminated: 15             python3 -m benchmarks.upstream.scripts.run_catboost_mlx --dataset epsilon --seed "$SEED" --iterations "$ITER" --results-dir "$RESULTS_DIR"
+[axisC/mlx/iter=4000/seed=44] FAILED
+
+=== Axis C summary ===
+  total: 50  ok: 49  fail: 1
+  Results: benchmarks/axisC/results/*.json
+  Next: paired-t-test on argmin_t L(t) per seed across backends.

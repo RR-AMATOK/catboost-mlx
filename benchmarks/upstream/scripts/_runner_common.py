@@ -93,6 +93,7 @@ class BenchResult:
     hardware: str = ""
     python_version: str = ""
     notes: str = ""
+    trajectory: Optional[Dict[str, Any]] = None  # {"iter": [int], "logloss": [float]} when --metric-period 1; None otherwise
 
     def write(self, out_dir: Path) -> Path:
         out_dir.mkdir(parents=True, exist_ok=True)

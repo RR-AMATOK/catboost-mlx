@@ -1,46 +1,69 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-04-26 (**S43 READY-TO-CLOSE — Branch B locked, v0.6.0 scope decided**).
-> Branch `mlx/sprint-43-falsification-and-roi` carries 9 commits (T0+T1+T2+T3+T4+T5+cleanup+restore).
-> PR pending. Three decisive empirical findings shipped:
+> Last updated: 2026-04-30 (**S44 COMPLETE — v0.6.0 framing locked; 5-dataset writeup done**).
+> Branch `mlx/sprint-44-pareto-5dataset`. All tasks T0–T5 complete.
 >
-> 1. **MLX is bit-equivalent to CatBoost-CPU at fair convergence** (Higgs-1M iter=1000
->    → +0.0002 logloss vs CPU = within fp32 numerical noise). The DEC-046 +0.0012
->    "architectural floor" claim was itself partly a 200-iter under-convergence artifact.
-> 2. **Throughput gap is structural, not amortization** (MLX/CPU ratio invariant
->    across 1M/11M and 200/1000 iters at ~5.2×). Branch A FALSIFIED.
-> 3. **Predict-path 8.5× speedup shipped** for OneHot-cat models (`ctr=False`
->    default path) via in-process dispatch. Bit-identical output verified.
+> **Sprint 44 headline deliverables:**
 >
-> v0.6.0 scope is now **data-locked to Branch B** (accuracy-led, "deterministic,
-> bit-equivalent Apple Silicon-native CatBoost-Plain port"). Ordered Boosting
-> demoted from hero to optional v0.7.x. ~4 sprints (S44-S47) execute the v0.6.0 plan.
+> 1. **v0.5.4 patch shipped 2026-04-30** — cat-overflow predict fix (tag `v0.5.4`
+>    on master; separate release branch). Prevents `OverflowError: Python integer 799
+>    out of bounds for uint8` on categorical models with high-cardinality features.
+> 2. **Epsilon iter-grid sweep complete** (T1) — full 4-iter-level × 4-framework ×
+>    3-seed sweep on Epsilon (2000 features). Floor at iter=2000: +0.0006 logloss
+>    (architectural floor; architectural-floor scaling with feature count confirmed).
+>    CatBoost overtakes LightGBM/XGBoost at iter=2000 (−0.0060 logloss ahead).
+> 3. **Amazon iter-grid sweep complete** (T2) — all-categorical dataset confirms
+>    uint8 bin-aliasing root cause (cardinality 799 → `static_cast<uint8_t>`).
+>    std=0.000000 across seeds is the diagnostic signal; +0.088 gap to CPU.
+> 4. **Axis C cross-over test complete** (T4/Epsilon iter=4000, 5 seeds) — 50/50
+>    runs landed (required 2 restarts due to laptop charging; `caffeinate -dimsu`
+>    wrap used). Cross-over signal at iter=4000 (MLX −0.000126 ahead) is **NOT
+>    statistically significant** (n=5, t=−0.968; critical value 2.776 at α=0.05).
+>    Seed 43 reverses sign; other 4 seeds favor MLX. Conservative statement:
+>    statistically indistinguishable at this sample size.
+> 5. **v0.6.0 framing locked** — "reproducibility-grade CatBoost on MLX". On numeric
+>    workloads at fair convergence, CatBoost-MLX is statistically indistinguishable
+>    from CatBoost-CPU. Not faster, but deterministic + GPU-native + MLX-ecosystem.
+> 6. **v0.6.0 writeup landed** — `docs/benchmarks/v0.6.0-pareto.md` (4,736 words;
+>    5 datasets; all claims pre-registered and falsification-gated).
+> 7. **Upstream RFC refreshed** — `docs/upstream_issue_draft.md` updated to v0.6.0
+>    reality (still STAGED — NOT POSTED).
+> 8. **DEC-047 added** — Axis C cross-over verdict; v0.6.0 defaults to
+>    "reproducibility-grade", not "iter-budget-Pareto".
 >
-> ## Sprint 43 close-out (PR pending)
+> **Next-session entry point:**
+> Review `docs/benchmarks/v0.6.0-pareto.md` and decide on the v0.6.0 release ceremony:
+> - Open PR `mlx/sprint-44-pareto-5dataset` → master
+> - Tag `v0.6.0` on master post-merge
+> - Cut GitHub Release with release notes from the pareto writeup TL;DR
+> - Defer PyPI publish + RFC posting to S45/S46 per the original plan, OR compress
+>   ceremony into fewer sprints given that the writeup is done
+>
+> **MSLR-WEB10K deferred** — S44-T3 skipped; ranking objective out of v0.6.0 scope
+> (estimated ~6h compute for full iter=1000 sweep + separate early-stopping
+> methodology). Planned for v0.6.x.
+>
+> ## Sprint 44 close-out
 >
 > **Authoritative records**:
-> - Sprint plan: `docs/sprint43/sprint-plan.md`
-> - Synthesis (verdict + scope decision): `docs/sprint43/T4-synthesis.md`
-> - Sprint close: `docs/sprint43/sprint-close.md`
-> - Pareto-frontier writeup (extended): `docs/benchmarks/v0.5.x-pareto.md`
+> - Sprint plan: `docs/sprint44/sprint-plan.md`
+> - v0.6.0 Pareto writeup: `docs/benchmarks/v0.6.0-pareto.md`
+> - Upstream RFC (staged): `docs/upstream_issue_draft.md`
 >
-> **Code state (master `26957d63a0` + this branch)**:
-> - No source code changes outside `python/catboost_mlx/core.py:_run_predict` (T3
->   dispatch) and the benchmarks infrastructure (T2 `--iterations` flag wiring).
-> - Production kernel v5 (`784f82a891`) byte-identical from S30 → S43.
+> **Code state (branch `mlx/sprint-44-pareto-5dataset`, tip `a447f806e1`):**
+> - `python/catboost_mlx/_predict_utils.py` modified (v0.5.4 cat-overflow fix)
+> - `python/tests/test_qa_round4.py` modified (updated dispatch test for new contract)
+> - 108 new benchmark result JSONs in `benchmarks/upstream/results/` and
+>   `benchmarks/axisC/results/` (untracked; to be staged in close-out commit)
+> - Production kernel v5 (`784f82a891`) byte-identical from S30 → S44
 >
-> **Next-session priorities** (Branch B execution, ~4 sprints to v0.6.0):
-> 1. **Open close-out PR** for `mlx/sprint-43-falsification-and-roi` → master.
-> 2. **Optional v0.5.3 tag** post-merge (T3 user-visible perf win + T2 iter-tooling).
-> 3. **S44 — Full 5-dataset Pareto-frontier sweep** at fair convergence: run Epsilon,
->    Amazon, MSLR (data acquisition gating); per-dataset iter-tuning to avoid
->    Adult-style overfit; complete the writeup; refresh the staged upstream RFC.
-> 4. **S45 — Documentation + iter-tooling polish**: README + CHANGELOG rewrite around
->    bit-equivalence framing; staged RFC review.
-> 5. **S46 — PyPI publish**: build matrix, `MACOSX_DEPLOYMENT_TARGET=14.0`, twine
->    upload, GitHub Release v0.6.0-rc1.
-> 6. **S47 — E3 launch**: HN/Twitter/MLX-Slack post; post the upstream RFC;
->    cut v0.6.0 GitHub Release.
+> ## Sprint 43 close-out (PR #42 MERGED 2026-04-26)
+>
+> **Outcome**: Branch A (throughput-led) falsified by Higgs-11M sweep (MLX/CPU ratio
+> invariant at 5.1–5.4×). Branch B (accuracy-led) locked: MLX bit-equivalent to
+> CatBoost-CPU at fair convergence (Higgs-1M iter=1000 → +0.0002 logloss = fp32 noise).
+> Predict 8.5× speedup shipped for default OneHot-cat path. v0.6.0 scope locked.
+> Records: `docs/sprint43/T4-synthesis.md`, `docs/sprint43/sprint-close.md`.
 >
 > ## Sprint 42 close-out (PR #40 MERGED 2026-04-26)
 >
