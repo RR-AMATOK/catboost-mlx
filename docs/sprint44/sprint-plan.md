@@ -1,6 +1,6 @@
 # Sprint 44 Plan — Full 5-Dataset Pareto Sweep at Fair Convergence
 
-**Sprint:** 44  |  **Status:** IN PROGRESS  |  **Branch:** `mlx/sprint-44-pareto-5dataset`
+**Sprint:** 44  |  **Status:** COMPLETE (2026-05-02; PR #44 merged, v0.6.0 tagged)  |  **Branch:** `mlx/sprint-44-pareto-5dataset` (merged + deleted)
 **Cut from:** master `35f881df9e` (post v0.5.3 release)
 **Theme:** Complete the 5-dataset upstream Pareto-frontier sweep at fair convergence (per S43-T4 Branch B locked) with the iter-grid methodology recommended by devils-advocate's three-guardrails plan.
 

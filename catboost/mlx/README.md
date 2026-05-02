@@ -27,7 +27,7 @@ fully deterministic, fast, and unified-memory native. The decision matrix:
 ## Installation & Quick Start
 
 > CatBoost-MLX is not yet on PyPI. The supported install path today is **from source**
-> (clone the repo) or from the **v0.5.0 GitHub Release** tarball. PyPI publication is
+> (clone the repo) or from the **v0.6.1 GitHub Release** tarball. PyPI publication is
 > tracked for a future release.
 
 ### One-time prerequisites
@@ -51,7 +51,7 @@ git clone https://github.com/RR-AMATOK/catboost-mlx.git
 cd catboost-mlx
 
 # 2. (Optional) check out a specific release tag
-git checkout v0.5.0
+git checkout v0.6.1
 
 # 3. Compile the standalone CLI binaries (csv_train + csv_predict)
 MLX_PREFIX="$(brew --prefix mlx)"

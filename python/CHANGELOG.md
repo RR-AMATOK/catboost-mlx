@@ -7,6 +7,124 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-05-02
+
+Documentation + release-hygiene patch on top of v0.6.0. No code
+changes; no API changes; no benchmark methodology changes.
+
+### Fixed
+- **Version metadata correctness**: `python/pyproject.toml` and
+  `python/catboost_mlx/__init__.py` were not bumped before the
+  v0.6.0 tag was cut, so a wheel built off the v0.6.0 commit
+  self-identified as `0.5.4`. v0.6.1 corrects the metadata. Future
+  release scripts should bump versions before tagging.
+- **`docs/benchmarks/v0.5.x-pareto.md`** marked as SUPERSEDED with
+  a pointer to `v0.6.0-pareto.md`. The v0.5.x writeup is preserved
+  for historical reference.
+- **`docs/sprint44/sprint-plan.md`** status updated from
+  "IN PROGRESS" to "COMPLETE (2026-05-02; PR #44 merged, v0.6.0
+  tagged)".
+- **`catboost/mlx/README.md`** install instructions updated to
+  reference v0.6.1 GitHub Release tarball (was v0.6.0; both work,
+  but v0.6.1 has correct version metadata).
+- **`python/CHANGELOG.md`** v0.6.0 entry added (was missing — the
+  v0.6.0 release shipped without a CHANGELOG entry).
+
+### Recommended install
+- Use `git checkout v0.6.1` rather than `v0.6.0` if you want the
+  installed package to correctly self-identify its version. The
+  underlying code is bit-identical between the two tags.
+
+## [0.6.0] - 2026-05-02
+
+Reproducibility-grade release. Branch B locked (per S43-T4 advisory):
+"deterministic, bit-equivalent Apple Silicon-native CatBoost-Plain
+port" — accuracy-led, not throughput-led. The launch artifact is
+`docs/benchmarks/v0.6.0-pareto.md`.
+
+### Headline claim
+
+On numeric workloads at fair convergence, CatBoost-MLX produces
+statistically indistinguishable results from CatBoost-CPU. Bit-
+equivalence holds within fp32 numerical noise on Higgs-1M (gap
++0.0002 at iter=1000) and within the architectural floor on Epsilon
+(gap +0.00055 at iter=2000). We are not faster than CatBoost-CPU
+on the same chip — training is 5–16× slower across measured
+datasets. We are reproducible, deterministic, and GPU-native on
+Apple Silicon.
+
+### Added
+
+- **5-dataset Pareto sweep at fair convergence** (S44-T2 + earlier
+  sprints): Adult, Higgs-1M, Higgs-11M, Epsilon, Amazon. Iter-grid
+  methodology with three guardrails (pre-registered Δlogloss
+  thresholds, explicit `argmin_iter` reporting, conditional
+  downgrade of bit-equivalence wording). MSLR-WEB10K (ranking)
+  deferred to v0.6.x.
+- **Axis C cross-over experiment** on Epsilon (S44 follow-up to
+  the original mathematician hypothesis): 5 seeds × 5 iter levels
+  × 2 backends = 50 runs with full per-iter trajectory. The
+  MLX-vs-CPU gap monotonically decays from +0.00346 (iter=200) to
+  -0.00013 (iter=4000). Paired-t-test verdict: t = -0.968 (n=5),
+  not significant. Conservative interpretation: bit-equivalent at
+  fair convergence; the variance-reduction hypothesis is
+  consistent with the data but not confirmed by it.
+- **Per-iter trajectory infrastructure** in
+  `benchmarks/upstream/scripts/run_catboost_cpu.py`: new
+  `--metric-period` flag captures `evals_result_["validation"]
+  ["Logloss"]` into the result JSON's `trajectory` field. Zero
+  wall-time overhead — CatBoost computes per-iter eval logloss
+  internally during the same training pass.
+- **`benchmarks/axisC/`** subdirectory with the launcher, results,
+  and analysis pipeline.
+- **Launch writeup** at `docs/benchmarks/v0.6.0-pareto.md` (524
+  lines, 9 sections): TL;DR, when-to-use, methodology, per-dataset
+  results, Axis C finding, what-works, honest limitations,
+  reproducibility receipts, summary.
+
+### Changed
+
+- **Upstream RFC draft** (`docs/upstream_issue_draft.md`)
+  refreshed for v0.6.0 framing (was staged at v0.5.x). Status:
+  **STAGED — NOT POSTED**.
+- **Documented architectural floor scaling**: floor magnitude
+  scales predictably with feature dimensionality (Higgs 28 features
+  → +0.0002 floor; Epsilon 2000 features → +0.0006 floor). More
+  histogram reduction steps per iter → more accumulated fp32
+  rounding per leaf-Newton step.
+- **Sprint 45 spec docs** added (`docs/sprint45/`): Pareto Lane
+  dashboard scoping (kept as v0.6.x exploration); CoreML demo spec
+  (kill recommendation captured — upstream CatBoost already has
+  CoreML, ANE doesn't run trees).
+
+### Known limitations (carry-forward + new)
+
+- 5-16× slower than CatBoost-CPU on training across measured
+  datasets. The gap is structural compute-throughput, not GPU
+  launch overhead. Closing it requires train-binary-IPC + histogram
+  kernel work, est. 5-8 sprints, deferred indefinitely.
+- Predict latency widens with model size (3.3× on Adult post-S43-T3
+  to 140× on Epsilon iter=2000). GPU launch overhead dominates at
+  low batch sizes.
+- **High-cardinality categorical features (cardinality > 255)
+  alias at training time** in the C++ training path's `uint8`
+  bin assumption (`csv_train.cpp:static_cast<uint8_t>`). v0.5.4
+  patched the predict-time crash; the underlying training-time
+  aliasing fix is tracked as DEC-047 (v0.6.x).
+- MSLR-WEB10K (ranking) iter-grid deferred to v0.6.x.
+- Ordered Boosting (`boosting_type='Ordered'`) still not
+  implemented (only `Plain`); v0.7.x scope.
+- CTR-encoded models (`ctr=True`) still use the subprocess predict
+  path; port to Python is a v0.6.x or later follow-up.
+
+### Internal
+
+- Sprint 44 closed; tasks T0-T2, T4, T5 done; T3 (MSLR) deferred.
+- v0.5.4 patch shipped mid-sprint as a focused release for the
+  Amazon cat-overflow fix (see `[0.5.4]` entry).
+- DEC-047 added to `.claude/state/DECISIONS.md`: Axis C cross-over
+  verdict + Amazon uint8 cat-aliasing as v0.6.x DEC item.
+
 ## [0.5.4] - 2026-04-30
 
 Patch release. Fixes a hard-fail in the in-process predict path for
