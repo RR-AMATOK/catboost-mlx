@@ -1,0 +1,595 @@
+=== Amazon iter=200 starting Thu Apr 30 10:24:15 CDT 2026 ===
+=== S42 benchmark sweep ===
+  ROOT:        /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx
+  DATASETS:    amazon
+  SEEDS:       42 43 44
+  FRAMEWORKS:  lightgbm xgboost catboost_cpu catboost_mlx
+  RESULTS_DIR: benchmarks/upstream/results
+
+[amazon/lightgbm/42] running...
+[lightgbm/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+  logloss=0.146054  train=0.65s  predict=0.006s  rss=407 MB  -> amazon_lightgbm_42.json
+[amazon/lightgbm/43] running...
+[lightgbm/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+  logloss=0.146054  train=0.66s  predict=0.005s  rss=405 MB  -> amazon_lightgbm_43.json
+[amazon/lightgbm/44] running...
+[lightgbm/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+  logloss=0.146054  train=0.61s  predict=0.006s  rss=408 MB  -> amazon_lightgbm_44.json
+[amazon/xgboost/42] running...
+[xgboost/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.160637  train=0.45s  predict=0.002s  rss=217 MB  -> amazon_xgboost_42.json
+[amazon/xgboost/43] running...
+[xgboost/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.160637  train=0.47s  predict=0.002s  rss=218 MB  -> amazon_xgboost_43.json
+[amazon/xgboost/44] running...
+[xgboost/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.160637  train=0.44s  predict=0.002s  rss=217 MB  -> amazon_xgboost_44.json
+[amazon/catboost_cpu/42] running...
+[catboost_cpu/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.132061  train=1.82s  predict=0.007s  rss=623 MB  -> amazon_catboost_cpu_42.json
+[amazon/catboost_cpu/43] running...
+[catboost_cpu/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.131694  train=1.83s  predict=0.007s  rss=655 MB  -> amazon_catboost_cpu_43.json
+[amazon/catboost_cpu/44] running...
+[catboost_cpu/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.131909  train=1.78s  predict=0.007s  rss=625 MB  -> amazon_catboost_cpu_44.json
+[amazon/catboost_mlx/42] running...
+[catboost_mlx/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 180, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 138, in main
+    y_proba, train_s, pred_s, n_classes = _train_classifier(
+                                          ~~~~~~~~~~~~~~~~~^
+        X_tr, y_tr_int, X_te, cat_indices, args.seed,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 75, in _train_classifier
+    y_proba = model.predict_proba(X_te)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1539, in predict_proba
+    output = self._run_predict(X, feature_names)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1785, in _run_predict
+    return self._predict_inprocess(X)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1801, in _predict_inprocess
+    binned = quantize_features(X, features)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/_predict_utils.py", line 64, in quantize_features
+    binned[d, f] = cat_map[val]
+    ~~~~~~^^^^^^
+OverflowError: Python integer 799 out of bounds for uint8
+[amazon/catboost_mlx/42] FAILED
+[amazon/catboost_mlx/43] running...
+[catboost_mlx/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 180, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 138, in main
+    y_proba, train_s, pred_s, n_classes = _train_classifier(
+                                          ~~~~~~~~~~~~~~~~~^
+        X_tr, y_tr_int, X_te, cat_indices, args.seed,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 75, in _train_classifier
+    y_proba = model.predict_proba(X_te)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1539, in predict_proba
+    output = self._run_predict(X, feature_names)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1785, in _run_predict
+    return self._predict_inprocess(X)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1801, in _predict_inprocess
+    binned = quantize_features(X, features)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/_predict_utils.py", line 64, in quantize_features
+    binned[d, f] = cat_map[val]
+    ~~~~~~^^^^^^
+OverflowError: Python integer 799 out of bounds for uint8
+[amazon/catboost_mlx/43] FAILED
+[amazon/catboost_mlx/44] running...
+[catboost_mlx/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 180, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 138, in main
+    y_proba, train_s, pred_s, n_classes = _train_classifier(
+                                          ~~~~~~~~~~~~~~~~~^
+        X_tr, y_tr_int, X_te, cat_indices, args.seed,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 75, in _train_classifier
+    y_proba = model.predict_proba(X_te)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1539, in predict_proba
+    output = self._run_predict(X, feature_names)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1785, in _run_predict
+    return self._predict_inprocess(X)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1801, in _predict_inprocess
+    binned = quantize_features(X, features)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/_predict_utils.py", line 64, in quantize_features
+    binned[d, f] = cat_map[val]
+    ~~~~~~^^^^^^
+OverflowError: Python integer 799 out of bounds for uint8
+[amazon/catboost_mlx/44] FAILED
+
+=== Summary ===
+  total: 12  ok: 9  fail: 3  skip: 0
+
+Results: benchmarks/upstream/results/*.json
+Next: T3 — write docs/benchmarks/v0.5.x-pareto.md from these JSONs.
+=== Amazon iter=200 done Thu Apr 30 10:24:53 CDT 2026 ===
+=== Amazon iter=500 starting Thu Apr 30 10:24:53 CDT 2026 ===
+=== S42 benchmark sweep ===
+  ROOT:        /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx
+  DATASETS:    amazon
+  SEEDS:       42 43 44
+  FRAMEWORKS:  lightgbm xgboost catboost_cpu catboost_mlx
+  RESULTS_DIR: benchmarks/upstream/results
+
+[amazon/lightgbm/42] running...
+[lightgbm/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+  logloss=0.157907  train=1.62s  predict=0.018s  rss=755 MB  -> amazon_iter500_lightgbm_42.json
+[amazon/lightgbm/43] running...
+[lightgbm/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+  logloss=0.157907  train=1.63s  predict=0.022s  rss=755 MB  -> amazon_iter500_lightgbm_43.json
+[amazon/lightgbm/44] running...
+[lightgbm/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+  logloss=0.157907  train=1.63s  predict=0.019s  rss=758 MB  -> amazon_iter500_lightgbm_44.json
+[amazon/xgboost/42] running...
+[xgboost/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.154216  train=1.16s  predict=0.003s  rss=224 MB  -> amazon_iter500_xgboost_42.json
+[amazon/xgboost/43] running...
+[xgboost/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.154216  train=1.15s  predict=0.003s  rss=224 MB  -> amazon_iter500_xgboost_43.json
+[amazon/xgboost/44] running...
+[xgboost/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.154216  train=1.17s  predict=0.003s  rss=218 MB  -> amazon_iter500_xgboost_44.json
+[amazon/catboost_cpu/42] running...
+[catboost_cpu/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.132280  train=4.55s  predict=0.008s  rss=691 MB  -> amazon_iter500_catboost_cpu_42.json
+[amazon/catboost_cpu/43] running...
+[catboost_cpu/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.130383  train=4.44s  predict=0.008s  rss=653 MB  -> amazon_iter500_catboost_cpu_43.json
+[amazon/catboost_cpu/44] running...
+[catboost_cpu/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.130886  train=4.32s  predict=0.008s  rss=663 MB  -> amazon_iter500_catboost_cpu_44.json
+[amazon/catboost_mlx/42] running...
+[catboost_mlx/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 180, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 138, in main
+    y_proba, train_s, pred_s, n_classes = _train_classifier(
+                                          ~~~~~~~~~~~~~~~~~^
+        X_tr, y_tr_int, X_te, cat_indices, args.seed,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 75, in _train_classifier
+    y_proba = model.predict_proba(X_te)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1539, in predict_proba
+    output = self._run_predict(X, feature_names)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1785, in _run_predict
+    return self._predict_inprocess(X)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1801, in _predict_inprocess
+    binned = quantize_features(X, features)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/_predict_utils.py", line 64, in quantize_features
+    binned[d, f] = cat_map[val]
+    ~~~~~~^^^^^^
+OverflowError: Python integer 799 out of bounds for uint8
+[amazon/catboost_mlx/42] FAILED
+[amazon/catboost_mlx/43] running...
+[catboost_mlx/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 180, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 138, in main
+    y_proba, train_s, pred_s, n_classes = _train_classifier(
+                                          ~~~~~~~~~~~~~~~~~^
+        X_tr, y_tr_int, X_te, cat_indices, args.seed,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 75, in _train_classifier
+    y_proba = model.predict_proba(X_te)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1539, in predict_proba
+    output = self._run_predict(X, feature_names)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1785, in _run_predict
+    return self._predict_inprocess(X)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1801, in _predict_inprocess
+    binned = quantize_features(X, features)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/_predict_utils.py", line 64, in quantize_features
+    binned[d, f] = cat_map[val]
+    ~~~~~~^^^^^^
+OverflowError: Python integer 799 out of bounds for uint8
+[amazon/catboost_mlx/43] FAILED
+[amazon/catboost_mlx/44] running...
+[catboost_mlx/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 180, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 138, in main
+    y_proba, train_s, pred_s, n_classes = _train_classifier(
+                                          ~~~~~~~~~~~~~~~~~^
+        X_tr, y_tr_int, X_te, cat_indices, args.seed,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 75, in _train_classifier
+    y_proba = model.predict_proba(X_te)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1539, in predict_proba
+    output = self._run_predict(X, feature_names)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1785, in _run_predict
+    return self._predict_inprocess(X)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1801, in _predict_inprocess
+    binned = quantize_features(X, features)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/_predict_utils.py", line 64, in quantize_features
+    binned[d, f] = cat_map[val]
+    ~~~~~~^^^^^^
+OverflowError: Python integer 799 out of bounds for uint8
+[amazon/catboost_mlx/44] FAILED
+
+=== Summary ===
+  total: 12  ok: 9  fail: 3  skip: 0
+
+Results: benchmarks/upstream/results/*.json
+Next: T3 — write docs/benchmarks/v0.5.x-pareto.md from these JSONs.
+=== Amazon iter=500 done Thu Apr 30 10:25:56 CDT 2026 ===
+=== Amazon iter=1000 starting Thu Apr 30 10:25:56 CDT 2026 ===
+=== S42 benchmark sweep ===
+  ROOT:        /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx
+  DATASETS:    amazon
+  SEEDS:       42 43 44
+  FRAMEWORKS:  lightgbm xgboost catboost_cpu catboost_mlx
+  RESULTS_DIR: benchmarks/upstream/results
+
+[amazon/lightgbm/42] running...
+[lightgbm/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+  logloss=0.187763  train=3.23s  predict=0.040s  rss=1280 MB  -> amazon_iter1000_lightgbm_42.json
+[amazon/lightgbm/43] running...
+[lightgbm/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+  logloss=0.187763  train=3.27s  predict=0.056s  rss=1275 MB  -> amazon_iter1000_lightgbm_43.json
+[amazon/lightgbm/44] running...
+[lightgbm/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+  logloss=0.187763  train=3.23s  predict=0.047s  rss=1282 MB  -> amazon_iter1000_lightgbm_44.json
+[amazon/xgboost/42] running...
+[xgboost/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.158754  train=2.22s  predict=0.005s  rss=233 MB  -> amazon_iter1000_xgboost_42.json
+[amazon/xgboost/43] running...
+[xgboost/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.158754  train=2.21s  predict=0.005s  rss=232 MB  -> amazon_iter1000_xgboost_43.json
+[amazon/xgboost/44] running...
+[xgboost/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.158754  train=2.22s  predict=0.006s  rss=232 MB  -> amazon_iter1000_xgboost_44.json
+[amazon/catboost_cpu/42] running...
+[catboost_cpu/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.135118  train=8.42s  predict=0.009s  rss=689 MB  -> amazon_iter1000_catboost_cpu_42.json
+[amazon/catboost_cpu/43] running...
+[catboost_cpu/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.131203  train=8.43s  predict=0.008s  rss=706 MB  -> amazon_iter1000_catboost_cpu_43.json
+[amazon/catboost_cpu/44] running...
+[catboost_cpu/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.133165  train=8.49s  predict=0.009s  rss=704 MB  -> amazon_iter1000_catboost_cpu_44.json
+[amazon/catboost_mlx/42] running...
+[catboost_mlx/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 180, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 138, in main
+    y_proba, train_s, pred_s, n_classes = _train_classifier(
+                                          ~~~~~~~~~~~~~~~~~^
+        X_tr, y_tr_int, X_te, cat_indices, args.seed,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 75, in _train_classifier
+    y_proba = model.predict_proba(X_te)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1539, in predict_proba
+    output = self._run_predict(X, feature_names)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1785, in _run_predict
+    return self._predict_inprocess(X)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1801, in _predict_inprocess
+    binned = quantize_features(X, features)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/_predict_utils.py", line 64, in quantize_features
+    binned[d, f] = cat_map[val]
+    ~~~~~~^^^^^^
+OverflowError: Python integer 799 out of bounds for uint8
+[amazon/catboost_mlx/42] FAILED
+[amazon/catboost_mlx/43] running...
+[catboost_mlx/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 180, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 138, in main
+    y_proba, train_s, pred_s, n_classes = _train_classifier(
+                                          ~~~~~~~~~~~~~~~~~^
+        X_tr, y_tr_int, X_te, cat_indices, args.seed,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 75, in _train_classifier
+    y_proba = model.predict_proba(X_te)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1539, in predict_proba
+    output = self._run_predict(X, feature_names)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1785, in _run_predict
+    return self._predict_inprocess(X)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1801, in _predict_inprocess
+    binned = quantize_features(X, features)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/_predict_utils.py", line 64, in quantize_features
+    binned[d, f] = cat_map[val]
+    ~~~~~~^^^^^^
+OverflowError: Python integer 799 out of bounds for uint8
+[amazon/catboost_mlx/43] FAILED
+[amazon/catboost_mlx/44] running...
+[catboost_mlx/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 180, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 138, in main
+    y_proba, train_s, pred_s, n_classes = _train_classifier(
+                                          ~~~~~~~~~~~~~~~~~^
+        X_tr, y_tr_int, X_te, cat_indices, args.seed,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 75, in _train_classifier
+    y_proba = model.predict_proba(X_te)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1539, in predict_proba
+    output = self._run_predict(X, feature_names)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1785, in _run_predict
+    return self._predict_inprocess(X)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1801, in _predict_inprocess
+    binned = quantize_features(X, features)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/_predict_utils.py", line 64, in quantize_features
+    binned[d, f] = cat_map[val]
+    ~~~~~~^^^^^^
+OverflowError: Python integer 799 out of bounds for uint8
+[amazon/catboost_mlx/44] FAILED
+
+=== Summary ===
+  total: 12  ok: 9  fail: 3  skip: 0
+
+Results: benchmarks/upstream/results/*.json
+Next: T3 — write docs/benchmarks/v0.5.x-pareto.md from these JSONs.
+=== Amazon iter=1000 done Thu Apr 30 10:27:43 CDT 2026 ===
+=== Amazon iter=2000 starting Thu Apr 30 10:27:43 CDT 2026 ===
+=== S42 benchmark sweep ===
+  ROOT:        /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx
+  DATASETS:    amazon
+  SEEDS:       42 43 44
+  FRAMEWORKS:  lightgbm xgboost catboost_cpu catboost_mlx
+  RESULTS_DIR: benchmarks/upstream/results
+
+[amazon/lightgbm/42] running...
+[lightgbm/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+  logloss=0.227674  train=6.62s  predict=0.109s  rss=2377 MB  -> amazon_iter2000_lightgbm_42.json
+[amazon/lightgbm/43] running...
+[lightgbm/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+  logloss=0.227674  train=6.61s  predict=0.104s  rss=2378 MB  -> amazon_iter2000_lightgbm_43.json
+[amazon/lightgbm/44] running...
+[lightgbm/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+  logloss=0.227674  train=6.62s  predict=0.104s  rss=2378 MB  -> amazon_iter2000_lightgbm_44.json
+[amazon/xgboost/42] running...
+[xgboost/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.173263  train=4.42s  predict=0.010s  rss=262 MB  -> amazon_iter2000_xgboost_42.json
+[amazon/xgboost/43] running...
+[xgboost/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.173263  train=4.43s  predict=0.010s  rss=262 MB  -> amazon_iter2000_xgboost_43.json
+[amazon/xgboost/44] running...
+[xgboost/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.173263  train=4.44s  predict=0.010s  rss=264 MB  -> amazon_iter2000_xgboost_44.json
+[amazon/catboost_cpu/42] running...
+[catboost_cpu/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.141564  train=16.44s  predict=0.010s  rss=727 MB  -> amazon_iter2000_catboost_cpu_42.json
+[amazon/catboost_cpu/43] running...
+[catboost_cpu/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.135992  train=16.28s  predict=0.010s  rss=719 MB  -> amazon_iter2000_catboost_cpu_43.json
+[amazon/catboost_cpu/44] running...
+[catboost_cpu/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.140138  train=16.53s  predict=0.010s  rss=730 MB  -> amazon_iter2000_catboost_cpu_44.json
+[amazon/catboost_mlx/42] running...
+[catboost_mlx/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 180, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 138, in main
+    y_proba, train_s, pred_s, n_classes = _train_classifier(
+                                          ~~~~~~~~~~~~~~~~~^
+        X_tr, y_tr_int, X_te, cat_indices, args.seed,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 75, in _train_classifier
+    y_proba = model.predict_proba(X_te)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1539, in predict_proba
+    output = self._run_predict(X, feature_names)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1785, in _run_predict
+    return self._predict_inprocess(X)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1801, in _predict_inprocess
+    binned = quantize_features(X, features)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/_predict_utils.py", line 64, in quantize_features
+    binned[d, f] = cat_map[val]
+    ~~~~~~^^^^^^
+OverflowError: Python integer 799 out of bounds for uint8
+[amazon/catboost_mlx/42] FAILED
+[amazon/catboost_mlx/43] running...
+[catboost_mlx/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 180, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 138, in main
+    y_proba, train_s, pred_s, n_classes = _train_classifier(
+                                          ~~~~~~~~~~~~~~~~~^
+        X_tr, y_tr_int, X_te, cat_indices, args.seed,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 75, in _train_classifier
+    y_proba = model.predict_proba(X_te)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1539, in predict_proba
+    output = self._run_predict(X, feature_names)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1785, in _run_predict
+    return self._predict_inprocess(X)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1801, in _predict_inprocess
+    binned = quantize_features(X, features)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/_predict_utils.py", line 64, in quantize_features
+    binned[d, f] = cat_map[val]
+    ~~~~~~^^^^^^
+OverflowError: Python integer 799 out of bounds for uint8
+[amazon/catboost_mlx/43] FAILED
+[amazon/catboost_mlx/44] running...
+[catboost_mlx/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 180, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 138, in main
+    y_proba, train_s, pred_s, n_classes = _train_classifier(
+                                          ~~~~~~~~~~~~~~~~~^
+        X_tr, y_tr_int, X_te, cat_indices, args.seed,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/benchmarks/upstream/scripts/run_catboost_mlx.py", line 75, in _train_classifier
+    y_proba = model.predict_proba(X_te)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1539, in predict_proba
+    output = self._run_predict(X, feature_names)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1785, in _run_predict
+    return self._predict_inprocess(X)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/core.py", line 1801, in _predict_inprocess
+    binned = quantize_features(X, features)
+  File "/Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/python/catboost_mlx/_predict_utils.py", line 64, in quantize_features
+    binned[d, f] = cat_map[val]
+    ~~~~~~^^^^^^
+OverflowError: Python integer 799 out of bounds for uint8
+[amazon/catboost_mlx/44] FAILED
+
+=== Summary ===
+  total: 12  ok: 9  fail: 3  skip: 0
+
+Results: benchmarks/upstream/results/*.json
+Next: T3 — write docs/benchmarks/v0.5.x-pareto.md from these JSONs.
+=== Amazon iter=2000 done Thu Apr 30 10:31:06 CDT 2026 ===

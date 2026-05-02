@@ -1,0 +1,27 @@
+{
+  "framework": "catboost_mlx",
+  "framework_version": "0.4.0",
+  "dataset": "epsilon_iter1000",
+  "task": "classification",
+  "metric_name": "logloss",
+  "metric_value": 0.2812620474316739,
+  "seed": 44,
+  "train_seconds": 2210.012079042004,
+  "predict_seconds": 10.828159875003621,
+  "peak_rss_bytes": 19290619904,
+  "n_train": 400000,
+  "n_test": 100000,
+  "n_features": 2000,
+  "cat_indices": [],
+  "hyperparameters": {
+    "iterations": 1000,
+    "depth": 6,
+    "learning_rate": 0.1,
+    "l2_reg": 3.0,
+    "random_strength": 0.0,
+    "bootstrap_type": "no"
+  },
+  "hardware": "Apple M3 Max | macOS 26.3.1",
+  "python_version": "3.13.2",
+  "notes": "Epsilon (Pascal LSC), libsvm format, all numeric. Source labels are -1/+1; this adapter remaps to 0/1 for compatibility with csv_train's logloss target convention. Materialized CSVs are ~7 GB each; runner scripts should prefer to stream from the libsvm files when possible."
+}

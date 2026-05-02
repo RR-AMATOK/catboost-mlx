@@ -1,0 +1,17 @@
+=== Axis C — argmin_iter parity sweep on Epsilon ===
+  ROOT:        /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx
+  RESULTS_DIR: benchmarks/axisC/results
+  SEEDS:       44
+  ITERS:       4000
+  Estimated:   ~5 hours on M3 Max (10 seeds × 5 iters × 2 backends)
+
+[axisC/cpu/iter=4000/seed=44] cached
+[axisC/mlx/iter=4000/seed=44] running...
+[catboost_mlx/epsilon/seed=44] train=(400000, 2000)  test=(100000, 2000)  task=classification
+Terminated: 15             python3 -m benchmarks.upstream.scripts.run_catboost_mlx --dataset epsilon --seed "$SEED" --iterations "$ITER" --results-dir "$RESULTS_DIR"
+[axisC/mlx/iter=4000/seed=44] FAILED
+
+=== Axis C summary ===
+  total: 2  ok: 1  fail: 1
+  Results: benchmarks/axisC/results/*.json
+  Next: paired-t-test on argmin_t L(t) per seed across backends.

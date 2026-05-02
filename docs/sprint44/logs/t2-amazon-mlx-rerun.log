@@ -1,0 +1,96 @@
+=== amazon mlx iter=200 start Thu Apr 30 11:53:02 CDT 2026 ===
+=== S42 benchmark sweep ===
+  ROOT:        /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx
+  DATASETS:    amazon
+  SEEDS:       42 43 44
+  FRAMEWORKS:  catboost_mlx
+  RESULTS_DIR: benchmarks/upstream/results
+
+[amazon/catboost_mlx/42] running...
+[catboost_mlx/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.219453  train=4.28s  predict=0.024s  rss=303 MB  -> amazon_catboost_mlx_42.json
+[amazon/catboost_mlx/43] running...
+[catboost_mlx/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.219453  train=4.32s  predict=0.025s  rss=297 MB  -> amazon_catboost_mlx_43.json
+[amazon/catboost_mlx/44] running...
+[catboost_mlx/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.219453  train=4.29s  predict=0.023s  rss=281 MB  -> amazon_catboost_mlx_44.json
+
+=== Summary ===
+  total: 3  ok: 3  fail: 0  skip: 0
+
+Results: benchmarks/upstream/results/*.json
+Next: T3 — write docs/benchmarks/v0.5.x-pareto.md from these JSONs.
+=== amazon mlx iter=200 done Thu Apr 30 11:53:18 CDT 2026 ===
+=== amazon mlx iter=500 start Thu Apr 30 11:53:18 CDT 2026 ===
+=== S42 benchmark sweep ===
+  ROOT:        /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx
+  DATASETS:    amazon
+  SEEDS:       42 43 44
+  FRAMEWORKS:  catboost_mlx
+  RESULTS_DIR: benchmarks/upstream/results
+
+[amazon/catboost_mlx/42] running...
+[catboost_mlx/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.219453  train=10.22s  predict=0.038s  rss=314 MB  -> amazon_iter500_catboost_mlx_42.json
+[amazon/catboost_mlx/43] running...
+[catboost_mlx/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.219453  train=10.25s  predict=0.037s  rss=304 MB  -> amazon_iter500_catboost_mlx_43.json
+[amazon/catboost_mlx/44] running...
+[catboost_mlx/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.219453  train=10.61s  predict=0.045s  rss=322 MB  -> amazon_iter500_catboost_mlx_44.json
+
+=== Summary ===
+  total: 3  ok: 3  fail: 0  skip: 0
+
+Results: benchmarks/upstream/results/*.json
+Next: T3 — write docs/benchmarks/v0.5.x-pareto.md from these JSONs.
+=== amazon mlx iter=500 done Thu Apr 30 11:53:51 CDT 2026 ===
+=== amazon mlx iter=1000 start Thu Apr 30 11:53:51 CDT 2026 ===
+=== S42 benchmark sweep ===
+  ROOT:        /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx
+  DATASETS:    amazon
+  SEEDS:       42 43 44
+  FRAMEWORKS:  catboost_mlx
+  RESULTS_DIR: benchmarks/upstream/results
+
+[amazon/catboost_mlx/42] running...
+[catboost_mlx/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.219453  train=18.82s  predict=0.065s  rss=289 MB  -> amazon_iter1000_catboost_mlx_42.json
+[amazon/catboost_mlx/43] running...
+[catboost_mlx/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.219453  train=16.86s  predict=0.062s  rss=315 MB  -> amazon_iter1000_catboost_mlx_43.json
+[amazon/catboost_mlx/44] running...
+[catboost_mlx/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.219453  train=21.43s  predict=0.067s  rss=325 MB  -> amazon_iter1000_catboost_mlx_44.json
+
+=== Summary ===
+  total: 3  ok: 3  fail: 0  skip: 0
+
+Results: benchmarks/upstream/results/*.json
+Next: T3 — write docs/benchmarks/v0.5.x-pareto.md from these JSONs.
+=== amazon mlx iter=1000 done Thu Apr 30 11:54:51 CDT 2026 ===
+=== amazon mlx iter=2000 start Thu Apr 30 11:54:51 CDT 2026 ===
+=== S42 benchmark sweep ===
+  ROOT:        /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx
+  DATASETS:    amazon
+  SEEDS:       42 43 44
+  FRAMEWORKS:  catboost_mlx
+  RESULTS_DIR: benchmarks/upstream/results
+
+[amazon/catboost_mlx/42] running...
+[catboost_mlx/amazon/seed=42] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.219453  train=41.04s  predict=0.144s  rss=341 MB  -> amazon_iter2000_catboost_mlx_42.json
+[amazon/catboost_mlx/43] running...
+[catboost_mlx/amazon/seed=43] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.219453  train=33.33s  predict=0.128s  rss=325 MB  -> amazon_iter2000_catboost_mlx_43.json
+[amazon/catboost_mlx/44] running...
+[catboost_mlx/amazon/seed=44] train=(26215, 9)  test=(6554, 9)  task=classification
+  logloss=0.219453  train=33.21s  predict=0.131s  rss=330 MB  -> amazon_iter2000_catboost_mlx_44.json
+
+=== Summary ===
+  total: 3  ok: 3  fail: 0  skip: 0
+
+Results: benchmarks/upstream/results/*.json
+Next: T3 — write docs/benchmarks/v0.5.x-pareto.md from these JSONs.
+=== amazon mlx iter=2000 done Thu Apr 30 11:56:42 CDT 2026 ===

@@ -1,0 +1,37 @@
+{
+  "framework": "xgboost",
+  "framework_version": "3.2.0",
+  "dataset": "amazon",
+  "task": "classification",
+  "metric_name": "logloss",
+  "metric_value": 0.16063732673429426,
+  "seed": 44,
+  "train_seconds": 0.43986583402147517,
+  "predict_seconds": 0.001528166001662612,
+  "peak_rss_bytes": 213843968,
+  "n_train": 26215,
+  "n_test": 6554,
+  "n_features": 9,
+  "cat_indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "hyperparameters": {
+    "iterations": 200,
+    "depth": 6,
+    "learning_rate": 0.1,
+    "l2_reg": 3.0,
+    "random_strength": 0.0,
+    "bootstrap_type": "no"
+  },
+  "hardware": "Apple M3 Max | macOS 26.3.1",
+  "python_version": "3.13.2",
+  "notes": "Amazon Employee Access (Kaggle), 9 categorical features, no numeric. Imbalanced binary target (94.2% positive). 80/20 deterministic split (seed=42) of the Kaggle labelled train set since the Kaggle test.csv has no labels. THIS DATASET TRIGGERS THE DEC-046 CTR rare-class characterized gap \u2014 include in benchmark writeup with the documented footnote, do not cherry-pick around."
+}
