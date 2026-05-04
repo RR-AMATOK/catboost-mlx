@@ -1,0 +1,9 @@
+catboost>=1.2
+lightgbm>=4.0
+xgboost>=2.0
+numpy>=1.21
+pandas>=1.3
+scikit-learn>=1.0
+# psutil only needed on Windows (Unix has the stdlib `resource` module).
+# Used by the runner's peak_rss_bytes() metadata; harmless to install elsewhere.
+psutil>=5.9; sys_platform == "win32"

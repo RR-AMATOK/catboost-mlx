@@ -1,0 +1,51 @@
+=== Python ===
+3.14.4 (tags/v3.14.4:23116f9, Apr  7 2026, 14:10:54) [MSC v.1944 64 bit (AMD64)]
+platform: Windows-11-10.0.26200-SP0
+machine: AMD64
+
+=== nvidia-smi ===
+Mon May  4 13:13:56 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 596.21                 Driver Version: 596.21         CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                  Driver-Model | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 5070 Ti   WDDM  |   00000000:01:00.0  On |                  N/A |
+|  0%   28C    P8             12W /  300W |     767MiB /  16303MiB |      1%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A            5192    C+G   ...xyewy\ShellExperienceHost.exe      N/A      |
+|    0   N/A  N/A            5276    C+G   ...yb3d8bbwe\WindowsTerminal.exe      N/A      |
+|    0   N/A  N/A            6208    C+G   ...5n1h2txyewy\TextInputHost.exe      N/A      |
+|    0   N/A  N/A            8580    C+G   C:\Windows\explorer.exe               N/A      |
+|    0   N/A  N/A            8644    C+G   ...indows\System32\ShellHost.exe      N/A      |
+|    0   N/A  N/A            9624    C+G   ..._cw5n1h2txyewy\SearchHost.exe      N/A      |
+|    0   N/A  N/A            9632    C+G   ...y\StartMenuExperienceHost.exe      N/A      |
+|    0   N/A  N/A           12160    C+G   ...s\Mozilla Firefox\firefox.exe      N/A      |
+|    0   N/A  N/A           15152    C+G   ...em32\ApplicationFrameHost.exe      N/A      |
+|    0   N/A  N/A           16656    C+G   ...s\Mozilla Firefox\firefox.exe      N/A      |
+|    0   N/A  N/A           17784    C+G   ...IA App\CEF\NVIDIA Overlay.exe      N/A      |
+|    0   N/A  N/A           18032    C+G   ...ntrolPanel\SystemSettings.exe      N/A      |
+|    0   N/A  N/A           18344    C+G   ...IA App\CEF\NVIDIA Overlay.exe      N/A      |
++-----------------------------------------------------------------------------------------+
+
+=== nvcc --version ===
+(command not found: nvcc)
+
+=== CPU (wmic) ===
+(command not found: wmic)
+
+=== RAM (wmic) ===
+(command not found: wmic)
+
+=== CatBoost ===
+version: 1.2.10
+

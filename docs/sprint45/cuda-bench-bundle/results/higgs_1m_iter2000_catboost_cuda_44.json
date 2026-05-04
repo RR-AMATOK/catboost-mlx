@@ -1,0 +1,28 @@
+{
+  "framework": "catboost_cuda",
+  "framework_version": "1.2.10",
+  "dataset": "higgs_1m_iter2000",
+  "task": "classification",
+  "metric_name": "logloss",
+  "metric_value": 0.4994749879376049,
+  "seed": 44,
+  "train_seconds": 10.634757499999978,
+  "predict_seconds": 0.02293199999985518,
+  "peak_rss_bytes": 514600960,
+  "n_train": 1000000,
+  "n_test": 100000,
+  "n_features": 28,
+  "cat_indices": [],
+  "hyperparameters": {
+    "iterations": 2000,
+    "depth": 6,
+    "learning_rate": 0.1,
+    "l2_reg": 3.0,
+    "random_strength": 0.0,
+    "bootstrap_type": "no"
+  },
+  "hardware": "Windows-11-10.0.26200-SP0",
+  "python_version": "3.14.4",
+  "notes": "UCI Higgs Boson (SUBSET), binary classification, all numeric. Split: first 1,000,000 rows train, next 100,000 rows test. Canonical full-scale upstream split is 10,500,000 train / 500,000 test; this prep is a subset of that.",
+  "trajectory": null
+}
