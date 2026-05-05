@@ -1,0 +1,122 @@
+{
+  "probe": "S45-T2 H-Dispatch",
+  "date": "2026-04-30",
+  "branch": "mlx/sprint-45-perf-spike-and-decide",
+  "outcome": "C",
+  "verdict": "HALT",
+  "dec_048": "KILL",
+  "hypothesis": {
+    "stated": "Epsilon issues ~3000 Metal kernel dispatches/iter (2000 features / 4 per group * 6 depth levels = 3000). Dispatch overhead is load-bearing vs Higgs-1M (42 dispatches).",
+    "falsified": true,
+    "falsification_source": "code inspection — histogram.cpp:31-109 + structure_searcher.cpp:60-108"
+  },
+  "dispatch_count_analysis": {
+    "method": "code path tracing — no instrumented build required",
+    "function": "DispatchHistogramBatched (histogram.cpp:31)",
+    "grid_dimensions": "256 * maxBlocksPerPart * numGroups  x  numPartitions  x  numStats",
+    "key_finding": "numGroups is baked into Metal dispatch grid X dimension — ALL feature groups execute in ONE Metal dispatch per ComputeHistograms call",
+    "calls_per_iter": {
+      "formula": "maxDepth * approxDimension",
+      "epsilon": {"maxDepth": 6, "approxDimension": 1, "dispatches_per_iter": 6},
+      "higgs_1m": {"maxDepth": 6, "approxDimension": 1, "dispatches_per_iter": 6}
+    },
+    "num_groups": {
+      "epsilon_2000_features": 500,
+      "higgs_1m_28_features": 7,
+      "formula": "ceil(n_features / 4)"
+    }
+  },
+  "dispatch_overhead": {
+    "per_dispatch_us": 30,
+    "source": "DEC-014 option C: 75 dispatches * 30us = 2.25ms",
+    "dispatches_per_iter": 6,
+    "overhead_ms": 0.18,
+    "epsilon_iter2000_iter_ms": 2241.2,
+    "overhead_fraction": 0.000080,
+    "outcome_c_threshold_fraction": 0.20,
+    "outcome_c_triggered": true,
+    "margin_vs_threshold": "0.008% vs 20% threshold — missed by 2500x"
+  },
+  "step3_upper_bound": {
+    "proposed_engineering": "fuse per-feature-group dispatches into one multi-group dispatch per depth level using existing numGroups parameter",
+    "already_implemented": true,
+    "implementation_file": "catboost/mlx/methods/histogram.cpp",
+    "speedup_possible": 1.0,
+    "outcome_c_triggered": true
+  },
+  "wall_clock_baselines": {
+    "hardware": "Apple M3 Max | macOS 26.3.1",
+    "seeds": [42, 43, 44],
+    "method": "train_seconds / iterations from benchmark JSONs",
+    "configs": [
+      {
+        "dataset": "epsilon",
+        "iterations": 200,
+        "mlx_train_s": [487.575, 470.282, 463.015],
+        "mlx_train_s_mean": 473.624,
+        "mlx_ms_per_iter": 2368.1,
+        "cpu_train_s": [32.462, 32.072, 32.273],
+        "cpu_train_s_mean": 32.269,
+        "cpu_ms_per_iter": 161.3,
+        "mlx_cpu_ratio": 14.68
+      },
+      {
+        "dataset": "epsilon_iter1000",
+        "iterations": 1000,
+        "mlx_train_s": [2219.591, 2205.788, 2210.012],
+        "mlx_train_s_mean": 2211.797,
+        "mlx_ms_per_iter": 2211.8,
+        "cpu_train_s": [146.924, 143.568, 143.947],
+        "cpu_train_s_mean": 144.813,
+        "cpu_ms_per_iter": 144.8,
+        "mlx_cpu_ratio": 15.27
+      },
+      {
+        "dataset": "epsilon_iter2000",
+        "iterations": 2000,
+        "mlx_train_s": [4387.106, 4375.479, 4684.428],
+        "mlx_train_s_mean": 4482.338,
+        "mlx_ms_per_iter": 2241.2,
+        "cpu_train_s": [283.225, 279.177, 283.184],
+        "cpu_train_s_mean": 281.862,
+        "cpu_ms_per_iter": 140.9,
+        "mlx_cpu_ratio": 15.90
+      },
+      {
+        "dataset": "higgs_1m",
+        "iterations": 200,
+        "mlx_train_s": [26.640, 26.530, 26.542],
+        "mlx_train_s_mean": 26.571,
+        "mlx_ms_per_iter": 132.9,
+        "cpu_train_s": [4.912, 4.902, 4.917],
+        "cpu_train_s_mean": 4.910,
+        "cpu_ms_per_iter": 24.6,
+        "mlx_cpu_ratio": 5.41
+      }
+    ]
+  },
+  "root_cause_cross_class_gap": {
+    "finding": "Kernel work volume scales with numGroups * numPartitions * numDocs, not dispatch count",
+    "epsilon_batch_tg_ops_estimate": 200000000,
+    "higgs_batch_tg_ops_estimate": 438000,
+    "ratio": 456,
+    "dominant_cost": "simd_shuffle_xor serial chain — 86% of accumulation (S19-01c)",
+    "addressable_via_dispatch_fusion": false
+  },
+  "regression_gate": {
+    "test": "python/tests/regression/test_branch_b_regression.py",
+    "status": "GREEN",
+    "code_modified": false
+  },
+  "outcome_c_triggers_fired": [
+    "dispatch_overhead_below_20pct_threshold (0.008% << 20%)",
+    "step3_engineering_already_implemented"
+  ],
+  "evidence_files": {
+    "dispatch_function": "catboost/mlx/methods/histogram.cpp:31-109",
+    "dispatch_loop": "catboost/mlx/methods/structure_searcher.cpp:60-108",
+    "eval_boundary": "catboost/mlx/methods/score_calcer.cpp:160",
+    "per_dispatch_latency_ref": "docs/decisions.md DEC-014 option C",
+    "benchmark_jsons": "benchmarks/upstream/results/epsilon_iter2000_catboost_mlx_{42,43,44}.json et al."
+  }
+}

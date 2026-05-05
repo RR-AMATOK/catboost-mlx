@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "catboost-tripoint"
+version = "0.1.0"
+description = "Cross-platform CatBoost prediction parity oracle (cpu / mlx / cuda)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "RR-AMATOK" }]
+
+# Runtime dependencies: only numpy is hard-required.  catboost, catboost_mlx,
+# and pyarrow are soft dependencies — the tool degrades gracefully if they are
+# absent (backends marked NOT AVAILABLE; CSV fallback if pyarrow missing).
+dependencies = [
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+cpu = ["catboost>=1.2"]
+mlx = ["catboost-mlx>=0.6"]
+parquet = ["pyarrow>=12"]
+all = ["catboost>=1.2", "catboost-mlx>=0.6", "pyarrow>=12"]
+dev = ["pytest>=7", "catboost>=1.2", "catboost-mlx>=0.6", "pyarrow>=12"]
+
+[project.scripts]
+catboost-tripoint = "catboost_tripoint.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["catboost_tripoint*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

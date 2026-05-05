@@ -1,7 +1,34 @@
 # Active Tasks — CatBoost-MLX
 
 > Coverage: Sprints 0–15 reconstructed from git/agent-memory on 2026-04-15. Sprint 16+ is source of truth.
-> Last header refresh: 2026-04-30 (S44 COMPLETE — v0.6.0 framing locked; 5-dataset writeup done; branch `mlx/sprint-44-pareto-5dataset`.)
+> Last header refresh: 2026-05-04 (S45 CLOSED — H-Dispatch falsified; DEC-048 KILL; T4+T5 shipped; branch `mlx/sprint-45-perf-spike-and-decide`.)
+
+## Sprint 46 — simd_shuffle Research Arc — PENDING
+
+**Branch**: `mlx/sprint-46-simd-shuffle-research` (not yet cut)
+**Authoritative records**: TBD at sprint open
+**Framing**: FRESH investigation. NOT a throughput-epic continuation. DEC-048 retires the W1/W2/W3 throughput-pivot framing entirely. S46 opens a new scope under a new DEC.
+**Pattern**: spike-then-commit (same as S45). S46 = scoping/research sprint only. No production kernel commits. Engineering window (S47+) opens only if S46 delivers a viable plan with kill criteria.
+
+- [ ] **S46-T0 SCAFFOLD** — Cut branch; draft sprint plan with single-hypothesis framing for simd_shuffle_xor redesign. Cite S19-01c (DEC-020) as the attribution source. State the kill criteria upfront. Apply MANDATORY-CODE-INSPECTION: read `catboost/mlx/kernels/hist.metal` simd_shuffle loop end-to-end before writing the hypothesis.
+- [ ] **S46-T1 FEASIBILITY PROBE** — Read the S20 failure mode (why did the Sprint 20 shuffle redesign not ship?). Research warp-shuffle reduction strategies applicable to Metal's SIMD model. Determine whether the `simd_shuffle_xor` serial chain is restructurable without breaking accumulation-order determinism (Branch-B gate constraint).
+- [ ] **S46-T2 DESIGN PROPOSAL** — Proposed alternative kernel architecture. Theoretical speedup estimate with stated assumptions. Branch-B bit-equivalence preservation plan.
+- [ ] **S46-T3 ENGINEERING PLAN** — One-sprint scope for S47 engineering (if viable). Kill criterion: if the feasibility probe shows no viable reduction strategy, DEC-049 = HALT; v0.7.0 throughput path permanently closed.
+- [ ] **S46-T4 CLOSE-OUT** — New DEC (DEC-049) filed regardless of direction. HANDOFF/TODOS/CHANGELOG-DEV updated. PR.
+
+## Sprint 45 — Performance Spike: H-Dispatch Probe + Cross-Class Lock — CLOSED
+
+**Branch**: `mlx/sprint-45-perf-spike-and-decide`
+**Authoritative records**: `docs/sprint45/sprint-close.md` + `docs/sprint45/T2/probe-verdict.md` + `docs/sprint45/T3/decision-synthesis.md`
+**Outcome**: H-Dispatch falsified by code inspection. DEC-048 = KILL on dispatch-fusion permanently. T4 (cross-class CUDA writeup) + T5 (`catboost-tripoint` parity oracle) ship regardless. v0.7.0 gated on S46 simd_shuffle investigation. LESSONS-LEARNED.md +2 entries.
+
+- [x] **S45-T0 SCAFFOLD** — DONE 2026-05-04. Branch cut, sprint-plan.md. Commits `bd4e65c29e`.
+- [x] **S45-T1 BRANCH-B-REGRESSION** — DONE 2026-05-04. `python/tests/regression/test_branch_b_regression.py` + `v0.6.1_predict_baselines.pkl`. Byte-identical CI gate on Higgs-1M + Epsilon. CI wired. Commit `04fe8ef894`.
+- [x] **S45-T2 H-DISPATCH-PROBE** — DONE 2026-05-04. **Outcome C — HALT.** Code inspection at `histogram.cpp:31` shows `numGroups` already fuses all feature groups. Dispatch count = 6/iter on Epsilon AND Higgs-1M. Overhead = 0.008% of iter wall-clock. Step 3 engineering already production code. No instrumented build required.
+- [x] **S45-T3 DECISION-GATE** — DONE 2026-05-04. DEC-048 KILL filed. Strategist "narrowed not killed" with devils-advocate YELLOW review (§4 MANDATORY-CODE-INSPECTION gate). Commit `253f6ce3d5`.
+- [x] **S45-T4 CROSS-CLASS-CUDA-WRITEUP** — DONE 2026-05-04. `docs/benchmarks/cross-class-cuda-comparison.md` (5,300 words). Three-platform bit-equivalence + per-feature-dim wall-clock structure. 51 CUDA JSONs in `docs/sprint45/cuda-bench-bundle/results/`.
+- [x] **S45-T5 CATBOOST-TRIPOINT** — DONE 2026-05-04. `tools/catboost_tripoint/` (~180 LoC, 8 files). Parity-oracle CLI verifying CPU/MLX/CUDA agreement vs fp32 floor. Runs on Higgs-1M + Epsilon.
+- [x] **S45-T6 CLOSE-OUT** — DONE 2026-05-04. `docs/sprint45/sprint-close.md`, HANDOFF/TODOS/CHANGELOG-DEV updated, LESSONS-LEARNED.md +2 entries. This task.
 
 ## Sprint 44 — Full 5-Dataset Pareto Sweep — COMPLETE
 
@@ -61,29 +88,31 @@
 - [x] **S41-T5 UPSTREAM-RFC-DRAFT-REFRESH** — DONE 2026-04-26. `docs/upstream_issue_draft.md` refreshed for post-S30/S40 reality (DEC-036/042/045/046 closures, v0.5.0 framing, characterized-difference positioning, five trigger conditions before submission). STAGED — NOT POSTED. Commit `c08fa10cda`.
 - [ ] **S41-T6 CLOSE-OUT-PR-AND-V051-TAG** — `docs/sprint41/sprint-close.md` written; HANDOFF + TODOS updated; CHANGELOG-DEV session entry pending; close-out commit + push + PR pending; optional v0.5.1 tag post-merge.
 
-## Current state (2026-04-30, S44 close-out)
+## Current state (2026-05-04, S45 close-out)
 
-- **Active branch**: `mlx/sprint-44-pareto-5dataset` (tip `a447f806e1`).
+- **Active branch**: `mlx/sprint-45-perf-spike-and-decide`. T0–T6 complete. PR pending → master.
 - **S40 status**: CLOSED (PR #36 + #37 + #38 merged). v0.5.0 GitHub Release published.
 - **S41 status**: CLOSED (PR #39 merged). v0.5.1 GitHub Release published.
 - **S42 status**: CLOSED (PR #40 merged at `26957d63a0`).
 - **S43 status**: CLOSED (PR #42 merged 2026-04-26). v0.5.3 tag shipped.
-- **S44 status**: COMPLETE. T0–T5 done. PR pending → master. v0.5.4 patch shipped mid-sprint (separate release branch + tag).
-- **v0.6.0 scope**: locked. Frame = "reproducibility-grade CatBoost on MLX". Writeup at `docs/benchmarks/v0.6.0-pareto.md`. Release ceremony pending (PR + tag + GitHub Release).
-- **Production kernel**: v5 (`784f82a891`), shipped S24 D0. Kernel sources md5 `9edaef45b99b9db3e2717da93800e76f` byte-identical S30 → S44 (no kernel changes in S44).
+- **S44 status**: COMPLETE. T0–T5 done. PR pending → master. v0.5.4 patch shipped mid-sprint.
+- **S45 status**: CLOSED. T0–T6 done. PR pending → master. DEC-048 KILL filed.
+- **v0.6.0 / v0.6.1 scope**: shipped. Frame = "reproducibility-grade CatBoost on MLX". Writeup at `docs/benchmarks/v0.6.0-pareto.md`. v0.6.1 is current release.
+- **v0.7.0 gate**: INDEFINITE HOLD. Requires ≥3× MLX/CPU iter speedup on Epsilon iter=2000 (or ≥2× on Higgs-1M iter=1000). Not achievable via dispatch route (DEC-048 KILL). S46 simd_shuffle research arc is the next candidate.
+- **Production kernel**: v5 (`784f82a891`), shipped S24 D0. Kernel sources md5 `9edaef45b99b9db3e2717da93800e76f` byte-identical S30 → S45 (no kernel changes in S45).
 - **R8 (honest)**: 1.01× e2e vs S16 baseline. Unchanged.
-- **Active DEC**: **DEC-046 ACCEPTED** (S40 lane lock); **DEC-047 ADDED** (Axis C cross-over verdict). DEC-045 RESOLVED, DEC-044 WITHDRAWN, DEC-042/036/040 CLOSED.
+- **Active DEC**: **DEC-046 ACCEPTED** (S40 lane lock); **DEC-047 ADDED** (Axis C cross-over); **DEC-048 KILL** (H-Dispatch falsified, S45).
 
 ## Open backlog (carry-forward; not on any current sprint)
 
-- **MSLR-WEB10K iter-grid sweep** (S42 carry-over, narrowed in S44): only ranking dataset still pending. Adapters in place, data on disk; ~6h compute on M3 Max plus a separate iter-tuning question for ranking. Deferred to v0.6.x. (Epsilon and Amazon completed in S44 — see `docs/benchmarks/v0.6.0-pareto.md`.)
-- **Full 11M Higgs sweep** (S42 carry-over): data on disk (~8 GB HIGGS.csv); requires ~hour-scale compute window for the canonical upstream-comparable run. Subset (1M) shipped in S42.
-- **Histogram-stage CI gate redesign** (S42 carry-over): currently `continue-on-error: true` (informational). Wall-clock gate was rebuilt as hardware-invariant speedup-ratio in S42-T4; same redesign needed for histogram_ms (compare as fraction-of-iter or relative-Δ across the 18-config grid).
-- **Narrow Lane D CTR-RNG investigation** (3-day kill-switch, optional per DEC-046) — would close the 61% categorical-attributable share of the MLX-vs-CPU gap on Adult; 0% effect on Higgs-1M (no cats).
-- **`predict()` 41× slowdown via subprocess** — DOCUMENTED in S41-T3; real fix (binary IPC or port CTR to Python) is non-trivial future engineering.
-- **Ordered Boosting (`boosting_type='Ordered'`)** — major future work; the strategist's E2 hero feature for v0.6.0; ~5 sprints of Metal kernel work.
-- **PyPI publish** (S41-T4 audit complete; gated on `MACOSX_DEPLOYMENT_TARGET=14.0` build env + per-Python wheel matrix).
-- **Posting the upstream RFC** (gated on DEC-046 trigger conditions; the Pareto-frontier writeup with the full 5-dataset suite is one such trigger).
+- **MSLR-WEB10K iter-grid sweep** (S42 carry-over, narrowed in S44): only ranking dataset still pending. Adapters in place, data on disk; ~6h compute on M3 Max plus a separate iter-tuning question for ranking. Deferred to v0.6.x.
+- **Full 11M Higgs sweep** (S42 carry-over): data on disk (~8 GB HIGGS.csv); requires ~hour-scale compute window. Subset (1M) shipped in S42.
+- **Histogram-stage CI gate redesign** (S42 carry-over): currently `continue-on-error: true` (informational). Same redesign as S42-T4 wall-clock gate needed for histogram_ms.
+- **Narrow Lane D CTR-RNG investigation** (3-day kill-switch, optional per DEC-046).
+- **`predict()` 41× slowdown via subprocess** — DOCUMENTED in S41-T3; non-trivial future engineering.
+- **Ordered Boosting (`boosting_type='Ordered'`)** — major future work; ~5 sprints of Metal kernel work.
+- **PyPI publish** — GATED on v0.7.0 perf delta. v0.7.0 is GATED on S46 simd_shuffle investigation outcome. S41-T4 readiness audit complete; `MACOSX_DEPLOYMENT_TARGET=14.0` fix still required at publish time. No PyPI publish until v0.7.0 gate is met.
+- **Posting the upstream RFC** (gated on DEC-046 trigger conditions; v0.6.0 5-dataset writeup is one such trigger — still STAGED NOT POSTED).
 - #113 S31-T3-MEASURE re-run; #114 S31-T-CLEANUP; S31-T-LATENT-P11 (Logloss/Poisson/Tweedie); SA carry-forwards (SA-L1-S33, SA-L3-S30/SA-N2-S33, SA-I2-S29 #95 CLI exit wrap)
 
 ## Sprint 40 — Lane B public release (CLOSED)

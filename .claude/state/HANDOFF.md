@@ -1,5 +1,29 @@
 # Handoff — CatBoost-MLX
 
+> Last updated: 2026-05-04 (**S45 CLOSED — H-Dispatch falsified; DEC-048 KILL filed; T4 + T5 shipped**).
+> Branch `mlx/sprint-45-perf-spike-and-decide`. All tasks T0–T6 complete. PR pending.
+
+## Sprint 45 close-out
+
+**Authoritative records:** `docs/sprint45/sprint-close.md` + `docs/sprint45/T2/probe-verdict.md` + `docs/sprint45/T3/decision-synthesis.md`
+
+**What S45 found:**
+H-Dispatch is falsified. `DispatchHistogramBatched` (`catboost/mlx/methods/histogram.cpp:31`) already batches all feature groups into a single Metal dispatch per depth level via the `numGroups` parameter. Dispatch count is 6/iter for both Epsilon (2000 features) and Higgs-1M (28 features). Dispatch overhead is 0.008% of Epsilon's 2241ms/iter — 2,500× below the 20% Outcome C threshold. The proposed "single multi-group dispatch" engineering for S46 is already production code. DEC-048 = KILL on dispatch-fusion permanently.
+
+**What S45 ships:**
+1. **T1** — `python/tests/regression/test_branch_b_regression.py` + `v0.6.1_predict_baselines.pkl`. Byte-identical CI gate on Higgs-1M + Epsilon predict output at v0.6.1 baseline. Green.
+2. **T4** — `docs/benchmarks/cross-class-cuda-comparison.md` (5,300 words). Three-platform bit-equivalence; cross-class wall-clock gap structure (23× Higgs, 88× Epsilon) attributed to kernel work volume, not dispatch count. 51 CUDA result JSONs from RTX 5070 Ti in `docs/sprint45/cuda-bench-bundle/results/`.
+3. **T5** — `tools/catboost_tripoint/` (~180 LoC, 8 files). Parity-oracle CLI: `catboost-tripoint verify --model X.cbm --data Y.parquet`. Emits signed JSON with CPU/MLX/CUDA agreement report vs theoretical fp32 floor.
+4. **DEC-048** — `.claude/state/DECISIONS.md` (filed at Sprint 45). KILL on H-Dispatch. Dispatch-fusion permanently closed.
+5. **LESSONS-LEARNED.md** — Two new entries in `Frameworks/LESSONS-LEARNED.md`: MANDATORY-CODE-INSPECTION rule + 6-agent H-Dispatch case study.
+
+**Process finding:** Six advisory agents converged on H-Dispatch from arithmetic without any agent reading the dispatch function. One grep refuted it. MANDATORY-CODE-INSPECTION gate now required before any perf hypothesis enters a sprint plan (see LESSONS-LEARNED.md §Sprint/Process, last two entries).
+
+**Next-session entry point:**
+S46 — simd_shuffle research arc. FRESH investigation, NOT a throughput-epic continuation. Scope is a scoping/research sprint first (no production engineering commits): feasibility report + design proposal + engineering plan with kill criteria. The `simd_shuffle_xor` serial chain (86% of accumulation; S19-01c DEC-020) is the last unprobed lever. Multi-sprint engineering only if S46 produces a viable plan. New DEC required before any S47 engineering begins. Branch `mlx/sprint-46-simd-shuffle-research` (not yet cut).
+
+**v0.7.0 gate:** ≥3× MLX/CPU iter speedup on Epsilon iter=2000 (or ≥2× on Higgs-1M iter=1000). Current state: indefinite hold. PyPI publish is gated on v0.7.0.
+
 > Last updated: 2026-04-30 (**S44 COMPLETE — v0.6.0 framing locked; 5-dataset writeup done**).
 > Branch `mlx/sprint-44-pareto-5dataset`. All tasks T0–T5 complete.
 >

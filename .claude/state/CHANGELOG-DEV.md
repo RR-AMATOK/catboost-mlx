@@ -2,6 +2,93 @@
 
 > Coverage: Sprints 0–15 reconstructed from git log on 2026-04-15. Sprint 16+ is source of truth.
 
+## 2026-05-04 — Sprint 45: H-Dispatch Probe + Cross-Class Lock + DEC-048
+
+Branch: `mlx/sprint-45-perf-spike-and-decide`. No production kernel or source code changes.
+Kernel sources md5 `9edaef45b99b9db3e2717da93800e76f` unchanged S30 → S45.
+
+### T0/T1 — Scaffold + Branch-B regression gate
+
+Sprint plan at `docs/sprint45/sprint-plan.md`. Branch-B regression test
+(`python/tests/regression/test_branch_b_regression.py`) wired to CI. Byte-identical
+gate on Higgs-1M iter=200 + Epsilon iter=200 predict output at v0.6.1 baseline.
+Reference data: `python/tests/regression/v0.6.1_predict_baselines.pkl`. Commits
+`bd4e65c29e` + `04fe8ef894`.
+
+### T2 — H-Dispatch probe: Outcome C
+
+**H-Dispatch falsified by code inspection. No instrumented build required.**
+
+`DispatchHistogramBatched` (`catboost/mlx/methods/histogram.cpp:31`) already fuses all
+feature groups into a single Metal dispatch per depth level via the `numGroups` parameter
+in the dispatch grid X dimension (`256 * maxBlocksPerPart * numGroups`). Dispatch count
+= 6/iter on both Epsilon (2000 features) and Higgs-1M (28 features). Dispatch overhead
+= 6 × ~30 µs = 0.18 ms/iter = 0.008% of Epsilon's 2241 ms/iter.
+
+Outcome C threshold: <20% of iter wall-clock. Actual: 0.008%. Threshold missed by 2,500×.
+Step 3 "single multi-group dispatch" engineering: already production code. No speedup
+available via dispatch fusion.
+
+Verdict document: `docs/sprint45/T2/probe-verdict.md`.
+
+### T3 — DEC-048: KILL on dispatch-fusion
+
+DEC-048 permanently closes the H-Dispatch hypothesis. Scope of KILL: dispatch-fusion only.
+`simd_shuffle_xor` serial chain (86% of accumulation per S19-01c DEC-020) is NOT closed —
+it was not in the S45 hypothesis set. Throughput epic narrowed, not permanently retired.
+Strategist synthesis: `docs/sprint45/T3/decision-synthesis.md`. Devils-advocate YELLOW review
+(§4 MANDATORY-CODE-INSPECTION gate): `docs/sprint45/T3/devils-advocate-review.md`.
+Commit `253f6ce3d5`.
+
+### T4 — Cross-class CUDA writeup
+
+`docs/benchmarks/cross-class-cuda-comparison.md` (5,300 words). Three-platform
+bit-equivalence (M3 Max MLX, M3 Max CPU, RTX 5070 Ti Blackwell CUDA) across the full
+5-dataset suite. Key finding: cross-class wall-clock ratio scales with feature
+dimensionality — Higgs-1M (28 features) 23×, Epsilon (2000 features) 88× — attributed
+to kernel work volume (batch-TG-ops ~456× larger on Epsilon), not dispatch count.
+51 RTX 5070 Ti result JSONs in `docs/sprint45/cuda-bench-bundle/results/`.
+Methodology: same hyperparameters, same datasets, same CatBoost 1.2.10 across platforms.
+Honest limitations: cross-class is informational, not same-machine.
+
+### T5 — `catboost-tripoint` parity-oracle CLI
+
+`tools/catboost_tripoint/` (~180 LoC, 8 files). `catboost-tripoint verify --model X.cbm
+--data Y.parquet` runs the same model on CatBoost-CPU, CatBoost-MLX, and CatBoost-CUDA
+(when available); emits signed JSON with per-tree leaf-value max-abs-diff,
+per-row prediction divergence (max + mean), theoretical fp32 floor
+(`ε_mach × T × √L`), and PASS/FAIL. Demonstrated on Higgs-1M + Epsilon.
+S45 scope: sketch only (~180 LoC). Production hardening deferred to v0.7.x.
+
+### T6 — Sprint close-out + LESSONS-LEARNED
+
+`docs/sprint45/sprint-close.md` written. HANDOFF, TODOS, CHANGELOG-DEV updated.
+Two new entries appended to `Frameworks/LESSONS-LEARNED.md`:
+
+1. **MANDATORY-CODE-INSPECTION gate**: Before any perf hypothesis enters a sprint plan,
+   the named function/kernel/dispatch site must be read end-to-end by one agent and cited
+   by file:line. ~15 min gate cost vs sprint cycle miss cost.
+2. **Agent-panel arithmetic without code inspection (case study)**: Six advisory agents
+   converged on H-Dispatch from arithmetic without reading the dispatch function.
+   One grep refuted it. Pattern: the sixth falsified perf hypothesis on this codebase
+   (DEC-013/014/015/017/019 + DEC-048). Consensus on a shared wrong model ≠ independent
+   verification.
+
+### Process note
+
+Six advisory agents (silicon-architect, mathematician, performance-engineer, devils-advocate,
+strategist, visionary) converged on "~3,000 dispatches/iter on Epsilon" from the arithmetic
+"2000 features ÷ 4 per group × 6 depth = 3,000". The arithmetic describes per-group
+dispatches; production uses one multi-group dispatch since before S45. MANDATORY-CODE-INSPECTION
+is now a standing rule for all future perf hypothesis work.
+
+### v0.7.0 status
+
+INDEFINITE HOLD. Dispatch route closed by DEC-048. simd_shuffle route unproven — S46
+simd_shuffle research arc is the next candidate. PyPI publish gated on v0.7.0.
+
+---
+
 ## 2026-05-02 — Sprint 44: Full 5-Dataset Pareto Sweep + v0.6.0 Frame Lock
 
 Branch: `mlx/sprint-44-pareto-5dataset`. No production kernel changes. Kernel
