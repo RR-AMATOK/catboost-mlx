@@ -1,0 +1,155 @@
+name: MLX Branch-B Predict Regression Gate
+
+# Guard against any _predict_inprocess change that alters float32 output
+# for the v0.6.1 reference models.
+#
+# Gate semantics
+# --------------
+# The test loads stored model weights from a checked-in baseline pickle and
+# calls predict_proba. It asserts byte-identical float32 output. Any change to
+# _predict_inprocess, the link function table, or the oblivious-tree evaluator
+# that alters predict output flips this gate.
+#
+# NOT testing training throughput, training determinism, or logloss accuracy.
+# This gate is strictly: "given the same trained model, do we get the same
+# float32 predictions?"
+#
+# Dataset cache dependency
+# ------------------------
+# The tests require the Higgs-1M and Epsilon dataset caches at
+#   ~/.cache/catboost-mlx-benchmarks/{higgs,epsilon}/
+# These are ~7 GB total and are NOT available on GitHub Actions runners.
+# Tests skip gracefully if the cache is absent -- they will NOT hard-fail.
+#
+# This means the gate is currently local-only (run by the developer before
+# merging) and future CI infrastructure (self-hosted runner with cache, or
+# a separate dataset download step) will enable it to run automatically.
+#
+# To run locally:
+#   cd <repo-root>
+#   pip install -e "python/[dev]"
+#   python -m pytest python/tests/regression/test_branch_b_regression.py -v
+#
+# To regenerate the baseline (after intentional predict-path change):
+#   python python/tests/regression/generate_v061_baselines.py
+#   git add python/tests/regression/v0.6.1_predict_baselines.pkl
+#
+# S46 follow-up: if a self-hosted macOS Apple Silicon runner with local dataset
+# cache becomes available, remove the skip-guard and set continue-on-error:
+# false to make this a hard gate.
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      # Only trigger when predict-path code changes.
+      - 'python/catboost_mlx/_predict_utils.py'
+      - 'python/catboost_mlx/core.py'
+      - 'python/tests/regression/**'
+  push:
+    branches:
+      - 'mlx/**'
+    paths:
+      - 'python/catboost_mlx/_predict_utils.py'
+      - 'python/catboost_mlx/core.py'
+      - 'python/tests/regression/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  branch-b-regression:
+    name: Branch-B predict regression (v0.6.1 baseline)
+    runs-on: macos-14          # Apple M1, Metal GPU available
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/pip
+          key: pip-macos14-py313-regression-${{ hashFiles('python/pyproject.toml', 'python/setup.py') }}
+          restore-keys: |
+            pip-macos14-py313-regression-
+            pip-macos14-py313-
+
+      - name: Install MLX and nanobind
+        run: pip install 'mlx>=0.18' 'nanobind>=2.10'
+
+      - name: Install MLX via Homebrew (for C++ binary linking)
+        run: brew install mlx
+
+      - name: Compile C++ binaries
+        run: |
+          set -euo pipefail
+          MLX_PREFIX="$(brew --prefix mlx)"
+          CFLAGS="-std=c++17 -O2 -I. -I${MLX_PREFIX}/include -L${MLX_PREFIX}/lib -lmlx -framework Metal -framework Foundation -Wno-c++20-extensions"
+          clang++ ${CFLAGS} catboost/mlx/tests/csv_train.cpp   -o csv_train
+          clang++ ${CFLAGS} catboost/mlx/tests/csv_predict.cpp -o csv_predict
+
+      - name: Bundle binaries and install package
+        run: |
+          set -euo pipefail
+          mkdir -p python/catboost_mlx/bin
+          cp csv_train   python/catboost_mlx/bin/
+          cp csv_predict python/catboost_mlx/bin/
+
+      - name: Build nanobind extension and install package
+        working-directory: python
+        run: pip install -e ".[dev]"
+
+      # The regression tests skip gracefully if the dataset cache is absent.
+      # On GitHub Actions the cache will be absent, so the tests will SKIP
+      # (not FAIL). When datasets are present (local dev or self-hosted runner
+      # with pre-populated cache), the tests assert byte-identical predict output.
+      #
+      # continue-on-error: false (default) -- if the test runs AND fails, it
+      # blocks the PR. Skip != Fail.
+      - name: Run Branch-B regression gate
+        working-directory: python
+        run: |
+          python -m pytest tests/regression/test_branch_b_regression.py \
+            -v --tb=short \
+            -m "regression"
+
+      - name: Write step summary
+        if: always()
+        run: |
+          python - <<'PYEOF'
+          import os, subprocess, sys
+
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY", "/dev/stdout")
+
+          result = subprocess.run(
+              [sys.executable, "-m", "pytest",
+               "python/tests/regression/test_branch_b_regression.py",
+               "--tb=no", "-q", "--no-header"],
+              capture_output=True, text=True
+          )
+
+          lines = [
+              "## Branch-B Predict Regression Gate",
+              "",
+              "Tests `_predict_inprocess` byte-equivalence against v0.6.1 baseline.",
+              "",
+              "```",
+              result.stdout.strip() or "(no output)",
+              "```",
+              "",
+              "Note: tests SKIP if dataset cache is absent (expected on GitHub-hosted runners).",
+              "Skip != Fail. A FAIL means _predict_inprocess changed float32 output for a fixed model.",
+          ]
+
+          with open(summary_path, "a") as s:
+              s.write("\n".join(lines) + "\n")
+          PYEOF

@@ -1,0 +1,9 @@
+# Bundled dataset cache — populated by bundle_cache.py from the user's local
+# prepared datasets. Do NOT commit; ~8 GB of train/test CSVs that are
+# regeneratable via prepare.py.
+cache/
+
+# macOS metadata
+.DS_Store
+__pycache__/
+*.pyc

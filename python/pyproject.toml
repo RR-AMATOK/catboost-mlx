@@ -83,4 +83,8 @@ ignore = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "regression: predict-output byte-equivalence gates (S45-T1)",
+]
+
 
