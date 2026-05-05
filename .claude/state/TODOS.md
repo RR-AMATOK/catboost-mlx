@@ -3,18 +3,28 @@
 > Coverage: Sprints 0–15 reconstructed from git/agent-memory on 2026-04-15. Sprint 16+ is source of truth.
 > Last header refresh: 2026-05-04 (S45 CLOSED — H-Dispatch falsified; DEC-048 KILL; T4+T5 shipped; branch `mlx/sprint-45-perf-spike-and-decide`.)
 
-## Sprint 46 — simd_shuffle Research Arc — PENDING
+## Sprint 46 — simd_shuffle Research Arc — IN PROGRESS
 
-**Branch**: `mlx/sprint-46-simd-shuffle-research` (not yet cut)
-**Authoritative records**: TBD at sprint open
-**Framing**: FRESH investigation. NOT a throughput-epic continuation. DEC-048 retires the W1/W2/W3 throughput-pivot framing entirely. S46 opens a new scope under a new DEC.
-**Pattern**: spike-then-commit (same as S45). S46 = scoping/research sprint only. No production kernel commits. Engineering window (S47+) opens only if S46 delivers a viable plan with kill criteria.
+**Branch**: `mlx/sprint-46-simd-shuffle-research` (cut from master post-PR #46 merge)
+**Authoritative records**: `docs/sprint46/sprint-plan.md`, DEC-049 (OPEN)
+**Framing**: FRESH investigation. NOT a throughput-epic continuation. DEC-048 retires the W1/W2/W3 throughput-pivot framing entirely. DEC-049 opens a new bounded research arc.
+**Pattern**: spike-then-commit (mirroring S45). S46 = scoping/research sprint only. No production kernel commits. Engineering window (S47+) opens only if T5 delivers ≥3× upper-bound at production shape.
+**Hard 1-week budget**. T5 fires at end of Day 5 regardless.
+**Terminology correction (load-bearing)**: DEC-048 calls the lever "simd_shuffle_xor"; the actual production code uses `simd_shuffle` (broadcast) at `kernel_sources.h:209-211`. The xor butterfly was REMOVED in S18 (DEC-012). Plan refers to it as the "src-broadcast chain."
 
-- [ ] **S46-T0 SCAFFOLD** — Cut branch; draft sprint plan with single-hypothesis framing for simd_shuffle_xor redesign. Cite S19-01c (DEC-020) as the attribution source. State the kill criteria upfront. Apply MANDATORY-CODE-INSPECTION: read `catboost/mlx/kernels/hist.metal` simd_shuffle loop end-to-end before writing the hypothesis.
-- [ ] **S46-T1 FEASIBILITY PROBE** — Read the S20 failure mode (why did the Sprint 20 shuffle redesign not ship?). Research warp-shuffle reduction strategies applicable to Metal's SIMD model. Determine whether the `simd_shuffle_xor` serial chain is restructurable without breaking accumulation-order determinism (Branch-B gate constraint).
-- [ ] **S46-T2 DESIGN PROPOSAL** — Proposed alternative kernel architecture. Theoretical speedup estimate with stated assumptions. Branch-B bit-equivalence preservation plan.
-- [ ] **S46-T3 ENGINEERING PLAN** — One-sprint scope for S47 engineering (if viable). Kill criterion: if the feasibility probe shows no viable reduction strategy, DEC-049 = HALT; v0.7.0 throughput path permanently closed.
-- [ ] **S46-T4 CLOSE-OUT** — New DEC (DEC-049) filed regardless of direction. HANDOFF/TODOS/CHANGELOG-DEV updated. PR.
+**Bounded 4-candidate design space** (per `sprint-plan.md` §T2):
+- **A — Atomic-add accumulation**: HIGH risk; re-enters DEC-017 + DEC-023 design space. Retire at T2 unless new evidence vs DEC-025 re-entry policy.
+- **B — Hierarchical reduction (re-introduce intra-SIMD butterfly)**: MEDIUM risk; per DEC-012 future-trigger clause. Register-spill verification required (DEC-014 precedent).
+- **C — Sort-by-bin extension**: MEDIUM-HIGH risk; DEC-020 shipped → DEC-023 v5 retracted. Re-entry must show Epsilon shape avoids race envelope.
+- **D — Split-K accumulation**: MEDIUM risk; most novel; least precedent.
+
+- [ ] **S46-T0 SCAFFOLD** — Cut branch; commit `docs/sprint46/sprint-plan.md`; file DEC-049 OPEN; update TODOS row. IN PROGRESS.
+- [ ] **S46-T1 CURRENT-STATE** — Owner @performance-engineer, reviewer @silicon-architect. `docs/sprint46/T1/current-state.md` citing file:line for every claim about `kernel_sources.h:107-283` (kHistOneByteSource), `histogram.cpp:31-217`, `structure_searcher.cpp:60-198`. NO arithmetic-only claims (MANDATORY-CODE-INSPECTION rule).
+- [ ] **S46-T2 4-CANDIDATE FEASIBILITY** — Owner @silicon-architect, reviewers @performance-engineer + @mathematician. `docs/sprint46/T2/feasibility.md`. Per-candidate: code-grounded sketch + first-principles upper-bound + parity stance + risk classification vs DEC-017/023/025 precedents. At least 2 candidates survive to T3 OR sprint halts early at T2 with DEC-049 = KILL.
+- [ ] **S46-T3 PROBE-D SPEC** — Owner @performance-engineer. `docs/sprint46/T3/probe-d-spec.md`. For each surviving candidate: ablation strategy + production dispatch shape requirement (Higgs-1M iter=200 + Epsilon iter=200 + Epsilon iter=2000) + parity sweep (Branch-B + DEC-008 envelope + 100/100 determinism + config #8 audit) + kill threshold per candidate.
+- [ ] **S46-T4 PROBE-D EXECUTION** — Owner @performance-engineer. NO production-code commits. Probe artifacts under `docs/sprint46/T4/<candidate>/` only. Probe builds use `#ifdef SIMD_SHUFFLE_PROBE_<X>` guards (S33 PROBE-E pattern). Production bit-identical to v0.6.1; Branch-B regression green on master throughout T4.
+- [ ] **S46-T5 DECISION GATE (DEC-049)** — Owner @strategist, stress-test @devils-advocate. Outcome A (≥3× → COMMIT to S47), B (1.5-3× → user-call), or C (<1.5× → HALT, DEC-049 = KILL). Stress-test against MANDATORY-CODE-INSPECTION + DEC-017/023 toy-to-production-transfer + DEC-025 re-entry policy.
+- [ ] **S46-T6 CLOSE-OUT** — DEC-049 finalized; HANDOFF/TODOS/CHANGELOG-DEV updated; LESSONS-LEARNED entry filed; single PR `mlx/sprint-46-simd-shuffle-research` → master regardless of T5 direction.
 
 ## Sprint 45 — Performance Spike: H-Dispatch Probe + Cross-Class Lock — CLOSED
 
