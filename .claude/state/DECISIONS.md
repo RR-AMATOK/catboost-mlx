@@ -2482,3 +2482,120 @@ cardinality) and all numeric-only workloads.
   `benchmarks/axisC/results/epsilon_axisC_iter4000_catboost_cpu_*.json`
 - Per-seed table and reproducibility script: `docs/benchmarks/v0.6.0-pareto.md §4`
 - Amazon aliasing evidence: `benchmarks/upstream/results/amazon_iter*.json`
+
+## DEC-048: H-Dispatch falsified — throughput epic via dispatch fusion is permanently retired
+
+**Sprint**: 45
+**Date**: 2026-05-04
+**Status**: ACCEPTED — KILL
+**Companion**: `docs/sprint45/T2/probe-verdict.md`, `docs/sprint45/T2/analysis.json`, `docs/sprint45/T3/decision-synthesis.md`
+
+### Context
+
+Sprint 45 set out to test a single load-bearing throughput hypothesis (H-Dispatch) on the
+v0.7.0 release path. The hypothesis, framed by a 6-agent advisory panel on 2026-05-02,
+was that Epsilon iter=2000 issues ~3,000 Metal kernel dispatches per iteration
+(2000 features ÷ 4 per group × 6 depth levels) versus Higgs-1M's ~42, and that the MLX
+graph-construction overhead per dispatch (~30 µs from DEC-014) compounds at high feature
+dimensionality in a way that is structurally hidden at low dimensionality. Closing the
+gap, per the hypothesis, would require fusing per-feature-group dispatches into a single
+multi-group dispatch per depth level using the existing `numGroups` parameter.
+
+The probe was executed under the Probe-D protocol per sprint plan §T2: dispatch-count
+instrumentation, kernel ablation, and a single-dispatch upper-bound measurement. No
+engineering commits were permitted before T3 gate.
+
+### Findings
+
+The hypothesis was falsified by code inspection alone — no instrumented build was
+constructed because Step 1 invalidated the arithmetic underlying Steps 2 and 3.
+
+| Hypothesis claim | Predicted | Measured | Threshold | Outcome |
+|---|---|---|---|---|
+| Dispatches/iter on Epsilon | ~3,000 | **6** | — | falsified (500× off) |
+| Dispatches/iter on Higgs-1M | ~42 | **6** | — | falsified |
+| Dispatch overhead vs iter wall-clock | "load-bearing" | **0.008%** | <20% (Outcome C) | C triggered (2,500× margin) |
+| Step 3 single-dispatch engineering | 1-day fix | **already production code** | — | C triggered |
+
+`DispatchHistogramBatched` (`catboost/mlx/methods/histogram.cpp:31`) already batches
+ALL feature groups into a single Metal dispatch per `ComputeHistograms` call via the
+`numGroups` parameter baked into the dispatch grid X dimension
+(`256 * maxBlocksPerPart * numGroups`). The dispatch loop in
+`structure_searcher.cpp:60–108` calls `ComputeHistograms` exactly `maxDepth × approxDim`
+times per iteration — 6 calls for both Epsilon (2000 features) and Higgs-1M (28 features).
+Dispatch count is **identical** across the two workloads; the cross-class gap is not a
+dispatch-count gap.
+
+Wall-clock baselines (seeds 42/43/44, mean): Epsilon iter=2000 = 2241.2 ms/iter MLX vs
+140.9 ms/iter CPU (15.9× ratio); Higgs-1M iter=200 = 132.9 ms/iter MLX vs 24.6 ms/iter
+CPU (5.4× ratio). Dispatch overhead = 6 × ~30 µs = 0.18 ms/iter — 0.008% of Epsilon's
+2241 ms/iter, missing the 20% Outcome C threshold by 2,500×.
+
+The actual cost driver, per S19-01c (DEC-020), is the `simd_shuffle_xor` serial chain in
+the histogram accumulation kernel — 86% of accumulation time, scaling with batch-TG-ops
+(~200M for Epsilon vs ~438k for Higgs, a 456× ratio that closely tracks the cross-class
+wall-clock gap).
+
+### Decision
+
+**KILL the dispatch-fusion lever permanently.** The proposed engineering is already
+the production implementation; no speedup is available via this route. DEC-048 closes
+the H-Dispatch hypothesis with empirical justification and forbids re-opening it absent
+evidence of a regression to per-group dispatching.
+
+**Scope of this KILL is the dispatch-fusion lever specifically.** The simd_shuffle_xor
+serial chain identified as the actual cost driver was NOT in the S45 hypothesis set
+and is NOT killed by this DEC. Addressing it requires a multi-sprint warp-shuffle
+redesign of the histogram accumulation kernel; that is a separate v0.7.x scope decision
+to be made post-S45 close-out, not a DEC-048 outcome.
+
+### Implication for v0.7.0
+
+No perf delta is available via the dispatch route. The v0.7.0 release path narrows to
+two options, both pre-flagged by the user as acceptable:
+
+| Path | Description | Constraint |
+|---|---|---|
+| **A — Hold** | v0.7.0 deferred indefinitely; project remains at v0.6.1 until either a research-grade lever appears or the audience proposition shifts | PyPI publish does not happen on the dispatch route |
+| **C — simd_shuffle redesign** | Multi-sprint warp-shuffle redesign of the histogram accumulation kernel targeting the S19-01c bottleneck (86% of accumulation cost) | New scope decision; not gated by DEC-048 |
+
+The choice between A and C is the user's call after T6 close-out. DEC-048 records the
+verdict on H-Dispatch and frames the choice; it does not make the choice.
+
+### What survives (and what does not)
+
+The sprint plan's risk-register meta-criterion ("if T2 falsifies all hypotheses
+... throughput epic is retired permanently — gap is hardware-class-bound, further
+pursuit is sunk-cost theater") is **partially** triggered:
+
+- **Triggered**: The dispatch-fusion lever is permanently retired. There is no version
+  of "fuse the dispatches" that buys >0.008% of iter wall-clock back on Epsilon.
+- **NOT triggered**: The simd_shuffle lever was not in the S45 hypothesis set and is
+  not killed by this DEC. The throughput epic is **narrowed**, not "permanently retired."
+  Calling it dead would oversimplify the verdict and misrepresent the remaining
+  attribution (S19-01c, DEC-020).
+
+This precision matters: future readers of DECISIONS.md must not infer from DEC-048 that
+all GPU-throughput work on catboost-mlx is closed. The dispatch route is closed; the
+kernel-architecture route remains open as a separate scope decision.
+
+### What S45 ships regardless of T3
+
+T1 (Branch-B regression test, CI gate locking v0.6.1's predict-output bit-equivalence),
+T4 (`docs/benchmarks/cross-class-cuda-comparison.md` — three-platform reproducibility
+writeup), and T5 (`tools/catboost_tripoint/` — parity-oracle CLI for regulated-ML
+cross-platform model verification) are all real, shipped, and independent of the T2
+verdict. S45 is a successful sprint by the plan's Definition of Done.
+
+### Authority
+
+- Empirical basis: `docs/sprint45/T2/probe-verdict.md`, `docs/sprint45/T2/analysis.json`
+- Code evidence: `catboost/mlx/methods/histogram.cpp:31–109`,
+  `catboost/mlx/methods/structure_searcher.cpp:60–108`,
+  `catboost/mlx/methods/score_calcer.cpp:160`
+- Wall-clock baselines: `benchmarks/upstream/results/epsilon_iter{200,1000,2000}_catboost_mlx_{42,43,44}.json`,
+  `benchmarks/upstream/results/higgs_1m_catboost_mlx_{42,43,44}.json`
+- Per-dispatch latency reference: DEC-014 option C
+- Actual cost driver attribution: DEC-020, S19-01c sprint
+- Process lesson (6-agent convergence on incorrect mechanism): captured in
+  `Frameworks/LESSONS-LEARNED.md` at T6 close-out
