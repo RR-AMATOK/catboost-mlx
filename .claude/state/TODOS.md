@@ -1,21 +1,23 @@
 # Active Tasks — CatBoost-MLX
 
 > Coverage: Sprints 0–15 reconstructed from git/agent-memory on 2026-04-15. Sprint 16+ is source of truth.
-> Last header refresh: 2026-05-05 (S46 CLOSED — simd_shuffle arc RETIRED; DEC-049 KILL; all 4 candidates falsified; branch `mlx/sprint-46-simd-shuffle-research`.)
+> Last header refresh: 2026-05-06 (S47 ACTIVE — DEC-051 amended DEC-050; PyPI publish DEFERRED until CUDA-class throughput. v0.7.0 = reproducibility-grade INTERNAL release on master, no PyPI yet.)
 
-## Sprint 47 — v0.7.0 release engineering (reproducibility-grade)
+## Sprint 47 — v0.7.0 reproducibility-grade INTERNAL release (NO PYPI)
 
-**Decision:** Option α DECIDED 2026-05-05 by user (DEC-050). v0.7.0 ships as reproducibility-grade. No throughput delta required. Throughput → v0.8.0 on structurally new lever.
+**Decision:** Option α DECIDED 2026-05-05 by user (DEC-050) → AMENDED 2026-05-06 (DEC-051). v0.7.0 still ships as reproducibility-grade with version bump + artifacts on master. **PyPI publish DEFERRED** until MLX path reaches CUDA-class throughput (current MLX/CUDA gap: 23–88×). Threshold to lock at v0.8.0 kickoff (working hypothesis: ≤5× MLX/CUDA on Higgs-1M iter=1000).
 
-**Branch (proposed):** `mlx/sprint-47-release-0.7.0`
+**Branch:** `mlx/sprint-47-release-0.7.0`
 
-- [ ] **S47-T0 SCAFFOLD** — Branch cut, `docs/sprint47/sprint-plan.md`, sprint scope locked to release engineering.
-- [ ] **S47-T1 VERSION BUMP** — `python/catboost_mlx/__init__.py` + `python/setup.py` + any other version anchors → 0.7.0. Verify via `pip install -e .` smoke test.
-- [ ] **S47-T2 USER-FACING CHANGELOG** — `CHANGELOG.md` v0.7.0 entry. Reproducibility-grade framing. Cite Branch-B regression (S45-T1), cross-class CUDA bit-equivalence (S45-T4), `catboost-tripoint` parity oracle (S45-T5). Document deferred throughput → v0.8.0 honestly.
-- [ ] **S47-T3 README POSTURE** — README.md "Status" section update. Cross-link DEC-047 + DEC-050. Make explicit that v0.7.0 = reproducibility-grade by design, not by accident.
-- [ ] **S47-T4 RELEASE VALIDATION** — Branch-B regression GREEN; `catboost-tripoint` smoke pass on Higgs-1M + Epsilon; sample model train+predict round-trip on conda-installed wheel.
-- [ ] **S47-T5 PYPI PUBLISH** — Build wheel, upload to TestPyPI, validate install + import + predict, then PyPI proper. GitHub Release v0.7.0 with reproducibility-grade narrative.
-- [ ] **S47-T6 CLOSE-OUT** — DECISIONS.md DEC-050 → IMPLEMENTED, HANDOFF/TODOS/CHANGELOG-DEV updated, single PR `mlx/sprint-47-release-0.7.0` → master. v0.7.0 lands on PyPI.
+- [x] **S47-T0 SCAFFOLD** — DONE 2026-05-06. `docs/sprint47/sprint-plan.md` (165 lines). Commit `e964f85ac8`.
+- [x] **S47-T1 VERSION BUMP** — DONE 2026-05-06. `__init__.py:30` + `pyproject.toml:13` → 0.7.0. Smoke pass. Commit `e29abb4b1b`.
+- [x] **S47-T2 USER-FACING CHANGELOG** — DONE 2026-05-06. `## [0.7.0]` (~90 lines): reproducibility-grade framing, Branch-B + tripoint + cross-class CUDA + Pareto citations, PyPI publish posture (deferred per DEC-051). Commit `2971372730`.
+- [x] **S47-T3 README POSTURE** — DONE 2026-05-06. NOT-upstream-catboost banner + Status section (source-only install + DEC-051 cross-link). Commit `c80f09cd4f` (post-DEC-051 edit pending in T5).
+- [x] **S47-T4 RELEASE VALIDATION** — DONE 2026-05-06. Branch-B GREEN; tripoint smoke PASS (mlx backend); clean-env wheel install round-trip GREEN. `docs/sprint47/T4/release-validation.md`. Commit `45a7f67ee6`.
+- [x] **S47-T5 RESCOPED** — DONE 2026-05-06. PyPI/TestPyPI upload CANCELLED per DEC-051. README + CHANGELOG adjusted to source-install + deferred-publish framing. DEC-051 filed (`.claude/state/DECISIONS.md`).
+- [ ] **S47-T6 CLOSE-OUT** — DECISIONS.md DEC-050 + DEC-051 → IMPLEMENTED. HANDOFF/TODOS/CHANGELOG-DEV finalized. Single PR `mlx/sprint-47-release-0.7.0` → master squash-merged. **No git tag for now**; reproducibility milestone is captured by the v0.6.1 baselines + Branch-B regression test, not a v0.7.0 git tag (which would imply a public release).
+
+**Future PyPI publish prerequisite (S48+):** Threshold to lock at v0.8.0 sprint kickoff. Working hypothesis: MLX/CUDA wall-clock ratio ≤ 5× on Higgs-1M iter=1000, parity intact. Until then, no PyPI.
 
 ## Sprint 46 — simd_shuffle Research Arc — CLOSED
 
