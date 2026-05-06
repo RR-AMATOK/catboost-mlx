@@ -2,6 +2,34 @@
 
 > Coverage: Sprints 0–15 reconstructed from git log on 2026-04-15. Sprint 16+ is source of truth.
 
+## 2026-05-06 — Sprint 47: v0.7.0 reproducibility-grade INTERNAL release (NO PYPI)
+
+Branch: `mlx/sprint-47-release-0.7.0`. Cut from master `7a97db638f` (post-S46 merge).
+
+### T0–T4 — Sprint scaffold + version bump + docs + validation (2026-05-06)
+
+- **T0** (`e964f85ac8`): `docs/sprint47/sprint-plan.md` (165 lines). Sprint scope locked to release engineering: 7-task structure with owners + acceptance, sequential-gates diagram, 6-item risk pre-mortem, two S48 candidates documented, definition of done.
+- **T1** (`e29abb4b1b`): version bump `python/catboost_mlx/__init__.py:30` + `python/pyproject.toml:13` from `0.6.1` to `0.7.0`. Smoke-tested via clean rebuild + import. Surfaced (and respected) the v0.6.1 baseline anchors in `python/tests/regression/{generate_v061_baselines.py, test_branch_b_regression.py}` — those stay at v0.6.1 by design.
+- **T2** (`2971372730`): user-facing `CHANGELOG.md` `## [0.7.0]` section (~90 lines). Reproducibility-grade framing; cites Branch-B regression (S45-T1), `catboost-tripoint` parity oracle (S45-T5), three-platform CUDA bit-equivalence writeup (S45-T4), 5-dataset Pareto suite (S44). Honest deferred-throughput statement citing the 7-falsification chain.
+- **T3** (`c80f09cd4f`): `README.md` posture update. NOT-upstream-catboost banner replaces inherited upstream nav links (which all pointed to catboost.ai). New Status section with v0.7.0 reproducibility-grade framing; new Install section.
+- **T4** (`45a7f67ee6`): release validation report (`docs/sprint47/T4/release-validation.md`). All three gates GREEN — Branch-B regression (2/2 tests pass), catboost-tripoint smoke (mlx backend produces predictions; CPU comparison limited to upstream-trained models by design), clean-env wheel install round-trip. Surfaced two T5 prerequisites: stale binary refresh + `MACOSX_DEPLOYMENT_TARGET=13.0` for the wheel platform tag.
+
+### T5 — RESCOPED per DEC-051 (2026-05-06)
+
+User decision mid-T5: **PyPI publish DEFERRED until MLX path reaches CUDA-class throughput.** The current MLX/CUDA wall-clock gap is 23–88× (per `docs/benchmarks/cross-class-cuda-comparison.md`); publishing without competitive throughput would invite users who'd hit that gap and conclude the package is not production-ready, regardless of CHANGELOG framing.
+
+Filed **DEC-051** (`.claude/state/DECISIONS.md`): amends DEC-050 §"What this closes" — the "PyPI publish unblocked" clause is REVOKED. v0.7.0 still ships as reproducibility-grade with version bump + artifacts on master; the `catboost-mlx` PyPI name is reserved (verified available 2026-05-06) for a future publish when throughput parity lands. Working hypothesis for unblock threshold: MLX/CUDA wall-clock ratio ≤ 5× on Higgs-1M iter=1000, parity intact. Threshold to lock at v0.8.0 sprint kickoff to avoid retroactive goalpost-moving.
+
+T5 cancelled sub-steps: TestPyPI upload, PyPI prod upload, GitHub Release v0.7.0. T5 retained sub-steps: README install instructions adjusted to source-only; CHANGELOG `## [0.7.0]` section reframed; DEC-051 filed.
+
+PyPI namespace check executed before rescope: HTTP 404 confirms `catboost-mlx` is available on PyPI. Wheel artifact built (`catboost_mlx-0.7.0-cp313-cp313-macosx_13_0_arm64.whl`, 412 KB) with correct `MACOSX_DEPLOYMENT_TARGET=13.0` and embedded binary `minos 13.0`. Wheel kept locally for the future-publish attempt; not committed (gitignored).
+
+### T6 — Close-out
+
+Single PR `mlx/sprint-47-release-0.7.0` → master squash-merged. No git tag for v0.7.0; the reproducibility milestone is captured by Branch-B regression locking v0.6.1 baselines, not by a v0.7.0 git tag (which would imply a public release the deferred PyPI gate forbids).
+
+---
+
 ## 2026-05-05 — DEC-050: v0.7.0 strategy DECIDED — Option α (reproducibility-grade)
 
 User-decision in S46 close-out, immediately following DEC-049 RETIRED. v0.7.0 ships as reproducibility-grade release (no throughput delta required); throughput → v0.8.0 conditional on a structurally NEW lever class (not another kernel-internal probe). Falsification chain DEC-013/014/015/017/019/048/049 disproved the implicit assumption that an incremental simd_shuffle-class lever exists. PyPI publish unblocked. S47 scope = release engineering only (version bump, user-facing CHANGELOG/README, PyPI publish workflow).

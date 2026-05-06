@@ -2786,3 +2786,39 @@ bogus 9.79× claim from reaching master.
 **S47 scope (now unblocked):** v0.7.0 release engineering. Reproducibility-grade framing in user-facing CHANGELOG.md + README.md. Version bump (0.6.x → 0.7.0). PyPI publish workflow. No probe code, no kernel changes, no benchmarks beyond release validation.
 
 **Authority pointers:** `.claude/state/HANDOFF.md` (DECIDED block), DEC-047, DEC-049 OUTCOME, `docs/sprint46/T5/decision.md` (path-decision context).
+
+---
+
+## DEC-051: PyPI publish gated on CUDA-parity throughput (amends DEC-050)
+
+**Status:** DECIDED (2026-05-06, by user, in S47-T5 mid-execution)
+**Sprint:** 47 (decision); v0.8.0+ (publish trigger)
+**Amends:** DEC-050 §"What this closes" — the clause "PyPI publish is unblocked" is REVOKED. The remainder of DEC-050 (v0.7.0 = reproducibility-grade framing, version-bump scope, S47 release-engineering scope) stands.
+**Cross-refs:** DEC-049 OUTCOME (simd_shuffle arc RETIRED), DEC-050 (Option α reproducibility-grade), `docs/benchmarks/cross-class-cuda-comparison.md` (the 23–88× MLX/CUDA wall-clock gap that is now load-bearing for the publish gate)
+
+**Decision:** Public PyPI publication of `catboost-mlx` is intentionally deferred until the MLX path achieves wall-clock throughput **comparable to CUDA on equivalent hardware class.** The Apple Silicon ↔ NVIDIA hardware-class gap is real, but the current 23–88× MLX/CUDA ratio measured in S45-T4 (`docs/benchmarks/cross-class-cuda-comparison.md`) is too wide to publish responsibly — users finding the package on PyPI would experience perf-disappointment that the reproducibility-grade framing does not offset.
+
+**What "comparable" means (calibration to set in v0.8.0+ planning):**
+- Concrete numerical threshold to be set at the v0.8.0 sprint kickoff after a fresh f_hist analysis at v0.7.0 baseline.
+- Working hypothesis: MLX/CUDA wall-clock ratio ≤ 5× on Higgs-1M iter=1000 (or equivalent), holding bit-equivalence parity intact, would trigger PyPI publish readiness.
+- The threshold must be set BEFORE the v0.8.0 lever-research arc opens, to avoid retroactive goalpost-moving.
+
+**Why the amendment now (mid-S47-T5):**
+DEC-050 was filed 2026-05-05 with the implicit assumption that "reproducibility-grade" was a sufficient public-product claim. After T4 release validation surfaced the wheel artifact and the user reviewed the full publish pathway, the user reassessed: publishing to PyPI without competitive throughput would invite users who'd hit the MLX/CUDA gap and conclude the package is not production-ready, regardless of what the CHANGELOG says about reproducibility. The reputational cost of premature publish exceeds the convenience benefit.
+
+**What this closes:**
+- T5 sub-steps 5–8 (TestPyPI upload, PyPI prod upload, GitHub Release v0.7.0). Cancelled.
+- The v0.7.0 narrative of "first PyPI-published release." v0.7.0 is now the **first reproducibility-grade tagged release that lands on master without external publish**.
+
+**What this does NOT close:**
+- v0.7.0 itself. The version bump, the artifacts (Branch-B regression, catboost-tripoint, cross-class CUDA writeup), and the release validation all land on master per DEC-050.
+- The `catboost-mlx` PyPI name. Verified available 2026-05-06; the name is reserved by being the same name we will publish under when the throughput gate clears.
+- The deferred-throughput posture from DEC-050. The lever-class research arc for v0.8.0 still opens conditionally on a structurally NEW design (not another simd_shuffle-class probe).
+
+**S47-T5 rescope:**
+- Original: TestPyPI → PyPI prod → GitHub Release v0.7.0.
+- Revised: README install instructions adjusted to source-only; CHANGELOG `## [0.7.0]` section reframed; DEC-051 filed; commits land on master via PR; **no PyPI upload, no GitHub Release**.
+
+**S47-T6 close-out:** unchanged scope; sprint closes with v0.7.0 internally tagged on master and PyPI deferred.
+
+**Authority pointers:** `README.md` (Status section + Install section reflecting source-only), `CHANGELOG.md` (`## [0.7.0]` section with PyPI publish posture), `docs/sprint47/T4/release-validation.md` (the wheel artifact that would have shipped, kept for the next attempt).

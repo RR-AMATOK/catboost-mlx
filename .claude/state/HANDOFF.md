@@ -1,15 +1,31 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-05-05 (**S46 CLOSED — simd_shuffle arc RETIRED; DEC-049 KILL; all 4 candidates falsified**).
-> Branch `mlx/sprint-46-simd-shuffle-research`. All tasks T0–T6 complete. PR pending.
+> Last updated: 2026-05-06 (**S47 ACTIVE — T0 complete, T1 next**).
+> Branch `mlx/sprint-47-release-0.7.0`. T0 scaffold done; plan at `docs/sprint47/sprint-plan.md`.
 
 ---
 
-## v0.7.0 strategy — DECIDED: Option α (reproducibility-grade release)
+## Sprint 47 — v0.7.0 Reproducibility-Grade Internal Release (ACTIVE)
 
-> **DECIDED 2026-05-05 by user.** v0.7.0 ships as a reproducibility-grade release. No throughput delta required. PyPI publish unblocked. Throughput → v0.8.0 conditional on a structurally NEW lever class (not another kernel-internal probe). See **DEC-050** in `.claude/state/DECISIONS.md`.
->
-> **S47 scope:** v0.7.0 release engineering. Version bump (0.6.x → 0.7.0). User-facing CHANGELOG.md + README.md updates with reproducibility-grade framing (build on DEC-047 v0.6.0 framing + DEC-S45-T4 cross-class CUDA bit-equivalence + S45-T5 `catboost-tripoint` parity oracle). PyPI publish workflow validation. No probe code, no kernel changes.
+**Status:** ACTIVE. T0–T4 + T5(rescoped) COMPLETE. Next task: T6 (close-out).
+**Branch:** `mlx/sprint-47-release-0.7.0` (cut from master `7a97db638f`)
+**Plan:** `docs/sprint47/sprint-plan.md`
+**Authority:** DEC-050 (DECIDED 2026-05-05) + **DEC-051** (DECIDED 2026-05-06, amends DEC-050 PyPI clause).
+
+**DEC-051 reframe:** v0.7.0 still ships as reproducibility-grade. The version bump and artifacts land on `master`. **PyPI publish is deferred until the MLX path reaches CUDA-class throughput** (current MLX/CUDA gap: 23–88×). v0.7.0 is the first reproducibility-grade tagged release that lands on master without external publish. The `catboost-mlx` PyPI name is reserved for the future publish.
+
+**Task status:**
+- [x] **T0 SCAFFOLD** — DONE 2026-05-06. `docs/sprint47/sprint-plan.md` (165 lines).
+- [x] **T1 VERSION BUMP** — DONE 2026-05-06. `python/catboost_mlx/__init__.py:30` + `python/pyproject.toml:13` → `0.7.0`. Smoke-tested.
+- [x] **T2 USER CHANGELOG** — DONE 2026-05-06. `## [0.7.0]` section cites Branch-B, tripoint, cross-class CUDA, 5-dataset Pareto. PyPI publish posture explicit.
+- [x] **T3 README POSTURE** — DONE 2026-05-06. NOT-upstream-catboost banner + Status section + source-only Install section.
+- [x] **T4 RELEASE VALIDATION** — DONE 2026-05-06. Branch-B GREEN; tripoint smoke PASS (mlx backend); clean-env wheel install round-trip GREEN. `docs/sprint47/T4/release-validation.md`.
+- [x] **T5 RESCOPED** — DONE 2026-05-06. PyPI/TestPyPI upload **CANCELLED** per DEC-051. README + CHANGELOG adjusted to source-install + deferred-publish framing. DEC-051 filed.
+- [ ] **T6 CLOSE-OUT** — DEC-050 + DEC-051 → IMPLEMENTED; HANDOFF/TODOS/CHANGELOG-DEV finalized; PR `mlx/sprint-47-release-0.7.0` → master squash-merged. **No git tag for now.**
+
+**Sequential gates:** T0 → T1 → (T2 ‖ T3 ‖ T4) → T5(rescoped) → T6.
+
+**S48+ pre-condition:** PyPI publish reactivates only when MLX/CUDA wall-clock ratio ≤ 5× on Higgs-1M iter=1000 (working hypothesis; threshold to lock at v0.8.0 sprint kickoff per DEC-051).
 
 ---
 
@@ -31,7 +47,7 @@ All four bounded candidates (B, C, D1, D2) from the simd_shuffle redesign resear
 
 **Process finding:** MANDATORY-CODE-INSPECTION rule fired correctly — code inspection of `kernel_sources.h:1374-1407` post-speedup surfaced the processor/owner-lane confusion that prevented a bogus 9.79× claim from reaching master. Process gap: inspection was post-measurement, not pre-sweep. Standing rule added S46-T6: probe specs must include code-inspection sign-off on accumulation invariant BEFORE the sweep runs.
 
-**v0.7.0 gate:** BLOCKING DECISION required (see above).
+**v0.7.0 gate:** DECIDED — Option α (DEC-050). S47 now executing.
 
 ---
 

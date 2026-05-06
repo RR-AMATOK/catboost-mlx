@@ -5,6 +5,110 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) co
 
 ---
 
+## [0.7.0] — 2026-05-06
+
+v0.7.0 is a **reproducibility-grade** internal release of catboost-mlx — bit-equivalent
+predict output to v0.6.1, three-platform parity verification, and a parity oracle CLI,
+all grounded in shipped artifacts. The version bump and the artifacts land on `master`;
+PyPI publish is intentionally deferred until the MLX path reaches CUDA-class throughput
+(see [PyPI publish posture](#pypi-publish-posture) below and DEC-051).
+
+### Added
+
+- **Source-install support** — `pip install -e python/` from a local clone works in a
+  clean Python environment. PyPI publish is deferred (see DEC-051). Apple Silicon M1+
+  (macOS 13+, Python 3.9+) is the only supported platform for this release. See
+  [Compatibility](#compatibility) below.
+
+- **Branch-B regression gate** (`python/tests/regression/test_branch_b_regression.py`) —
+  CI test that locks v0.7.0 predict output byte-for-byte against the v0.6.1 baselines on
+  Higgs-1M (100k test rows, iter=200, seed=42) and Epsilon-subset (10k test rows, iter=200,
+  seed=42). Any engineering change that alters `_predict_inprocess` float32 output will fail
+  this gate. This is the primary correctness contract for the reproducibility-grade frame.
+
+- **`catboost-tripoint` parity oracle** (`tools/catboost_tripoint/`) — CLI tool that runs
+  a catboost-mlx model against CPU and/or CUDA backends and reports signed parity verdicts
+  vs the theoretical fp32 floor (`ε_mach × T × √L`). Outputs human-readable summary and
+  optional signed JSON report (`--report-json`). Tested on Higgs-1M and Epsilon as part of
+  release validation (S47-T4). Example:
+
+  ```bash
+  catboost-tripoint verify \
+      --model path/to/model.json \
+      --data  path/to/eval.parquet \
+      --backends cpu,mlx \
+      --report-json parity_report.json
+  # Verdict: PASS  (max-abs diff within theoretical fp32 floor)
+  ```
+
+- **5-dataset Pareto benchmark suite** (Sprints 44–45) — Adult, Higgs-1M, Higgs-11M,
+  Epsilon, and Amazon measured across CatBoost-CPU, LightGBM, XGBoost, and CatBoost-MLX at
+  fair convergence (3 seeds × iter-grid per dataset). Full results and methodology in
+  `docs/benchmarks/v0.6.0-pareto.md`.
+
+- **Three-platform bit-equivalence writeup** — CatBoost 1.2.10 with identical hyperparameters
+  on M3 Max (Mac CPU), M3 Max (MLX), and RTX 5070 Ti (Win CUDA) produces logloss within
+  ≤0.0003 between Mac CPU and CUDA on all-numeric workloads at fair convergence. MLX carries
+  a structural +0.001–0.003 architectural floor that decays monotonically with iteration count.
+  Wall-clock ratios (MLX/CUDA: 23–88× on measured datasets) reflect cross-class hardware
+  differences, not implementation defects. 5,300-word writeup with per-dataset tables and
+  methodology disclaimer in `docs/benchmarks/cross-class-cuda-comparison.md`.
+
+### What is NOT in v0.7.0
+
+Throughput optimization is intentionally deferred to v0.8.0+. After seven empirical
+falsifications of throughput hypotheses on the existing histogram kernel topology
+(DEC-013, 014, 015, 017, 019, 048, 049 — see `.claude/state/DECISIONS.md`), the team
+concluded the simd_shuffle-family research arc has no surviving design: bin-owner mapping
+is intrinsic to bin values, and any routing-free accumulation scheme silently drops
+contributions in proportion to 1/SIMD_SIZE. Future throughput work requires a structurally
+new lever class — bin-distributed dispatch, sort-then-scan with race-free atomics, or a
+fundamentally different kernel topology — and is out of scope for v0.7.0. Any v0.8.0 arc
+must publish a fresh f_hist analysis at v0.7.0's measured baseline before a probe is
+greenlit. The gating decision is DEC-050.
+
+v0.7.0 ships as reproducibility-grade by design, not by accident. Bit-exact parity on
+Apple Silicon GPU vs CPU CatBoost is the primary product claim.
+
+### PyPI publish posture
+
+PyPI publish is intentionally deferred until the MLX path reaches CUDA-class throughput
+(per DEC-051, 2026-05-06). The cross-class CUDA writeup
+(`docs/benchmarks/cross-class-cuda-comparison.md`) measures the current MLX/CUDA wall-clock
+gap at 23–88× across the five Pareto datasets; closing that gap requires the structurally-
+new lever class deferred to v0.8.0+ (per DEC-049 OUTCOME and DEC-050).
+
+The `catboost-mlx` PyPI name is reserved (verified available 2026-05-06). v0.7.0 is the
+internal-release version: the version bump, the reproducibility artifacts, and the
+release validation all land on `master`. When throughput parity lands, the next release
+(likely v0.8.x) will be the first PyPI publication.
+
+### Compatibility
+
+| Requirement | Minimum |
+|---|---|
+| Hardware | Apple Silicon (M1/M2/M3/M4) |
+| macOS | 13.0 (Ventura) |
+| Python | 3.9 |
+| MLX | 0.18+ |
+
+**Not supported in v0.7.0:** Linux, Windows, Intel Mac, non-Apple-Silicon hardware.
+See [README.md](README.md) for full system requirements.
+
+### Further reading
+
+| Document | What it covers |
+|---|---|
+| `.claude/state/DECISIONS.md` — DEC-049 OUTCOME | Closure of the simd_shuffle throughput research arc; all four bounded candidates falsified |
+| `.claude/state/DECISIONS.md` — DEC-050 | Release strategy decision: reproducibility-grade by design |
+| `.claude/state/DECISIONS.md` — DEC-051 | PyPI publish gate amendment: deferred until MLX reaches CUDA-class throughput |
+| `docs/benchmarks/cross-class-cuda-comparison.md` | Three-platform (Mac CPU / Mac MLX / Win CUDA RTX 5070 Ti) bit-equivalence writeup |
+| `docs/benchmarks/v0.6.0-pareto.md` | 5-dataset Pareto benchmark suite; per-dataset logloss tables, determinism contract, limitations |
+| `docs/sprint46/T6/summary.md` | S46 research arc close-out; what S47 inherits |
+| `docs/sprint47/sprint-plan.md` | S47 scope and release engineering tasks |
+
+---
+
 ## [Unreleased] — Sprint 18 (2026-04-17)
 
 ### Performance
