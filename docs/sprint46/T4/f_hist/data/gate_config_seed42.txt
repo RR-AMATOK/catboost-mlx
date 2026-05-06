@@ -1,0 +1,43 @@
+bench_boosting — CatBoost-MLX library-path benchmark (TODO-014)
+================================================================
+rows=50000  features=100  classes=2  depth=6  iters=12  bins=128
+lr=0.1000  l2=3.0000  seed=42  approxDim=1  onehot=0
+----------------------------------------------------------------
+Generating synthetic dataset...
+Dataset: 50000 rows x 100 features (25 uint32 cols), 12700 total bin-features
+Beginning 12 boosting iterations...
+
+[per-kernel-profile] Enabled — inserting mx::eval() sync points.
+  WARNING: reported ms are UPPER BOUNDS (kernel overlap suppressed).
+
+
+--- Running (T2 sort-by-bin, production default) ---
+  iter    0  time=  239.1 ms  loss=0.688806
+  iter    9  time=   48.7 ms  loss=0.669195
+  iter   11  time=   49.5 ms  loss=0.666843
+
+================================================================
+Timing Summary
+----------------------------------------------------------------
+  iter-0 (cold start):     239.1 ms
+  warm mean (  11 iters):     49.9 ms
+  warm min:                 46.7 ms
+  warm max:                 52.3 ms
+
+  Final loss: 0.66684335
+  BENCH_FINAL_LOSS=0.66684335
+================================================================
+
+=== Per-kernel profile (--per-kernel-profile; UPPER BOUNDS due to sync) ===
+WARNING: mx::eval() sync points disable MLX kernel overlap. Reported
+         per-kernel ms are UPPER BOUNDS on non-sync production timing.
+         Stats: 10%-trimmed mean/stdev (Metal scheduling jitter suppressed)
+         Warm iters = 11 (iter-0 excluded)
+
+  derivatives      mean=  0.586 ms   stdev= 0.025 ms  ( 4.3%)
+  tree_support     mean=  6.120 ms   stdev= 0.156 ms  ( 2.5%)
+  histogram        mean= 36.828 ms   stdev= 1.262 ms  ( 3.4%)
+  suffix_sum       mean=  1.175 ms   stdev= 0.036 ms  ( 3.0%)
+  split_score      mean=  1.924 ms   stdev= 0.101 ms  ( 5.2%)  [wall-clock floor: sub-ms jitter]
+  leaf_estimation  mean=  2.522 ms   stdev= 0.059 ms  ( 2.3%)
+  ------ sum-of-per-kernel= 49.157 ms  vs iter_total= 49.938 ms  (delta=-0.782 ms, -1.6%)

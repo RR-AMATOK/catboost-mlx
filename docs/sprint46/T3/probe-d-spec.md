@@ -389,9 +389,17 @@ followed by an on-chip merge pass. This trades accumulation serialization for me
 With K=4:
 - Each TG processes 4 doc slices instead of 1 → 4× more parallel accumulators per TG
 - Merge pass: 4 partial histograms → 1 final histogram per TG
-- TG memory for K=4: `K * HIST_PER_SIMD * sizeof(float) = 4 * 1024 * 4 = 16 KB` (fits
-  DEC-011 32 KB ceiling)
-- K=8: 32 KB (at ceiling; no margin) → K=4 is preferred
+- ~~TG memory for K=4: `K * HIST_PER_SIMD * sizeof(float) = 4 * 1024 * 4 = 16 KB` (fits
+  DEC-011 32 KB ceiling)~~
+- ~~K=8: 32 KB (at ceiling; no margin) → K=4 is preferred~~
+
+**ERRATUM (T4 code-inspection finding, 2026-05-05):** The TG-memory arithmetic above is wrong by 8×. The actual D1 layout requires the `NUM_SIMD_GROUPS=8` dimension as well (per `kernel_sources.h:28–34`, current production `simdHist[8][1024]` consumes 32 KB exactly). For D1 to maintain per-SIMD-group locality, the partial histogram layout is `partialHist[K][NUM_SIMD_GROUPS][HIST_PER_SIMD]`:
+- For K=4: `4 × 8 × 1024 × 4 bytes = 131,072 bytes = 128 KB` — **4× over the 32 KB ceiling**
+- For K=8: `8 × 8 × 1024 × 4 bytes = 256 KB` — **8× over ceiling**
+
+The "16 KB" figure in the original spec corresponds to a flat `K × HIST_PER_SIMD × sizeof(float)` layout that omits the NUM_SIMD_GROUPS dimension, which would require atomic accumulation within each K-slice (re-introducing the DEC-023 race envelope).
+
+**D1 as specified is structurally TG-memory-infeasible.** D MUST proceed via the D2 path (separate accumulation + merge dispatches). See §3.4 below for the corrected D2 specification.
 
 ### §3.2  Pre-flight kill-switch (STRUCTURAL — Sibling S-1 race gate)
 
@@ -406,15 +414,13 @@ static_assert(maxBlocksPerPart == 1, "Multi-block histogram requires race-free w
 Lifting this constraint under `#ifdef SIMD_SHUFFLE_PROBE_D` requires a race-free writeback
 mechanism. Two options:
 
-- **D1 (TG-scope merge):** K partial histograms merged inside the TG before global writeback.
+- ~~**D1 (TG-scope merge):** K partial histograms merged inside the TG before global writeback.
   `maxBlocksPerPart` remains 1 from the dispatch perspective (the K-split is internal to the
   kernel, not external multi-block dispatch). No lift of the static_assert needed for D1.
-  This is the preferred path.
+  This is the preferred path.~~ **(See ERRATUM in §3.1 — D1 is TG-memory-infeasible.)**
 
 - **D2 (device-scope multi-block):** K separate TG dispatches, each writing to a unique device
-  buffer slot, then a separate merge kernel. Requires lifting `histogram.cpp:133–134` and
-  `histogram.cpp:83–88` dispatch grid change. The Sibling S-1 race on global
-  `atomic_fetch_add_explicit` (`kernel_sources.h:267–281`) reactivates.
+  buffer slot, then a separate merge kernel. **D2 is now the only viable D path.** Code-inspection-grounded race analysis (T4, 2026-05-05): D2 is structurally race-free if (a) accumulation writes to unique per-`(partition, group, K-block)` device slots, and (b) the merge kernel uses `maxBlocksPerPart=1`. Both are design choices, not code-path constraints. The static_assert at `histogram.cpp:134` is in `ComputeHistogramsImpl` — the probe build's `DispatchHistogramProbeDKBench` (under `#ifdef SIMD_SHUFFLE_PROBE_D`) bypasses it entirely. **No production-code static_assert lift needed for the probe.** D2 merge overhead analytical bound: ~1.3 ms at Epsilon K=4 (memory-bandwidth-limited; partial reads = 4 × 32000 TGs × 4 KB = 512 MB at ~400 GB/s) — 0.058% of 2241 ms iter total, far below the 30% retirement threshold.
 
 **T4 pre-flight decision:** If D1 (intra-kernel K-split) is achievable, proceed without
 touching `histogram.cpp:133–134`. If D2 is required, the race-fix mechanism overhead must
