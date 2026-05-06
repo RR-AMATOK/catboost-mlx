@@ -1,17 +1,12 @@
 <img src=http://storage.mds.yandex.net/get-devtools-opensource/250854/catboost-logo.png width=300/>
 
-[Website](https://catboost.ai) |
-[Documentation](https://catboost.ai/docs/) |
-[Tutorials](https://catboost.ai/docs/concepts/tutorials.html) |
-[Installation](https://catboost.ai/docs/concepts/installation.html) |
-[Release Notes](https://github.com/catboost/catboost/releases)
-
-[![GitHub license](https://img.shields.io/github/license/catboost/catboost.svg)](https://github.com/catboost/catboost/blob/master/LICENSE)
-[![PyPI version](https://badge.fury.io/py/catboost.svg)](https://badge.fury.io/py/catboost)
-[![Conda Version](https://img.shields.io/conda/vn/conda-forge/catboost.svg)](https://anaconda.org/conda-forge/catboost)
-[![GitHub issues](https://img.shields.io/github/issues/catboost/catboost.svg)](https://github.com/catboost/catboost/issues)
-[![Telegram](https://img.shields.io/badge/chat-on%20Telegram-2ba2d9.svg)](https://t.me/catboost_en)
-[![Twitter](https://img.shields.io/badge/@CatBoostML--_.svg?style=social&logo=twitter)](https://twitter.com/CatBoostML)
+> **This is NOT the upstream `catboost` package.** This is `catboost-mlx`, an
+> independent port of CatBoost's gradient boosting decision trees to Apple Silicon
+> GPU via Apple's MLX/Metal framework. For the upstream Python `catboost` package
+> (CPU + CUDA, multi-platform), see [catboost.ai](https://catboost.ai) or
+> `pip install catboost`. This package: Apple Silicon only, MLX/Metal backend,
+> focused on bit-exact parity with upstream CatBoost on supported losses (RMSE,
+> Logloss, MultiClass).
 
 ---
 
@@ -30,6 +25,57 @@ This fork adds a native Apple Silicon GPU backend using [MLX](https://github.com
 
 ---
 
+## Status
+
+**v0.7.0 — Reproducibility-grade release. First PyPI publication.**
+
+`pip install catboost-mlx`
+
+### What "reproducibility-grade" means
+
+- **Bit-equivalence with v0.6.1 predict output is enforced by CI.** The Branch-B
+  regression test (`python/tests/regression/test_branch_b_regression.py`) compares
+  predict output against committed baselines byte-for-byte on every push.
+- **Three-platform bit-equivalence at fair convergence.** On all-numeric workloads,
+  Mac CPU (CatBoost 1.2.10), Mac MLX (this package), and Windows CUDA (RTX 5070 Ti,
+  CatBoost 1.2.10) produce logloss values within ≤0.0003 of each other. Full results
+  in [`docs/benchmarks/cross-class-cuda-comparison.md`](docs/benchmarks/cross-class-cuda-comparison.md).
+- **Parity oracle.** The `catboost-tripoint` CLI
+  (`tools/catboost_tripoint/`) compares CPU/MLX/CUDA predict outputs against the
+  derived fp32 floor and emits a signed JSON report. Exit code 0 = PASS; exit code
+  1 = at least one pairwise diff exceeds the floor.
+- **5-dataset Pareto benchmark suite.** Adult, Higgs-1M, Higgs-11M, Epsilon, and
+  Amazon results (with full reproducibility receipts) are in
+  [`docs/benchmarks/v0.6.0-pareto.md`](docs/benchmarks/v0.6.0-pareto.md).
+
+### Throughput posture
+
+The MLX path matches CatBoost-CPU on correctness but does not yet exceed it on
+wall-clock. Training is 5–16× slower than CatBoost-CPU on the same M3 Max chip
+across the five measured datasets; the gap is structural compute-throughput, not
+launch overhead (falsified at 11M-row scale). Seven throughput-lever research arcs
+were executed and falsified across Sprints 13–46 (DEC-013/014/015/017/019/048/049 in
+[`.claude/state/DECISIONS.md`](.claude/state/DECISIONS.md)). Throughput improvement
+is deferred to v0.8.0, conditioned on a structurally new lever class and a fresh
+kernel-efficiency analysis. The engineering rationale is documented in DEC-049
+OUTCOME and DEC-050.
+
+---
+
+## Install
+
+```bash
+# From PyPI (recommended)
+pip install catboost-mlx
+
+# From source
+git clone https://github.com/RR-AMATOK/catboost-mlx.git
+cd catboost-mlx
+pip install -e python/
+```
+
+---
+
 CatBoost is a machine learning method based on [gradient boosting](https://en.wikipedia.org/wiki/Gradient_boosting) over decision trees.
 
 Main advantages of CatBoost:
@@ -45,10 +91,10 @@ Get Started and Documentation
 --------------
 All CatBoost documentation is available [here](https://catboost.ai/docs/).
 
-Install CatBoost by following the guide for the
+For upstream CatBoost installation guides (CPU + CUDA, multi-platform):
  * [Python package](https://catboost.ai/en/docs/concepts/python-installation)
  * [R-package](https://catboost.ai/en/docs/concepts/r-installation)
- * [Сommand line](https://catboost.ai/en/docs/concepts/cli-installation)
+ * [Command line](https://catboost.ai/en/docs/concepts/cli-installation)
  * [Package for Apache Spark](https://catboost.ai/en/docs/concepts/spark-installation)
 
 Next you may want to explore:
