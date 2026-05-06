@@ -27,9 +27,17 @@ This fork adds a native Apple Silicon GPU backend using [MLX](https://github.com
 
 ## Status
 
-**v0.7.0 — Reproducibility-grade release. First PyPI publication.**
+**v0.7.0 — Reproducibility-grade release. Source-install only; no PyPI publish yet.**
 
-`pip install catboost-mlx`
+PyPI publish is intentionally gated on closing the MLX-vs-CUDA throughput gap (see
+[Throughput posture](#throughput-posture) below and DEC-051 in
+[`.claude/state/DECISIONS.md`](.claude/state/DECISIONS.md)). Install from source:
+
+```bash
+git clone https://github.com/RR-AMATOK/catboost-mlx.git
+cd catboost-mlx
+pip install -e python/
+```
 
 ### What "reproducibility-grade" means
 
@@ -65,14 +73,14 @@ OUTCOME and DEC-050.
 ## Install
 
 ```bash
-# From PyPI (recommended)
-pip install catboost-mlx
-
-# From source
 git clone https://github.com/RR-AMATOK/catboost-mlx.git
 cd catboost-mlx
 pip install -e python/
 ```
+
+PyPI publish is deferred (see [Status](#status) and DEC-051). When the MLX path
+reaches CUDA-class throughput, the package will publish as `catboost-mlx` on PyPI
+(name reservation verified 2026-05-06).
 
 ---
 

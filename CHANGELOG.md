@@ -7,16 +7,18 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) co
 
 ## [0.7.0] — 2026-05-06
 
-v0.7.0 is the first PyPI-published release of catboost-mlx. It ships as a
-**reproducibility-grade** release: bit-equivalent predict output to v0.6.1, three-platform
-parity verification, and a parity oracle CLI — all grounded in shipped artifacts. This is
-the framing DEC-050 names honestly; it is not a backup plan.
+v0.7.0 is a **reproducibility-grade** internal release of catboost-mlx — bit-equivalent
+predict output to v0.6.1, three-platform parity verification, and a parity oracle CLI,
+all grounded in shipped artifacts. The version bump and the artifacts land on `master`;
+PyPI publish is intentionally deferred until the MLX path reaches CUDA-class throughput
+(see [PyPI publish posture](#pypi-publish-posture) below and DEC-051).
 
 ### Added
 
-- **PyPI publication** — `pip install catboost-mlx` now works in a clean Python environment.
-  Apple Silicon M1+ (macOS 13+, Python 3.9+) is the only supported platform for this release.
-  See [Compatibility](#compatibility) below.
+- **Source-install support** — `pip install -e python/` from a local clone works in a
+  clean Python environment. PyPI publish is deferred (see DEC-051). Apple Silicon M1+
+  (macOS 13+, Python 3.9+) is the only supported platform for this release. See
+  [Compatibility](#compatibility) below.
 
 - **Branch-B regression gate** (`python/tests/regression/test_branch_b_regression.py`) —
   CI test that locks v0.7.0 predict output byte-for-byte against the v0.6.1 baselines on
@@ -68,6 +70,19 @@ greenlit. The gating decision is DEC-050.
 v0.7.0 ships as reproducibility-grade by design, not by accident. Bit-exact parity on
 Apple Silicon GPU vs CPU CatBoost is the primary product claim.
 
+### PyPI publish posture
+
+PyPI publish is intentionally deferred until the MLX path reaches CUDA-class throughput
+(per DEC-051, 2026-05-06). The cross-class CUDA writeup
+(`docs/benchmarks/cross-class-cuda-comparison.md`) measures the current MLX/CUDA wall-clock
+gap at 23–88× across the five Pareto datasets; closing that gap requires the structurally-
+new lever class deferred to v0.8.0+ (per DEC-049 OUTCOME and DEC-050).
+
+The `catboost-mlx` PyPI name is reserved (verified available 2026-05-06). v0.7.0 is the
+internal-release version: the version bump, the reproducibility artifacts, and the
+release validation all land on `master`. When throughput parity lands, the next release
+(likely v0.8.x) will be the first PyPI publication.
+
 ### Compatibility
 
 | Requirement | Minimum |
@@ -86,6 +101,7 @@ See [README.md](README.md) for full system requirements.
 |---|---|
 | `.claude/state/DECISIONS.md` — DEC-049 OUTCOME | Closure of the simd_shuffle throughput research arc; all four bounded candidates falsified |
 | `.claude/state/DECISIONS.md` — DEC-050 | Release strategy decision: reproducibility-grade by design |
+| `.claude/state/DECISIONS.md` — DEC-051 | PyPI publish gate amendment: deferred until MLX reaches CUDA-class throughput |
 | `docs/benchmarks/cross-class-cuda-comparison.md` | Three-platform (Mac CPU / Mac MLX / Win CUDA RTX 5070 Ti) bit-equivalence writeup |
 | `docs/benchmarks/v0.6.0-pareto.md` | 5-dataset Pareto benchmark suite; per-dataset logloss tables, determinism contract, limitations |
 | `docs/sprint46/T6/summary.md` | S46 research arc close-out; what S47 inherits |
