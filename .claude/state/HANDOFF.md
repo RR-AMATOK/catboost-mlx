@@ -1,15 +1,29 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-05-05 (**S46 CLOSED — simd_shuffle arc RETIRED; DEC-049 KILL; all 4 candidates falsified**).
-> Branch `mlx/sprint-46-simd-shuffle-research`. All tasks T0–T6 complete. PR pending.
+> Last updated: 2026-05-06 (**S47 ACTIVE — T0 complete, T1 next**).
+> Branch `mlx/sprint-47-release-0.7.0`. T0 scaffold done; plan at `docs/sprint47/sprint-plan.md`.
 
 ---
 
-## v0.7.0 strategy — DECIDED: Option α (reproducibility-grade release)
+## Sprint 47 — v0.7.0 Release Engineering (ACTIVE)
 
-> **DECIDED 2026-05-05 by user.** v0.7.0 ships as a reproducibility-grade release. No throughput delta required. PyPI publish unblocked. Throughput → v0.8.0 conditional on a structurally NEW lever class (not another kernel-internal probe). See **DEC-050** in `.claude/state/DECISIONS.md`.
->
-> **S47 scope:** v0.7.0 release engineering. Version bump (0.6.x → 0.7.0). User-facing CHANGELOG.md + README.md updates with reproducibility-grade framing (build on DEC-047 v0.6.0 framing + DEC-S45-T4 cross-class CUDA bit-equivalence + S45-T5 `catboost-tripoint` parity oracle). PyPI publish workflow validation. No probe code, no kernel changes.
+**Status:** ACTIVE. T0 COMPLETE. Next task: T1 (version bump).
+**Branch:** `mlx/sprint-47-release-0.7.0` (cut from master `7a97db638f`)
+**Plan:** `docs/sprint47/sprint-plan.md`
+**Authority:** DEC-050 (DECIDED 2026-05-05).
+
+DEC-050 resolved the v0.7.0 blocking question: Option α, reproducibility-grade release. No throughput delta required. PyPI publish unblocked. Throughput defers to v0.8.0 on a structurally new lever class.
+
+**Task status:**
+- [x] **T0 SCAFFOLD** — DONE 2026-05-06. `docs/sprint47/sprint-plan.md` created (165 lines). HANDOFF.md updated.
+- [ ] **T1 VERSION BUMP** — `python/catboost_mlx/__init__.py` + `python/setup.py` + any other `__version__` anchors → `0.7.0`. Acceptance: `catboost_mlx.__version__ == "0.7.0"`.
+- [ ] **T2 USER CHANGELOG** — `CHANGELOG.md` `## [0.7.0]` section. Cite Branch-B, tripoint, cross-class CUDA. Honest deferred-throughput statement.
+- [ ] **T3 README POSTURE** — Status section + DEC-047/050 cross-links + NOT-upstream-catboost banner.
+- [ ] **T4 RELEASE VALIDATION** — Branch-B GREEN; tripoint PASS; clean-env wheel install round-trip.
+- [ ] **T5 PYPI PUBLISH** — TestPyPI → PyPI prod → GitHub Release `v0.7.0`.
+- [ ] **T6 CLOSE-OUT** — DEC-050 → IMPLEMENTED; PR squash-merged; `v0.7.0` tag pushed.
+
+**Sequential gates:** T0 → T1 → (T2 ‖ T3 ‖ T4) → T5 → T6.
 
 ---
 
@@ -31,7 +45,7 @@ All four bounded candidates (B, C, D1, D2) from the simd_shuffle redesign resear
 
 **Process finding:** MANDATORY-CODE-INSPECTION rule fired correctly — code inspection of `kernel_sources.h:1374-1407` post-speedup surfaced the processor/owner-lane confusion that prevented a bogus 9.79× claim from reaching master. Process gap: inspection was post-measurement, not pre-sweep. Standing rule added S46-T6: probe specs must include code-inspection sign-off on accumulation invariant BEFORE the sweep runs.
 
-**v0.7.0 gate:** BLOCKING DECISION required (see above).
+**v0.7.0 gate:** DECIDED — Option α (DEC-050). S47 now executing.
 
 ---
 
