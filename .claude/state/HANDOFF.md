@@ -1,31 +1,54 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-05-06 (**S47 ACTIVE — T0 complete, T1 next**).
-> Branch `mlx/sprint-47-release-0.7.0`. T0 scaffold done; plan at `docs/sprint47/sprint-plan.md`.
+> Last updated: 2026-05-06 (**S48 ACTIVE — v0.8.0 throughput research arc kickoff. v2 plan APPROVED. T0 ready to fire.**).
+> Branch `mlx/sprint-48-v0.8.0-arc-kickoff` (cut from master `0c4a7b5d31`). PR #48 merged.
 
 ---
 
-## Sprint 47 — v0.7.0 Reproducibility-Grade Internal Release (ACTIVE)
+## Sprint 48 — v0.8.0 Throughput Research Arc — KICKOFF (ACTIVE)
 
-**Status:** ACTIVE. T0–T4 + T5(rescoped) COMPLETE. Next task: T6 (close-out).
-**Branch:** `mlx/sprint-47-release-0.7.0` (cut from master `7a97db638f`)
-**Plan:** `docs/sprint47/sprint-plan.md`
-**Authority:** DEC-050 (DECIDED 2026-05-05) + **DEC-051** (DECIDED 2026-05-06, amends DEC-050 PyPI clause).
+**Status:** SCAFFOLDED. T0 ready to fire (visionary brainstorm + devils-advocate stress-test + user threshold-lock).
+**Branch:** `mlx/sprint-48-v0.8.0-arc-kickoff` (cut from master `0c4a7b5d31`)
+**Plan:** `docs/sprint48/scoping.md` (v2 panel-synthesis at top, v1 framing preserved below)
+**Authority:** DEC-049 OUTCOME (simd_shuffle RETIRED) + DEC-050 + DEC-051 (PyPI gated on CUDA-class throughput) + v2 plan approved 2026-05-06.
 
-**DEC-051 reframe:** v0.7.0 still ships as reproducibility-grade. The version bump and artifacts land on `master`. **PyPI publish is deferred until the MLX path reaches CUDA-class throughput** (current MLX/CUDA gap: 23–88×). v0.7.0 is the first reproducibility-grade tagged release that lands on master without external publish. The `catboost-mlx` PyPI name is reserved for the future publish.
+**Mode:** RESEARCH SPIKE. **3-day spike + 10-day total v0.8.0 throughput budget** (S48 3 days + S49 ≤7 days, conditional on Outcome A).
+
+**v2 candidate roster (post agent panel review):**
+- **L4** Hybrid two-stage — carryover from v1; only candidate clearing all silicon math
+- **C1** Inverted-index histogram (visionary) — Postgres GIN / Lucene posting-list analogy; sidesteps scatter
+- **C4** Persistent-kernel pipelining (visionary) — Triton/FlashAttention-2 analogy; CPU↔GPU sync topology change
+- **C5** Leaf-wise tree growth (visionary) — LightGBM analogy; product-changing, **needs explicit user-call at T0**
+- **L6** Hybrid CPU+GPU concurrent (silicon-architect) — UMA exploit; Apple Silicon's defining feature unused by L1–L5
+- **PRE-RETIRED** (per silicon-architect): L1 (dispatch explosion), L2 (BW-bound sort), L3 (`mx::segmented_sum` doesn't exist), L5 (76% density at Epsilon)
+
+**Tiered threshold (LOCK at T0):**
+- Hard gate (PyPI per DEC-051): ≤ 5× MLX/CUDA on Higgs-1M iter=1000
+- Stretch: ≤ 3×
+- Stop-loss floor: ≤ 8× after S49 → retire
+
+**Sunk-cost pre-commit rail (APPROVED):** "If T0 produces 0–1 surviving candidates, S48 closes Day 3 with DEC-052 = RETIRED-AT-PREMISE, NO user re-deliberation, v0.8.0 auto-pivots to pre-decided target." Default pivot: ordered boosting (LightGBM evidence shows the 5–10× exists). Confirmed at T0c user-call.
 
 **Task status:**
-- [x] **T0 SCAFFOLD** — DONE 2026-05-06. `docs/sprint47/sprint-plan.md` (165 lines).
-- [x] **T1 VERSION BUMP** — DONE 2026-05-06. `python/catboost_mlx/__init__.py:30` + `python/pyproject.toml:13` → `0.7.0`. Smoke-tested.
-- [x] **T2 USER CHANGELOG** — DONE 2026-05-06. `## [0.7.0]` section cites Branch-B, tripoint, cross-class CUDA, 5-dataset Pareto. PyPI publish posture explicit.
-- [x] **T3 README POSTURE** — DONE 2026-05-06. NOT-upstream-catboost banner + Status section + source-only Install section.
-- [x] **T4 RELEASE VALIDATION** — DONE 2026-05-06. Branch-B GREEN; tripoint smoke PASS (mlx backend); clean-env wheel install round-trip GREEN. `docs/sprint47/T4/release-validation.md`.
-- [x] **T5 RESCOPED** — DONE 2026-05-06. PyPI/TestPyPI upload **CANCELLED** per DEC-051. README + CHANGELOG adjusted to source-install + deferred-publish framing. DEC-051 filed.
-- [ ] **T6 CLOSE-OUT** — DEC-050 + DEC-051 → IMPLEMENTED; HANDOFF/TODOS/CHANGELOG-DEV finalized; PR `mlx/sprint-47-release-0.7.0` → master squash-merged. **No git tag for now.**
+- [ ] **T0 (Day 1) SCAFFOLD + BRAINSTORM + STRESS-GATE** — Scoping doc committed (`docs/sprint48/scoping.md`). DEC-052 OPEN to be filed. @visionary brainstorm + @devils-advocate stress-test on v2 candidate roster. User-call: candidate list approval + threshold lock + pivot-target confirmation + C5 admit/reject decision.
+- [ ] **T1+T2 (Day 2) F_HIST + ROOFLINE** — Fresh f_hist measurement at v0.7.0 baseline (cheap, hours). @silicon-architect roofline + occupancy on survivors (paper only, no probes).
+- [ ] **T3+T5 (Day 3) PROBE-SPECS + DECISION** — Probe-spec drafts for 1-2 finalists (specs only, NOT built). @strategist synthesis. User decision: A (greenlight S49 build) / B (user-call marginal) / C (retire+pivot) / D (retire hard).
 
-**Sequential gates:** T0 → T1 → (T2 ‖ T3 ‖ T4) → T5(rescoped) → T6.
+**Probability-weighted expected outcome:** P(C — Retire+Pivot) ≈ 0.55; P(B — marginal) ≈ 0.25; P(A — measured ≥2×) ≈ 0.20.
 
-**S48+ pre-condition:** PyPI publish reactivates only when MLX/CUDA wall-clock ratio ≤ 5× on Higgs-1M iter=1000 (working hypothesis; threshold to lock at v0.8.0 sprint kickoff per DEC-051).
+**Hard rules:** NO production-code commits in S48. All probe code (if any in S49) `#ifdef`-gated. Branch-B regression GREEN on master throughout.
+
+---
+
+## Sprint 47 — v0.7.0 Reproducibility-Grade Internal Release — CLOSED 2026-05-06
+
+**Status:** CLOSED. PR #48 merged at `0c4a7b5d31`.
+**Branch:** `mlx/sprint-47-release-0.7.0` (deleted post-merge)
+**Authority:** DEC-050 + DEC-051 (PyPI publish DEFERRED until CUDA-class throughput).
+
+**Outcome:** v0.7.0 reproducibility-grade INTERNAL release on master. No PyPI publish. No git tag. `catboost-mlx` PyPI name reserved.
+
+**S47 ships (all on master at `0c4a7b5d31`):** 7-task structure (T0 sprint plan + T1 version bump + T2 user CHANGELOG + T3 README posture + T4 release validation + T5 rescoped DEC-051 + T6 close-out). Branch-B regression GREEN locally; tripoint smoke PASS; clean-env wheel install + train+predict round-trip GREEN.
 
 ---
 
