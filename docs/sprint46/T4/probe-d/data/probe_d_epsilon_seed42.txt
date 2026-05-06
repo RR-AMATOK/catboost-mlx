@@ -1,0 +1,43 @@
+bench_boosting — CatBoost-MLX library-path benchmark (TODO-014)
+================================================================
+rows=400000  features=2000  classes=2  depth=6  iters=12  bins=128
+lr=0.1000  l2=3.0000  seed=42  approxDim=1  onehot=0
+----------------------------------------------------------------
+Generating synthetic dataset...
+Dataset: 400000 rows x 2000 features (500 uint32 cols), 254000 total bin-features
+Beginning 12 boosting iterations...
+
+[per-kernel-profile] Enabled — inserting mx::eval() sync points.
+  WARNING: reported ms are UPPER BOUNDS (kernel overlap suppressed).
+
+
+--- Running (T2 sort-by-bin, production default) ---
+  iter    0  time= 2134.4 ms  loss=0.692410
+  iter    9  time= 2073.9 ms  loss=0.689298
+  iter   11  time= 2088.0 ms  loss=0.688994
+
+================================================================
+Timing Summary
+----------------------------------------------------------------
+  iter-0 (cold start):    2134.4 ms
+  warm mean (  11 iters):   2081.3 ms
+  warm min:               2065.5 ms
+  warm max:               2098.0 ms
+
+  Final loss: 0.68899357
+  BENCH_FINAL_LOSS=0.68899357
+================================================================
+
+=== Per-kernel profile (--per-kernel-profile; UPPER BOUNDS due to sync) ===
+WARNING: mx::eval() sync points disable MLX kernel overlap. Reported
+         per-kernel ms are UPPER BOUNDS on non-sync production timing.
+         Stats: 10%-trimmed mean/stdev (Metal scheduling jitter suppressed)
+         Warm iters = 11 (iter-0 excluded)
+
+  derivatives      mean=  0.769 ms   stdev= 0.061 ms  ( 8.0%)  [wall-clock floor: sub-ms jitter]
+  tree_support     mean= 17.657 ms   stdev= 0.281 ms  ( 1.6%)
+  histogram        mean=2040.928 ms   stdev= 6.065 ms  ( 0.3%)
+  suffix_sum       mean=  1.943 ms   stdev= 0.065 ms  ( 3.4%)
+  split_score      mean=  3.068 ms   stdev= 0.095 ms  ( 3.1%)
+  leaf_estimation  mean=  4.118 ms   stdev= 0.093 ms  ( 2.3%)
+  ------ sum-of-per-kernel=2068.483 ms  vs iter_total=2081.179 ms  (delta=-12.696 ms, -0.6%)

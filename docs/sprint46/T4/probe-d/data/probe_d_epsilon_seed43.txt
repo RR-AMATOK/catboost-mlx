@@ -1,0 +1,43 @@
+bench_boosting — CatBoost-MLX library-path benchmark (TODO-014)
+================================================================
+rows=400000  features=2000  classes=2  depth=6  iters=12  bins=128
+lr=0.1000  l2=3.0000  seed=43  approxDim=1  onehot=0
+----------------------------------------------------------------
+Generating synthetic dataset...
+Dataset: 400000 rows x 2000 features (500 uint32 cols), 254000 total bin-features
+Beginning 12 boosting iterations...
+
+[per-kernel-profile] Enabled — inserting mx::eval() sync points.
+  WARNING: reported ms are UPPER BOUNDS (kernel overlap suppressed).
+
+
+--- Running (T2 sort-by-bin, production default) ---
+  iter    0  time= 2143.5 ms  loss=0.692406
+  iter    9  time= 2063.5 ms  loss=0.689275
+  iter   11  time= 2087.3 ms  loss=0.688968
+
+================================================================
+Timing Summary
+----------------------------------------------------------------
+  iter-0 (cold start):    2143.5 ms
+  warm mean (  11 iters):   2084.5 ms
+  warm min:               2063.5 ms
+  warm max:               2106.3 ms
+
+  Final loss: 0.68896824
+  BENCH_FINAL_LOSS=0.68896824
+================================================================
+
+=== Per-kernel profile (--per-kernel-profile; UPPER BOUNDS due to sync) ===
+WARNING: mx::eval() sync points disable MLX kernel overlap. Reported
+         per-kernel ms are UPPER BOUNDS on non-sync production timing.
+         Stats: 10%-trimmed mean/stdev (Metal scheduling jitter suppressed)
+         Warm iters = 11 (iter-0 excluded)
+
+  derivatives      mean=  0.782 ms   stdev= 0.047 ms  ( 6.0%)  [wall-clock floor: sub-ms jitter]
+  tree_support     mean= 17.898 ms   stdev= 0.412 ms  ( 2.3%)
+  histogram        mean=2043.334 ms   stdev= 6.004 ms  ( 0.3%)
+  suffix_sum       mean=  1.966 ms   stdev= 0.057 ms  ( 2.9%)
+  split_score      mean=  3.059 ms   stdev= 0.154 ms  ( 5.0%)  [WARN: stdev > 5%]
+  leaf_estimation  mean=  4.111 ms   stdev= 0.107 ms  ( 2.6%)
+  ------ sum-of-per-kernel=2071.150 ms  vs iter_total=2084.376 ms  (delta=-13.226 ms, -0.6%)

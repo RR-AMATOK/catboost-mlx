@@ -1,0 +1,43 @@
+bench_boosting — CatBoost-MLX library-path benchmark (TODO-014)
+================================================================
+rows=400000  features=2000  classes=2  depth=6  iters=12  bins=128
+lr=0.1000  l2=3.0000  seed=44  approxDim=1  onehot=0
+----------------------------------------------------------------
+Generating synthetic dataset...
+Dataset: 400000 rows x 2000 features (500 uint32 cols), 254000 total bin-features
+Beginning 12 boosting iterations...
+
+[per-kernel-profile] Enabled — inserting mx::eval() sync points.
+  WARNING: reported ms are UPPER BOUNDS (kernel overlap suppressed).
+
+
+--- Running (T2 sort-by-bin, production default) ---
+  iter    0  time= 2147.1 ms  loss=0.692404
+  iter    9  time= 2086.5 ms  loss=0.689266
+  iter   11  time= 2087.3 ms  loss=0.688958
+
+================================================================
+Timing Summary
+----------------------------------------------------------------
+  iter-0 (cold start):    2147.1 ms
+  warm mean (  11 iters):   2090.0 ms
+  warm min:               2074.8 ms
+  warm max:               2106.8 ms
+
+  Final loss: 0.68895841
+  BENCH_FINAL_LOSS=0.68895841
+================================================================
+
+=== Per-kernel profile (--per-kernel-profile; UPPER BOUNDS due to sync) ===
+WARNING: mx::eval() sync points disable MLX kernel overlap. Reported
+         per-kernel ms are UPPER BOUNDS on non-sync production timing.
+         Stats: 10%-trimmed mean/stdev (Metal scheduling jitter suppressed)
+         Warm iters = 11 (iter-0 excluded)
+
+  derivatives      mean=  0.825 ms   stdev= 0.040 ms  ( 4.9%)
+  tree_support     mean= 17.845 ms   stdev= 0.390 ms  ( 2.2%)
+  histogram        mean=2049.195 ms   stdev= 6.907 ms  ( 0.3%)
+  suffix_sum       mean=  1.909 ms   stdev= 0.065 ms  ( 3.4%)
+  split_score      mean=  3.029 ms   stdev= 0.117 ms  ( 3.9%)
+  leaf_estimation  mean=  4.134 ms   stdev= 0.117 ms  ( 2.8%)
+  ------ sum-of-per-kernel=2076.937 ms  vs iter_total=2089.787 ms  (delta=-12.849 ms, -0.6%)

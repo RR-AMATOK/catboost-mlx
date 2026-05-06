@@ -1,20 +1,35 @@
 # Active Tasks — CatBoost-MLX
 
 > Coverage: Sprints 0–15 reconstructed from git/agent-memory on 2026-04-15. Sprint 16+ is source of truth.
-> Last header refresh: 2026-05-04 (S45 CLOSED — H-Dispatch falsified; DEC-048 KILL; T4+T5 shipped; branch `mlx/sprint-45-perf-spike-and-decide`.)
+> Last header refresh: 2026-05-05 (S46 CLOSED — simd_shuffle arc RETIRED; DEC-049 KILL; all 4 candidates falsified; branch `mlx/sprint-46-simd-shuffle-research`.)
 
-## Sprint 46 — simd_shuffle Research Arc — PENDING
+## Sprint 47 — v0.7.0 release engineering (reproducibility-grade)
 
-**Branch**: `mlx/sprint-46-simd-shuffle-research` (not yet cut)
-**Authoritative records**: TBD at sprint open
-**Framing**: FRESH investigation. NOT a throughput-epic continuation. DEC-048 retires the W1/W2/W3 throughput-pivot framing entirely. S46 opens a new scope under a new DEC.
-**Pattern**: spike-then-commit (same as S45). S46 = scoping/research sprint only. No production kernel commits. Engineering window (S47+) opens only if S46 delivers a viable plan with kill criteria.
+**Decision:** Option α DECIDED 2026-05-05 by user (DEC-050). v0.7.0 ships as reproducibility-grade. No throughput delta required. Throughput → v0.8.0 on structurally new lever.
 
-- [ ] **S46-T0 SCAFFOLD** — Cut branch; draft sprint plan with single-hypothesis framing for simd_shuffle_xor redesign. Cite S19-01c (DEC-020) as the attribution source. State the kill criteria upfront. Apply MANDATORY-CODE-INSPECTION: read `catboost/mlx/kernels/hist.metal` simd_shuffle loop end-to-end before writing the hypothesis.
-- [ ] **S46-T1 FEASIBILITY PROBE** — Read the S20 failure mode (why did the Sprint 20 shuffle redesign not ship?). Research warp-shuffle reduction strategies applicable to Metal's SIMD model. Determine whether the `simd_shuffle_xor` serial chain is restructurable without breaking accumulation-order determinism (Branch-B gate constraint).
-- [ ] **S46-T2 DESIGN PROPOSAL** — Proposed alternative kernel architecture. Theoretical speedup estimate with stated assumptions. Branch-B bit-equivalence preservation plan.
-- [ ] **S46-T3 ENGINEERING PLAN** — One-sprint scope for S47 engineering (if viable). Kill criterion: if the feasibility probe shows no viable reduction strategy, DEC-049 = HALT; v0.7.0 throughput path permanently closed.
-- [ ] **S46-T4 CLOSE-OUT** — New DEC (DEC-049) filed regardless of direction. HANDOFF/TODOS/CHANGELOG-DEV updated. PR.
+**Branch (proposed):** `mlx/sprint-47-release-0.7.0`
+
+- [ ] **S47-T0 SCAFFOLD** — Branch cut, `docs/sprint47/sprint-plan.md`, sprint scope locked to release engineering.
+- [ ] **S47-T1 VERSION BUMP** — `python/catboost_mlx/__init__.py` + `python/setup.py` + any other version anchors → 0.7.0. Verify via `pip install -e .` smoke test.
+- [ ] **S47-T2 USER-FACING CHANGELOG** — `CHANGELOG.md` v0.7.0 entry. Reproducibility-grade framing. Cite Branch-B regression (S45-T1), cross-class CUDA bit-equivalence (S45-T4), `catboost-tripoint` parity oracle (S45-T5). Document deferred throughput → v0.8.0 honestly.
+- [ ] **S47-T3 README POSTURE** — README.md "Status" section update. Cross-link DEC-047 + DEC-050. Make explicit that v0.7.0 = reproducibility-grade by design, not by accident.
+- [ ] **S47-T4 RELEASE VALIDATION** — Branch-B regression GREEN; `catboost-tripoint` smoke pass on Higgs-1M + Epsilon; sample model train+predict round-trip on conda-installed wheel.
+- [ ] **S47-T5 PYPI PUBLISH** — Build wheel, upload to TestPyPI, validate install + import + predict, then PyPI proper. GitHub Release v0.7.0 with reproducibility-grade narrative.
+- [ ] **S47-T6 CLOSE-OUT** — DECISIONS.md DEC-050 → IMPLEMENTED, HANDOFF/TODOS/CHANGELOG-DEV updated, single PR `mlx/sprint-47-release-0.7.0` → master. v0.7.0 lands on PyPI.
+
+## Sprint 46 — simd_shuffle Research Arc — CLOSED
+
+**Branch**: `mlx/sprint-46-simd-shuffle-research`
+**Authoritative records**: `docs/sprint46/T5/decision.md` + `docs/sprint46/T6/summary.md`
+**Outcome**: DEC-049 RETIRED — Outcome C (HALT). All 4 candidates falsified at production shape. No production code changed. Negative result documented with quantitative evidence.
+
+- [x] **S46-T0 SCAFFOLD** — DONE. Branch cut, `docs/sprint46/sprint-plan.md`, DEC-049 OPEN filed.
+- [x] **S46-T1 CURRENT-STATE** — DONE. `docs/sprint46/T1/current-state.md`. f_hist=0.9772 at Epsilon; src-broadcast chain mechanics documented with file:line citations.
+- [x] **S46-T2 4-CANDIDATE FEASIBILITY** — DONE. `docs/sprint46/T2/feasibility.md`. Candidate A retired at T2 (DEC-025 re-entry policy). B, C, D survived to T3.
+- [x] **S46-T3 PROBE-D SPEC** — DONE. `docs/sprint46/T3/probe-d-spec.md`. D1 erratum: 128 KB TG memory — retired structurally. D2 specified.
+- [x] **S46-T4 PROBE-D EXECUTION** — DONE. Build-env fix (CMakeLists.txt `BUILD_S46_PROBES=ON`). D2 dispatcher rewrite (`mx::add → concatenate`). 27-run sweep: B=9.79× BOGUS (parity FAIL iter-0), C=RETIRED (DEC-023), D1=RETIRED (TG ceiling), D2=1.006× (parity FAIL). Raw data: `docs/sprint46/T4/probe-d/results.json`.
+- [x] **S46-T5 DECISION GATE (DEC-049)** — COMPLETED 2026-05-05. Outcome C — RETIRED. `docs/sprint46/T5/decision.md`. Probe B processor/owner-lane bug diagnosed at `kernel_sources.h:1374-1407`. Structural impossibility argument filed.
+- [x] **S46-T6 CLOSE-OUT** — COMPLETED 2026-05-05. DEC-049 OUTCOME appended. LESSONS-LEARNED entries filed (project + Frameworks). HANDOFF/TODOS/CHANGELOG-DEV updated. PR `mlx/sprint-46-simd-shuffle-research` → master prepared.
 
 ## Sprint 45 — Performance Spike: H-Dispatch Probe + Cross-Class Lock — CLOSED
 

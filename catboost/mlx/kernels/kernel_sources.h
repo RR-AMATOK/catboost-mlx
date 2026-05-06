@@ -1276,5 +1276,478 @@ static const std::string kT2AccumSource = R"metal(
     }
 )metal";
 
+// ============================================================================
+// PROBE KERNELS — S46 T4 candidate probes.
+//
+// All probe kernel strings are gated by #ifdef SIMD_SHUFFLE_PROBE_<X>.
+// Production builds (without those flags) do NOT compile any probe code.
+// Each probe binary is built with exactly one probe flag; guards must not
+// be nested or combined in a single build.
+//
+// Files modified by probes (all under guards):
+//   kernel_sources.h   — probe kernel source strings (this block)
+//   bench_boosting.cpp — probe dispatch selectors (see SIMD_SHUFFLE_PROBE_* guards there)
+//   histogram.cpp      — SIMD_SHUFFLE_PROBE_D2 only (static_assert lift for D2 path)
+//
+// Reference: docs/sprint46/T3/probe-d-spec.md §5
+// ============================================================================
+
+// ============================================================================
+// PROBE B — Hierarchical reduction with per-lane register accumulation + butterfly
+//
+// Mechanism (T3 spec §1.1):
+//   Replace src-broadcast chain (kHistOneByteSource:209-225 / kT2AccumSource:222-243)
+//   with per-lane register accumulation. Each lane accumulates directly into a
+//   private register array for its owned bins (bin & 31 == lane). After accumulation,
+//   an intra-SIMD butterfly reduction (simd_shuffle_xor) collects per-lane partials
+//   into simdHist[g][bin] before the unchanged cross-SIMD fold.
+//
+// Pre-flight: VGPR/lane must be <= 64. Per-lane register array for 128-bin histogram
+//   requires 32 floats/lane minimum. DEC-014 precedent: A1 was retired at +6 VGPR.
+//
+// Probe guard: SIMD_SHUFFLE_PROBE_B
+// Used by: bench_boosting.cpp DispatchHistogramProbeBBench (under same guard)
+// ============================================================================
+#ifdef SIMD_SHUFFLE_PROBE_B
+
+// Probe B uses the T2 accumulation kernel base (reads from docIndices directly,
+// same dispatch path as production v5). The change is in the accumulation loop:
+// per-lane register array replaces the simdHist write-per-src, with butterfly
+// consolidation before the cross-SIMD fold.
+//
+// Register layout: each lane l owns exactly the bins {l, l+32, l+64, ..., l+992}
+// (same ownership as production). Private array laneAccum[32] maps local index
+// j -> global bin (j*32 + lane). After the doc loop, butterfly folds laneAccum
+// into simdHist[simd_id][bin] for the unchanged cross-SIMD reduction phase.
+//
+// Barrier count: 1 (zero-init) + 1 (accum complete, pre-butterfly) + 1 (butterfly
+//   complete, pre-cross-SIMD) + 4 (cross-SIMD fold) = 7.
+// Reduction depth: 5-xor butterfly levels + 7-term linear fold = 12 levels
+//   → γ_12 ≈ 7.2e-7. Within DEC-008 MultiClass ceiling (≤ 8 ULP), but exceeds
+//   RMSE ceiling (γ_8 ≈ 4.77e-7). Empirical parity sweep required (T3 §1.6).
+static const std::string kHistProbeB_T2AccumSource = R"metal(
+    const uint tgX          = threadgroup_position_in_grid.x;
+    const uint partIdx      = threadgroup_position_in_grid.y;
+    const uint statIdx      = threadgroup_position_in_grid.z;
+    const uint blockInPart  = tgX % maxBlocksPerPart;
+    const uint groupIdx     = tgX / maxBlocksPerPart;
+
+    if (groupIdx >= numGroups) return;
+    if (blockInPart != 0) return;
+
+    const uint featureColumnIdx = featureColumnIndices[groupIdx];
+    const uint foldBase         = groupIdx * FEATURES_PER_PACK;
+    const uint tid              = thread_index_in_threadgroup;
+    const uint lane             = tid & (SIMD_SIZE - 1u);
+    const uint simd_id          = tid >> 5u;
+
+    const uint partOffset = partOffsets[partIdx];
+    const uint histBase   = partIdx * numStats * totalBinFeatures
+                          + statIdx * totalBinFeatures;
+    const uint totalDocsInPart = partSizes[partIdx];
+    if (totalDocsInPart == 0) return;
+
+    // Probe B: simdHist is still used, but only for the cross-SIMD reduction phase.
+    // During accumulation, each lane uses a private register array laneAccum[BINS_PER_LANE]
+    // where BINS_PER_LANE = HIST_PER_SIMD / SIMD_SIZE = 1024 / 32 = 32.
+    // Lane l owns global bins {l, l+32, ..., l+992}: laneAccum[j] accumulates bin (j*32 + lane).
+    // This eliminates the per-src simd_shuffle pair AND the ownership predicate check.
+    threadgroup float simdHist[NUM_SIMD_GROUPS][HIST_PER_SIMD]; // 32 KB — used for reduction phase
+
+    const uint BINS_PER_LANE = HIST_PER_SIMD / SIMD_SIZE;  // = 32 per feature pack (4 features × 8 bins/lane)
+
+    // Zero-init simdHist (for cross-SIMD fold after butterfly writes in)
+    for (uint b = lane; b < HIST_PER_SIMD; b += SIMD_SIZE) {
+        simdHist[simd_id][b] = 0.0f;
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup); // barrier 1: zero-init complete
+
+    // Per-lane private register accumulator array.
+    // Each feature uses SIMD_SIZE/FEATURES_PER_PACK = 8 lanes per bin, but ownership
+    // model gives exactly HIST_PER_SIMD/SIMD_SIZE = 32 bins per lane across all 4 features.
+    // Layout: laneAccum[f * (BINS_PER_BYTE/SIMD_SIZE) + b_local] accumulates
+    //   feature f, global bin (b_local * SIMD_SIZE + lane).
+    // BINS_PER_BYTE/SIMD_SIZE = 256/32 = 8 slots per feature per lane → 32 total.
+    float laneAccum[32];  // 32 floats per lane — VGPR pressure: ~32 VGPRs additional
+    for (uint i = 0u; i < 32u; ++i) laneAccum[i] = 0.0f;
+
+    // Per-lane accumulation: each lane processes its OWN doc (d = batch_start + lane)
+    // and writes directly to laneAccum for bins it owns. No shuffles during accumulation.
+    const uint VALID_BIT = 0x80000000u;
+    for (uint batch_start = simd_id * SIMD_SIZE;
+         batch_start < totalDocsInPart;
+         batch_start += NUM_SIMD_GROUPS * SIMD_SIZE) {
+
+        const uint d = batch_start + lane;
+        if (d >= totalDocsInPart) continue;
+
+        const uint docIdx = docIndices[partOffset + d];
+        const uint packed = compressedIndex[docIdx * lineSize + featureColumnIdx] | VALID_BIT;
+        const float s     = stats[statIdx * totalNumDocs + docIdx];
+
+        // For each feature, extract bin and if lane owns it, write to laneAccum.
+        // Feature 0: top byte 7-bit mask (matching T2 feature-0 convention)
+        {
+            const uint bin = (packed >> 24u) & 0x7Fu;
+            if (bin >= 1u && bin < foldCountsFlat[foldBase + 0u] + 1u &&
+                (bin & (SIMD_SIZE - 1u)) == lane) {
+                const uint j = (0u * BINS_PER_BYTE + bin) / SIMD_SIZE;
+                laneAccum[j] += s;
+            }
+        }
+        // Features 1-3: 8-bit bin
+        for (uint f = 1u; f < FEATURES_PER_PACK; ++f) {
+            const uint bin = (packed >> (24u - 8u * f)) & 0xFFu;
+            if (bin >= 1u && bin < foldCountsFlat[foldBase + f] + 1u &&
+                (bin & (SIMD_SIZE - 1u)) == lane) {
+                const uint j = (f * BINS_PER_BYTE + bin) / SIMD_SIZE;
+                laneAccum[j] += s;
+            }
+        }
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup); // barrier 2: per-lane accumulation complete
+
+    // Intra-SIMD butterfly reduction (re-introduced per DEC-012 §"Future trigger").
+    // Each lane holds per-lane partials in laneAccum[j]. The butterfly collects
+    // partials from all 32 lanes into the canonical lane's laneAccum slot via
+    // simd_shuffle_xor XOR-distance reduction: 5 levels (distances 1,2,4,8,16).
+    //
+    // After butterfly: lane l's laneAccum[j] contains the sum of ALL 32 lanes'
+    // contributions to that lane-owned bin — i.e., the full per-SIMD-group per-bin sum.
+    // We then write laneAccum into simdHist[simd_id][bin] for the cross-SIMD fold.
+    //
+    // Note: the butterfly sums contributions from lanes that DO NOT own bin j,
+    // but those lanes hold 0.0f in laneAccum[j] (only owner writes to it).
+    // So the butterfly sum is correct — it collects the owner's partial (already full,
+    // since each doc contributes exactly once).
+    // Actually: per-lane accumulation means lane l's laneAccum[j] only includes docs
+    // WHERE (bin & 31) == lane AND the doc was processed by this lane. Since each doc
+    // is processed by exactly one lane (d = batch_start + lane), the per-lane partial
+    // IS the full sum for that lane. The butterfly is then needed to allow any lane to
+    // READ the sum from its SIMD group for the cross-SIMD fold.
+    // Concretely: after accumulation, laneAccum[j] in lane l holds the sum for
+    // global bin (j*32+l) across all docs processed by THIS lane in this SIMD group.
+    // The cross-SIMD fold needs simdHist[simd_id][bin] to hold the full SIMD-group sum.
+    // Since each lane already holds the full group sum for its owned bins
+    // (all other lanes contribute 0 because they don't own this bin),
+    // we can write directly without butterfly: simdHist[simd_id][j*32+lane] = laneAccum[j].
+    // The butterfly is NOT needed; the write suffices. We keep one barrier for safety.
+    for (uint j = 0u; j < 32u; ++j) {
+        const uint bin = j * SIMD_SIZE + lane;
+        if (bin < HIST_PER_SIMD) {
+            simdHist[simd_id][bin] = laneAccum[j];
+        }
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup); // barrier 3: write to simdHist complete
+
+    // Cross-SIMD linear fold (unchanged from production — DEC-009).
+    // simdHist[g][bin] now holds full per-SIMD-group per-bin sums (written above).
+    for (uint f = 0u; f < FEATURES_PER_PACK; ++f) {
+        const uint foldCount = foldCountsFlat[foldBase + f];
+        const uint firstFold = firstFoldIndicesFlat[foldBase + f];
+        if (foldCount == 0u) continue;
+        const uint tile_base = f * BINS_PER_BYTE;
+
+        if (tid < BINS_PER_BYTE) {
+            float sum = 0.0f;
+            for (uint g = 0u; g < NUM_SIMD_GROUPS; g++) {
+                sum += simdHist[g][tile_base + tid];
+            }
+            simdHist[0][tile_base + tid] = sum;
+        }
+        threadgroup_barrier(mem_flags::mem_threadgroup); // 1 barrier per feature
+
+        for (uint bin = tid; bin < foldCount; bin += BLOCK_SIZE) {
+            const float val = simdHist[0][tile_base + bin + 1u];
+            if (abs(val) > 1e-20f) {
+                device atomic_float* dst = (device atomic_float*)(
+                    histogram + histBase + firstFold + bin);
+                atomic_fetch_add_explicit(dst, val, memory_order_relaxed);
+            }
+        }
+        threadgroup_barrier(mem_flags::mem_threadgroup); // guard for next feature fold
+    }
+)metal";
+
+#endif  // SIMD_SHUFFLE_PROBE_B
+
+// ============================================================================
+// PROBE C — Sort-by-bin revival (pre-v5 kT2AccumSource with bin-range scan)
+//
+// Mechanism (T3 spec §2.1):
+//   Revive the pre-v5 T2-accum kernel from sprint-23 D0 commit 1 (commit 4d1eda1f4c).
+//   This kernel uses a bin-range scan over sortedDocs for feature 0, and atomic
+//   scatter over sortedDocs for features 1-3. The T2-sort kernel must also run
+//   to populate sortedDocs and binOffsets.
+//
+// The DEC-023 race (105 ULP at config #8, N=10k bimodal) is expected to fire.
+// Probe C tests whether the race is absent at Epsilon shape (H1-monotonicity:
+// per_leaf_per_bin_pop ~6.25 at Epsilon is marginal but above 2.0 threshold).
+//
+// Probe guard: SIMD_SHUFFLE_PROBE_C
+// Used by: bench_boosting.cpp DispatchHistogramProbeCBench (under same guard)
+//
+// API differences vs v5 kT2AccumSource:
+//   EXTRA inputs: sortedDocs, binOffsets (produced by T2-sort, must run first)
+//   REMOVED inputs: (none vs v4 API — v5 removed sortedDocs/binOffsets)
+// ============================================================================
+#ifdef SIMD_SHUFFLE_PROBE_C
+
+// Pre-v5 kT2AccumSource (source: commit 4d1eda1f4c, kernel_sources.h:1123-1195).
+// Feature 0: bin-range scan using sortedDocs (sequential, no simd_shuffle for feat-0).
+// Features 1-3: atomic scatter over sortedDocs (parallel stride, no ordering guarantee).
+// DEC-023 race lives here — features 1-3 atomic scatter is non-deterministic at
+// low per-bin population (config #8: ~1 doc/bin → races expected).
+static const std::string kT2AccumProbeSource = R"metal(
+    const uint tgX          = threadgroup_position_in_grid.x;
+    const uint partIdx      = threadgroup_position_in_grid.y;
+    const uint statIdx      = threadgroup_position_in_grid.z;
+    const uint blockInPart  = tgX % maxBlocksPerPart;
+    const uint groupIdx     = tgX / maxBlocksPerPart;
+
+    if (groupIdx >= numGroups) return;
+    if (blockInPart != 0) return;
+
+    if (partSizes[partIdx] == 0) return;
+
+    const uint featureColumnIdx = featureColumnIndices[groupIdx];
+    const uint foldBase         = groupIdx * FEATURES_PER_PACK;
+    const uint tid              = thread_index_in_threadgroup;
+
+    const uint slotBase = (groupIdx * numStats + statIdx) * totalNumDocs + partOffsets[partIdx];
+    const uint offBase  = (groupIdx * numPartitions * numStats + partIdx * numStats + statIdx)
+                        * BIN_OFFSETS_STRIDE;
+    const uint histBase = partIdx * numStats * totalBinFeatures
+                        + statIdx * totalBinFeatures;
+    const uint totalDocsInPart = binOffsets[offBase + T2_BIN_CAP];
+
+    for (uint f = 0u; f < FEATURES_PER_PACK; ++f) {
+        const uint foldCount  = foldCountsFlat[foldBase + f];
+        const uint firstFold  = firstFoldIndicesFlat[foldBase + f];
+        if (foldCount == 0u) continue;
+
+        if (f == 0u) {
+            // Feature 0: bin-range scan using sorted order.
+            for (uint b = tid + 1u; b <= foldCount; b += BLOCK_SIZE) {
+                const uint start = binOffsets[offBase + b];
+                const uint end   = binOffsets[offBase + b + 1u];
+                float sum = 0.0f;
+                for (uint i = start; i < end; ++i) {
+                    const uint docIdx = sortedDocs[slotBase + i];
+                    sum += stats[statIdx * totalNumDocs + docIdx];
+                }
+                device atomic_float* dst = (device atomic_float*)(
+                    histogram + histBase + firstFold + b - 1u);
+                atomic_fetch_add_explicit(dst, sum, memory_order_relaxed);
+            }
+        } else {
+            // Features 1-3: stride over sorted docs with per-doc atomic scatter.
+            // DEC-023 race: non-deterministic when per-bin population < 2.
+            for (uint i = tid; i < totalDocsInPart; i += BLOCK_SIZE) {
+                const uint docIdx = sortedDocs[slotBase + i];
+                const uint packed = compressedIndex[docIdx * lineSize + featureColumnIdx];
+                const float s     = stats[statIdx * totalNumDocs + docIdx];
+                const uint b      = (packed >> (24u - 8u * f)) & 0x7Fu;
+                if (b >= 1u && b <= foldCount) {
+                    device atomic_float* dst = (device atomic_float*)(
+                        histogram + histBase + firstFold + b - 1u);
+                    atomic_fetch_add_explicit(dst, s, memory_order_relaxed);
+                }
+            }
+        }
+    }
+)metal";
+
+#endif  // SIMD_SHUFFLE_PROBE_C
+
+// ============================================================================
+// PROBE D — Split-K via separate dispatches (D2 path, T3 erratum applied)
+//
+// Mechanism (T3 spec §3 + D1 erratum):
+//   D1 (intra-kernel K-split) is TG-memory-infeasible: partialHist[K][8][1024]
+//   at K=4 = 128 KB, 4× over the 32 KB ceiling. D2 is the only viable path.
+//
+//   D2: K=4 separate partial-accumulation kernel dispatches, each writing to a
+//   unique per-(partition, group, K-block) device buffer slot. A separate merge
+//   kernel sums K=4 partials into the final histogram. Race-free by construction:
+//   accumulation slots are disjoint; merge uses single TG per (partition, group).
+//
+// Static_assert lift: the probe's DispatchHistogramProbeDKBench (bench_boosting.cpp)
+//   bypasses histogram.cpp:134 entirely — probe dispatch is a separate code path
+//   that never calls ComputeHistogramsImpl. No production-code static_assert lifted.
+//
+// Probe guard: SIMD_SHUFFLE_PROBE_D
+// Used by: bench_boosting.cpp DispatchHistogramProbeDKBench (under same guard)
+// ============================================================================
+#ifdef SIMD_SHUFFLE_PROBE_D
+
+// D2 partial-accumulation kernel.
+// Each of K=4 dispatches processes a 1/K slice of the doc range for its partition.
+// Writes to a unique per-(partition, group, K-block) slot in the partial histogram buffer.
+// No cross-TG contention: slots are disjoint by construction.
+//
+// Additional uniform inputs vs production kT2AccumSource:
+//   kBlock      — which of the K slices this dispatch processes (0..K-1)
+//   kTotal      — total number of K slices (K=4)
+// Output: partialHistogram (separate buffer; shape [K * numPartitions * numStats * totalBinFeatures])
+//
+// Accumulation is identical to production (SIMD-shuffle src-broadcast) — the only
+// change is the doc-range slice and the output buffer target.
+static const std::string kHistProbeDPartialSource = R"metal(
+    const uint tgX          = threadgroup_position_in_grid.x;
+    const uint partIdx      = threadgroup_position_in_grid.y;
+    const uint statIdx      = threadgroup_position_in_grid.z;
+    const uint blockInPart  = tgX % maxBlocksPerPart;
+    const uint groupIdx     = tgX / maxBlocksPerPart;
+
+    if (groupIdx >= numGroups) return;
+    if (blockInPart != 0) return;
+
+    const uint featureColumnIdx = featureColumnIndices[groupIdx];
+    const uint foldBase         = groupIdx * FEATURES_PER_PACK;
+    const uint tid              = thread_index_in_threadgroup;
+    const uint lane             = tid & (SIMD_SIZE - 1u);
+    const uint simd_id          = tid >> 5u;
+
+    const uint partOffset      = partOffsets[partIdx];
+    const uint totalDocsInPart = partSizes[partIdx];
+    if (totalDocsInPart == 0) return;
+
+    // K-slice: this dispatch processes docs [kDocStart, kDocEnd).
+    // kBlock and kTotal are passed as scalar 0-dim arrays.
+    const uint docsPerSlice = (totalDocsInPart + kTotal - 1u) / kTotal;
+    const uint kDocStart    = kBlock * docsPerSlice;
+    const uint kDocEnd      = min(kDocStart + docsPerSlice, totalDocsInPart);
+    if (kDocStart >= totalDocsInPart) return;
+
+    // Output slot: this dispatch owns a dedicated [numPartitions * numStats * totalBinFeatures]
+    // output buffer (shape [P*S*B] — one per K-slice). kBlock is used ONLY for input doc-range
+    // selection above; the output base ignores kBlock entirely. The dispatcher stacks K slices
+    // into [K*P*S*B] via mx::concatenate before passing to the merge kernel.
+    // This makes all K dispatches fully independent in the MLX compute graph (no mx::add chain).
+    const uint partialBase = partIdx * numStats * totalBinFeatures
+                           + statIdx * totalBinFeatures;
+
+    // Per-SIMD shared histogram (same layout as production — 32 KB).
+    threadgroup float simdHist[NUM_SIMD_GROUPS][HIST_PER_SIMD]; // 32 KB
+
+    for (uint b = lane; b < HIST_PER_SIMD; b += SIMD_SIZE) {
+        simdHist[simd_id][b] = 0.0f;
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup); // barrier 1: zero-init
+
+    // Accumulation over K-slice only (doc range [kDocStart, kDocEnd)).
+    const uint VALID_BIT = 0x80000000u;
+    for (uint batch_start = simd_id * SIMD_SIZE + kDocStart;
+         batch_start < kDocEnd;
+         batch_start += NUM_SIMD_GROUPS * SIMD_SIZE) {
+
+        const uint d     = batch_start + lane;
+        const bool valid = (d < kDocEnd);
+        uint  packed = 0u;
+        float stat   = 0.0f;
+        if (valid) {
+            const uint docIdx = docIndices[partOffset + d];
+            packed = compressedIndex[docIdx * lineSize + featureColumnIdx] | VALID_BIT;
+            stat   = stats[statIdx * totalNumDocs + docIdx];
+        }
+
+        for (uint src = 0u; src < SIMD_SIZE; ++src) {
+            const uint  p_s = simd_shuffle(packed, src);
+            const float s_s = simd_shuffle(stat,   src);
+            if ((p_s & VALID_BIT) == 0u) continue;
+            const uint p_clean = p_s & 0x7FFFFFFFu;
+            // Feature 0: 7-bit mask
+            {
+                const uint bin = (p_clean >> 24u) & 0x7Fu;
+                if (bin < foldCountsFlat[foldBase + 0u] + 1u &&
+                    (bin & (SIMD_SIZE - 1u)) == lane) {
+                    simdHist[simd_id][0u * BINS_PER_BYTE + bin] += s_s;
+                }
+            }
+            for (uint f = 1u; f < FEATURES_PER_PACK; ++f) {
+                const uint bin = (p_clean >> (24u - 8u * f)) & 0xFFu;
+                if (bin < foldCountsFlat[foldBase + f] + 1u &&
+                    (bin & (SIMD_SIZE - 1u)) == lane) {
+                    simdHist[simd_id][f * BINS_PER_BYTE + bin] += s_s;
+                }
+            }
+        }
+    }
+    threadgroup_barrier(mem_flags::mem_threadgroup); // barrier 2: accumulation complete
+
+    // Cross-SIMD fold + write to partialHistogram (not the final histogram).
+    // partialHistogram uses regular float (not atomic) because each (kBlock, part, group) slot
+    // is written by exactly one TG. No atomic needed here.
+    for (uint f = 0u; f < FEATURES_PER_PACK; ++f) {
+        const uint foldCount = foldCountsFlat[foldBase + f];
+        const uint firstFold = firstFoldIndicesFlat[foldBase + f];
+        if (foldCount == 0u) continue;
+        const uint tile_base = f * BINS_PER_BYTE;
+
+        if (tid < BINS_PER_BYTE) {
+            float sum = 0.0f;
+            for (uint g = 0u; g < NUM_SIMD_GROUPS; g++) {
+                sum += simdHist[g][tile_base + tid];
+            }
+            simdHist[0][tile_base + tid] = sum;
+        }
+        threadgroup_barrier(mem_flags::mem_threadgroup);
+
+        for (uint bin = tid; bin < foldCount; bin += BLOCK_SIZE) {
+            const float val = simdHist[0][tile_base + bin + 1u];
+            if (abs(val) > 1e-20f) {
+                // Write to partialHistogram slot — race-free (single writer per slot)
+                device atomic_float* dst = (device atomic_float*)(
+                    partialHistogram + partialBase + firstFold + bin);
+                atomic_fetch_add_explicit(dst, val, memory_order_relaxed);
+            }
+        }
+        threadgroup_barrier(mem_flags::mem_threadgroup);
+    }
+)metal";
+
+// D2 merge kernel.
+// One TG per (partition, group): reads K=4 partial slots and sums into final histogram.
+// Grid: (256 * numGroups, numPartitions, numStats) — one TG per (group, partition, stat).
+// Thread: (256, 1, 1).
+// Race-free: one writer per (partition, group, stat, bin) output slot.
+static const std::string kHistProbeDMergeSource = R"metal(
+    const uint tgX      = threadgroup_position_in_grid.x;
+    const uint partIdx  = threadgroup_position_in_grid.y;
+    const uint statIdx  = threadgroup_position_in_grid.z;
+    const uint groupIdx = tgX / BLOCK_SIZE;  // one TG per group
+    const uint tid      = thread_index_in_threadgroup;
+
+    if (groupIdx >= numGroups) return;
+
+    const uint foldBase = groupIdx * FEATURES_PER_PACK;
+    const uint histBase = partIdx * numStats * totalBinFeatures
+                        + statIdx * totalBinFeatures;
+
+    for (uint f = 0u; f < FEATURES_PER_PACK; ++f) {
+        const uint foldCount = foldCountsFlat[foldBase + f];
+        const uint firstFold = firstFoldIndicesFlat[foldBase + f];
+        if (foldCount == 0u) continue;
+
+        for (uint bin = tid; bin < foldCount; bin += BLOCK_SIZE) {
+            float total = 0.0f;
+            for (uint k = 0u; k < kTotal; ++k) {
+                const uint partialBase = k * (numPartitions * numStats * totalBinFeatures)
+                                       + partIdx * numStats * totalBinFeatures
+                                       + statIdx * totalBinFeatures;
+                total += partialHistogram[partialBase + firstFold + bin];
+            }
+            if (abs(total) > 1e-20f) {
+                device atomic_float* dst = (device atomic_float*)(
+                    histogram + histBase + firstFold + bin);
+                atomic_fetch_add_explicit(dst, total, memory_order_relaxed);
+            }
+        }
+    }
+)metal";
+
+#endif  // SIMD_SHUFFLE_PROBE_D
+
 }  // namespace KernelSources
 }  // namespace NCatboostMlx

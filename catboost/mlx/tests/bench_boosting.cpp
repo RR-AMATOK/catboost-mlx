@@ -508,6 +508,416 @@ static mx::array DispatchHistogramT2Bench(
 }
 
 // ============================================================================
+// PROBE DISPATCH FUNCTIONS — S46 T4
+//
+// Each probe dispatch function is gated by #ifdef SIMD_SHUFFLE_PROBE_<X>.
+// Production builds without those flags do not compile any probe code.
+// Each probe binary is built with exactly one probe flag.
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// PROBE B — per-lane register accumulation + write to simdHist (no shuffle)
+//
+// Uses kHistProbeB_T2AccumSource from kernel_sources.h under SIMD_SHUFFLE_PROBE_B.
+// Dispatch signature identical to DispatchHistogramT2Bench — drop-in replacement
+// in bench_boosting.cpp RunIteration under the same guard.
+// ----------------------------------------------------------------------------
+#ifdef SIMD_SHUFFLE_PROBE_B
+
+static mx::array DispatchHistogramProbeBBench(
+    const mx::array& compressedData,
+    const mx::array& stats,
+    const mx::array& docIndices,
+    const mx::array& partOffsets,
+    const mx::array& partSizes,
+    const std::vector<TCFeature>& features,
+    ui32 numUi32PerDoc,
+    ui32 numActiveParts,
+    ui32 totalBinFeatures,
+    ui32 numStats,
+    ui32 numDocs,
+    ui32 maxBlocksPerPart
+) {
+    const ui32 numFeatures = static_cast<ui32>(features.size());
+    const ui32 numGroups   = (numFeatures + 3) / 4;
+
+    std::vector<uint32_t> foldCountsFlatVec(numGroups * 4, 0u);
+    std::vector<uint32_t> firstFoldIndicesFlatVec(numGroups * 4, 0u);
+    std::vector<uint32_t> featureColIndicesVec(numGroups, 0u);
+    ui32 maxFoldCount = 0;
+    for (ui32 g = 0; g < numGroups; ++g) {
+        featureColIndicesVec[g] = g;
+        for (ui32 slot = 0; slot < 4; ++slot) {
+            ui32 f = g * 4 + slot;
+            if (f < numFeatures) {
+                const ui32 folds = features[f].Folds;
+                foldCountsFlatVec[g * 4 + slot]       = folds;
+                firstFoldIndicesFlatVec[g * 4 + slot] = features[f].FirstFoldIndex;
+                if (folds > maxFoldCount) maxFoldCount = folds;
+            }
+        }
+    }
+    if (maxFoldCount > 127u) {
+        std::fprintf(stderr, "FATAL: Probe B: max fold count %u exceeds DEC-016 envelope.\n", maxFoldCount);
+        std::exit(1);
+    }
+
+    auto foldCountsArr  = mx::array(reinterpret_cast<const int32_t*>(foldCountsFlatVec.data()),
+                                    {static_cast<int>(numGroups * 4)}, mx::uint32);
+    auto firstFoldArr   = mx::array(reinterpret_cast<const int32_t*>(firstFoldIndicesFlatVec.data()),
+                                    {static_cast<int>(numGroups * 4)}, mx::uint32);
+    auto featureColsArr = mx::array(reinterpret_cast<const int32_t*>(featureColIndicesVec.data()),
+                                    {static_cast<int>(numGroups)}, mx::uint32);
+    auto lineSizeArr    = mx::array(static_cast<uint32_t>(numUi32PerDoc), mx::uint32);
+    auto maxBlocksArr   = mx::array(static_cast<uint32_t>(maxBlocksPerPart), mx::uint32);
+    auto numGroupsArr   = mx::array(static_cast<uint32_t>(numGroups), mx::uint32);
+    auto numPartsArr    = mx::array(static_cast<uint32_t>(numActiveParts), mx::uint32);
+    auto numStatsArr    = mx::array(static_cast<uint32_t>(numStats), mx::uint32);
+    auto totalBinsArr   = mx::array(static_cast<uint32_t>(totalBinFeatures), mx::uint32);
+    auto totalDocsArr   = mx::array(static_cast<uint32_t>(numDocs), mx::uint32);
+
+    auto flatCompressed = mx::reshape(compressedData, {-1});
+    mx::Shape histShape = {static_cast<int>(numActiveParts * numStats * totalBinFeatures)};
+
+    static auto kernel = mx::fast::metal_kernel(
+        "probe_b_t2_accum",
+        /*input_names=*/{
+            "compressedIndex", "stats",
+            "docIndices", "partSizes",
+            "featureColumnIndices", "foldCountsFlat", "firstFoldIndicesFlat",
+            "partOffsets",
+            "lineSize", "maxBlocksPerPart", "numGroups",
+            "numPartitions", "numStats",
+            "totalBinFeatures", "totalNumDocs"
+        },
+        /*output_names=*/{"histogram"},
+        /*source=*/NCatboostMlx::KernelSources::kHistProbeB_T2AccumSource,
+        /*header=*/NCatboostMlx::KernelSources::kHistHeader,
+        /*ensure_row_contiguous=*/true,
+        /*atomic_outputs=*/true
+    );
+
+    auto grid       = std::make_tuple(
+        static_cast<int>(256 * maxBlocksPerPart * numGroups),
+        static_cast<int>(numActiveParts),
+        static_cast<int>(numStats)
+    );
+    auto threadgroup = std::make_tuple(256, 1, 1);
+
+    auto results = kernel(
+        {flatCompressed, stats, docIndices, partSizes,
+         featureColsArr, foldCountsArr, firstFoldArr, partOffsets,
+         lineSizeArr, maxBlocksArr, numGroupsArr,
+         numPartsArr, numStatsArr, totalBinsArr, totalDocsArr},
+        {histShape}, {mx::float32},
+        grid, threadgroup, {}, 0.0f, false, mx::Device::gpu
+    );
+    return results[0];
+}
+
+#endif  // SIMD_SHUFFLE_PROBE_B
+
+// ----------------------------------------------------------------------------
+// PROBE C — pre-v5 sort-by-bin accum (bin-range scan for feature 0)
+//
+// Uses kT2AccumProbeSource from kernel_sources.h under SIMD_SHUFFLE_PROBE_C.
+// Requires T2-sort to run first (populates sortedDocs + binOffsets).
+// ----------------------------------------------------------------------------
+#ifdef SIMD_SHUFFLE_PROBE_C
+
+static mx::fast::CustomKernelFunction& GetT2SortKernelProbeC() {
+    static auto k = mx::fast::metal_kernel(
+        "probe_c_t2_sort",
+        /*input_names=*/{
+            "compressedIndex", "docIndices",
+            "partOffsets", "partSizes",
+            "featureColumnIndices",
+            "lineSize", "maxBlocksPerPart", "numGroups",
+            "numPartitions", "numStats",
+            "totalBinFeatures", "totalNumDocs"
+        },
+        /*output_names=*/{"sortedDocs", "binOffsets"},
+        /*source=*/NCatboostMlx::KernelSources::kT2SortSource,
+        /*header=*/NCatboostMlx::KernelSources::kHistHeader,
+        /*ensure_row_contiguous=*/true,
+        /*atomic_outputs=*/false
+    );
+    return k;
+}
+
+static mx::fast::CustomKernelFunction& GetT2AccumProbeC() {
+    static auto k = mx::fast::metal_kernel(
+        "probe_c_t2_accum_prev5",
+        /*input_names=*/{
+            "sortedDocs", "binOffsets",
+            "compressedIndex", "stats",
+            "partOffsets", "partSizes",
+            "featureColumnIndices", "foldCountsFlat", "firstFoldIndicesFlat",
+            "lineSize", "maxBlocksPerPart", "numGroups",
+            "numPartitions", "numStats",
+            "totalBinFeatures", "totalNumDocs"
+        },
+        /*output_names=*/{"histogram"},
+        /*source=*/NCatboostMlx::KernelSources::kT2AccumProbeSource,
+        /*header=*/NCatboostMlx::KernelSources::kHistHeader,
+        /*ensure_row_contiguous=*/true,
+        /*atomic_outputs=*/true
+    );
+    return k;
+}
+
+static mx::array DispatchHistogramProbeCBench(
+    const mx::array& compressedData,
+    const mx::array& stats,
+    const mx::array& docIndices,
+    const mx::array& partOffsets,
+    const mx::array& partSizes,
+    const std::vector<TCFeature>& features,
+    ui32 numUi32PerDoc,
+    ui32 numActiveParts,
+    ui32 totalBinFeatures,
+    ui32 numStats,
+    ui32 numDocs,
+    ui32 maxBlocksPerPart
+) {
+    const ui32 numFeatures = static_cast<ui32>(features.size());
+    const ui32 numGroups   = (numFeatures + 3) / 4;
+    const ui32 numTGs      = numGroups * numActiveParts * numStats;
+
+    std::vector<uint32_t> foldCountsFlatVec(numGroups * 4, 0u);
+    std::vector<uint32_t> firstFoldIndicesFlatVec(numGroups * 4, 0u);
+    std::vector<uint32_t> featureColIndicesVec(numGroups, 0u);
+    ui32 maxFoldCount = 0;
+    for (ui32 g = 0; g < numGroups; ++g) {
+        featureColIndicesVec[g] = g;
+        for (ui32 slot = 0; slot < 4; ++slot) {
+            ui32 f = g * 4 + slot;
+            if (f < numFeatures) {
+                const ui32 folds = features[f].Folds;
+                foldCountsFlatVec[g * 4 + slot]       = folds;
+                firstFoldIndicesFlatVec[g * 4 + slot] = features[f].FirstFoldIndex;
+                if (folds > maxFoldCount) maxFoldCount = folds;
+            }
+        }
+    }
+    if (maxFoldCount > 127u) {
+        std::fprintf(stderr, "FATAL: Probe C: max fold count %u exceeds DEC-016 envelope.\n", maxFoldCount);
+        std::exit(1);
+    }
+
+    auto foldCountsArr  = mx::array(reinterpret_cast<const int32_t*>(foldCountsFlatVec.data()),
+                                    {static_cast<int>(numGroups * 4)}, mx::uint32);
+    auto firstFoldArr   = mx::array(reinterpret_cast<const int32_t*>(firstFoldIndicesFlatVec.data()),
+                                    {static_cast<int>(numGroups * 4)}, mx::uint32);
+    auto featureColsArr = mx::array(reinterpret_cast<const int32_t*>(featureColIndicesVec.data()),
+                                    {static_cast<int>(numGroups)}, mx::uint32);
+    auto lineSizeArr    = mx::array(static_cast<uint32_t>(numUi32PerDoc), mx::uint32);
+    auto maxBlocksArr   = mx::array(static_cast<uint32_t>(maxBlocksPerPart), mx::uint32);
+    auto numGroupsArr   = mx::array(static_cast<uint32_t>(numGroups), mx::uint32);
+    auto numPartsArr    = mx::array(static_cast<uint32_t>(numActiveParts), mx::uint32);
+    auto numStatsArr    = mx::array(static_cast<uint32_t>(numStats), mx::uint32);
+    auto totalBinsArr   = mx::array(static_cast<uint32_t>(totalBinFeatures), mx::uint32);
+    auto totalDocsArr   = mx::array(static_cast<uint32_t>(numDocs), mx::uint32);
+
+    auto flatCompressed = mx::reshape(compressedData, {-1});
+    mx::Shape sortedDocsShape  = {static_cast<int>(numGroups * numStats * numDocs)};
+    mx::Shape binOffsetsShape  = {static_cast<int>(numTGs * 129u)};
+    mx::Shape histShape        = {static_cast<int>(numActiveParts * numStats * totalBinFeatures)};
+
+    auto sortGrid       = std::make_tuple(
+        static_cast<int>(256 * maxBlocksPerPart * numGroups),
+        static_cast<int>(numActiveParts),
+        static_cast<int>(numStats)
+    );
+    auto threadgroup = std::make_tuple(256, 1, 1);
+
+    // Sort step
+    auto sortOut = GetT2SortKernelProbeC()(
+        {flatCompressed, docIndices, partOffsets, partSizes,
+         featureColsArr, lineSizeArr, maxBlocksArr, numGroupsArr,
+         numPartsArr, numStatsArr, totalBinsArr, totalDocsArr},
+        {sortedDocsShape, binOffsetsShape},
+        {mx::uint32, mx::uint32},
+        sortGrid, threadgroup, {}, 0.0f, false, mx::Device::gpu
+    );
+    const mx::array& sortedDocs = sortOut[0];
+    const mx::array& binOffsets = sortOut[1];
+
+    // Accum step (pre-v5 bin-range scan)
+    auto accumOut = GetT2AccumProbeC()(
+        {sortedDocs, binOffsets, flatCompressed, stats,
+         partOffsets, partSizes,
+         featureColsArr, foldCountsArr, firstFoldArr,
+         lineSizeArr, maxBlocksArr, numGroupsArr,
+         numPartsArr, numStatsArr, totalBinsArr, totalDocsArr},
+        {histShape}, {mx::float32},
+        sortGrid, threadgroup, {}, 0.0f, false, mx::Device::gpu
+    );
+    return accumOut[0];
+}
+
+#endif  // SIMD_SHUFFLE_PROBE_C
+
+// ----------------------------------------------------------------------------
+// PROBE D — Split-K via separate dispatches (D2, K=4)
+//
+// Uses kHistProbeDPartialSource + kHistProbeDMergeSource from kernel_sources.h.
+// Runs K=4 partial accumulation dispatches then 1 merge dispatch per depth step.
+// ----------------------------------------------------------------------------
+#ifdef SIMD_SHUFFLE_PROBE_D
+
+constexpr ui32 kProbeD_K = 4;  // K=4 slices
+
+static mx::array DispatchHistogramProbeDKBench(
+    const mx::array& compressedData,
+    const mx::array& stats,
+    const mx::array& docIndices,
+    const mx::array& partOffsets,
+    const mx::array& partSizes,
+    const std::vector<TCFeature>& features,
+    ui32 numUi32PerDoc,
+    ui32 numActiveParts,
+    ui32 totalBinFeatures,
+    ui32 numStats,
+    ui32 numDocs,
+    ui32 maxBlocksPerPart
+) {
+    // NOTE: this function bypasses histogram.cpp:134 static_assert entirely.
+    // It is a separate bench-only dispatch path; no production code modified.
+
+    const ui32 numFeatures = static_cast<ui32>(features.size());
+    const ui32 numGroups   = (numFeatures + 3) / 4;
+
+    std::vector<uint32_t> foldCountsFlatVec(numGroups * 4, 0u);
+    std::vector<uint32_t> firstFoldIndicesFlatVec(numGroups * 4, 0u);
+    std::vector<uint32_t> featureColIndicesVec(numGroups, 0u);
+    ui32 maxFoldCount = 0;
+    for (ui32 g = 0; g < numGroups; ++g) {
+        featureColIndicesVec[g] = g;
+        for (ui32 slot = 0; slot < 4; ++slot) {
+            ui32 f = g * 4 + slot;
+            if (f < numFeatures) {
+                const ui32 folds = features[f].Folds;
+                foldCountsFlatVec[g * 4 + slot]       = folds;
+                firstFoldIndicesFlatVec[g * 4 + slot] = features[f].FirstFoldIndex;
+                if (folds > maxFoldCount) maxFoldCount = folds;
+            }
+        }
+    }
+    if (maxFoldCount > 127u) {
+        std::fprintf(stderr, "FATAL: Probe D: max fold count %u exceeds DEC-016 envelope.\n", maxFoldCount);
+        std::exit(1);
+    }
+
+    auto foldCountsArr  = mx::array(reinterpret_cast<const int32_t*>(foldCountsFlatVec.data()),
+                                    {static_cast<int>(numGroups * 4)}, mx::uint32);
+    auto firstFoldArr   = mx::array(reinterpret_cast<const int32_t*>(firstFoldIndicesFlatVec.data()),
+                                    {static_cast<int>(numGroups * 4)}, mx::uint32);
+    auto featureColsArr = mx::array(reinterpret_cast<const int32_t*>(featureColIndicesVec.data()),
+                                    {static_cast<int>(numGroups)}, mx::uint32);
+    auto lineSizeArr    = mx::array(static_cast<uint32_t>(numUi32PerDoc), mx::uint32);
+    auto maxBlocksArr   = mx::array(static_cast<uint32_t>(maxBlocksPerPart), mx::uint32);
+    auto numGroupsArr   = mx::array(static_cast<uint32_t>(numGroups), mx::uint32);
+    auto numPartsArr    = mx::array(static_cast<uint32_t>(numActiveParts), mx::uint32);
+    auto numStatsArr    = mx::array(static_cast<uint32_t>(numStats), mx::uint32);
+    auto totalBinsArr   = mx::array(static_cast<uint32_t>(totalBinFeatures), mx::uint32);
+    auto totalDocsArr   = mx::array(static_cast<uint32_t>(numDocs), mx::uint32);
+    auto kTotalArr      = mx::array(static_cast<uint32_t>(kProbeD_K), mx::uint32);
+
+    auto flatCompressed = mx::reshape(compressedData, {-1});
+    // histShape: final merged output [numPartitions * numStats * totalBinFeatures].
+    // sliceShape: per-K-dispatch output [numPartitions * numStats * totalBinFeatures].
+    // Each dispatch writes only its own doc-range slice; kBlock controls doc range, not output offset.
+    // After K independent dispatches, mx::concatenate forms [K * numPartitions * numStats * totalBinFeatures]
+    // for the merge kernel — making all K dispatches data-independent in the MLX compute graph.
+    mx::Shape histShape  = {static_cast<int>(numActiveParts * numStats * totalBinFeatures)};
+    mx::Shape sliceShape = {static_cast<int>(numActiveParts * numStats * totalBinFeatures)};
+
+    auto grid       = std::make_tuple(
+        static_cast<int>(256 * maxBlocksPerPart * numGroups),
+        static_cast<int>(numActiveParts),
+        static_cast<int>(numStats)
+    );
+    auto threadgroup = std::make_tuple(256, 1, 1);
+
+    // Partial accumulation: K separate dispatches, each processing a disjoint 1/K doc slice.
+    // Each dispatch outputs shape [P*S*B] — its own buffer; kBlock selects the input doc range
+    // (kernel_sources.h:kHistProbeDPartialSource: kDocStart = kBlock * docsPerSlice).
+    // The K outputs are INDEPENDENT in the MLX compute graph — no mx::add chain.
+    static auto partialKernel = mx::fast::metal_kernel(
+        "probe_d_partial_accum",
+        /*input_names=*/{
+            "compressedIndex", "stats",
+            "docIndices", "partOffsets", "partSizes",
+            "featureColumnIndices", "foldCountsFlat", "firstFoldIndicesFlat",
+            "lineSize", "maxBlocksPerPart", "numGroups",
+            "numPartitions", "numStats", "totalBinFeatures", "totalNumDocs",
+            "kBlock", "kTotal"
+        },
+        /*output_names=*/{"partialHistogram"},
+        /*source=*/NCatboostMlx::KernelSources::kHistProbeDPartialSource,
+        /*header=*/NCatboostMlx::KernelSources::kHistHeader,
+        /*ensure_row_contiguous=*/true,
+        /*atomic_outputs=*/true
+    );
+
+    // Launch K independent dispatches. kSlices[k] = partial histogram for doc-slice k.
+    // Shape per slice: [P*S*B] (one slot per partition × stat × bin-feature).
+    // kBlock is passed as k to select the doc range; output offset is always 0 (kernel
+    // ignores kBlock for output addressing — see kernel_sources.h kHistProbeDPartialSource).
+    std::vector<mx::array> kSlices;
+    kSlices.reserve(kProbeD_K);
+    for (ui32 k = 0; k < kProbeD_K; ++k) {
+        auto kBlockArr = mx::array(static_cast<uint32_t>(k), mx::uint32);
+        auto partialOut = partialKernel(
+            {flatCompressed, stats, docIndices, partOffsets, partSizes,
+             featureColsArr, foldCountsArr, firstFoldArr,
+             lineSizeArr, maxBlocksArr, numGroupsArr,
+             numPartsArr, numStatsArr, totalBinsArr, totalDocsArr,
+             kBlockArr, kTotalArr},
+            {sliceShape}, {mx::float32},
+            grid, threadgroup, {}, 0.0f, false, mx::Device::gpu
+        );
+        kSlices.push_back(partialOut[0]);
+    }
+    // Force evaluation of all K slices simultaneously — MLX scheduler can run them in parallel
+    // since they share no data dependencies (each reads a disjoint doc range, writes to its own buffer).
+    mx::eval(kSlices);
+
+    // Concatenate K slices into [K * P*S*B] for the merge kernel.
+    // Layout after concatenate: [slice_0 (P*S*B elems) | slice_1 | ... | slice_{K-1}]
+    // Merge kernel indexes as: k * (P*S*B) + partIdx*numStats*totalBinFeatures + statIdx*totalBinFeatures
+    // which matches this layout exactly (kernel_sources.h:kHistProbeDMergeSource:1736).
+    auto partialHistogram = mx::concatenate(kSlices, 0);
+
+    // Merge: sum K partial slots into final histogram.
+    // One TG per (group, partition, stat). Grid and threadgroup same as accumulation.
+    static auto mergeKernel = mx::fast::metal_kernel(
+        "probe_d_merge",
+        /*input_names=*/{
+            "partialHistogram",
+            "featureColumnIndices", "foldCountsFlat", "firstFoldIndicesFlat",
+            "numGroups", "numPartitions", "numStats", "totalBinFeatures", "kTotal"
+        },
+        /*output_names=*/{"histogram"},
+        /*source=*/NCatboostMlx::KernelSources::kHistProbeDMergeSource,
+        /*header=*/NCatboostMlx::KernelSources::kHistHeader,
+        /*ensure_row_contiguous=*/true,
+        /*atomic_outputs=*/true
+    );
+
+    auto mergeOut = mergeKernel(
+        {partialHistogram, featureColsArr, foldCountsArr, firstFoldArr,
+         numGroupsArr, numPartsArr, numStatsArr, totalBinsArr, kTotalArr},
+        {histShape}, {mx::float32},
+        grid, threadgroup, {}, 0.0f, false, mx::Device::gpu
+    );
+    return mergeOut[0];
+}
+
+#endif  // SIMD_SHUFFLE_PROBE_D
+
+// ============================================================================
 // Suffix-sum + split scoring (mirrors score_calcer.cpp FindBestSplitGPU)
 // ============================================================================
 
@@ -1099,14 +1509,40 @@ long long RunIteration(
             pk_treeSupportAccum += ms_d(layout_t1 - layout_t0).count()
                                  + ms_d(leafscr_t1 - leafscr_t0).count();
 
-            // Dispatch histogram — T2 sort-by-bin is the default production path.
+            // Dispatch histogram — probe variants selected at compile time via #ifdef guard.
+            // Exactly one of the probe guards will be active in a probe binary;
+            // production builds (no probe flags) use the default T2 path.
             auto hist_t0 = hrc::now();
+#if defined(SIMD_SHUFFLE_PROBE_B)
+            mx::array histogram = DispatchHistogramProbeBBench(
+                compressedData, statArr,
+                layout.DocIndices, layout.PartOffsets, layout.PartSizes,
+                features, numUi32PerDoc, numActiveParts,
+                totalBinFeatures, numStats, numDocs, maxBlocksPerPart
+            );
+#elif defined(SIMD_SHUFFLE_PROBE_C)
+            mx::array histogram = DispatchHistogramProbeCBench(
+                compressedData, statArr,
+                layout.DocIndices, layout.PartOffsets, layout.PartSizes,
+                features, numUi32PerDoc, numActiveParts,
+                totalBinFeatures, numStats, numDocs, maxBlocksPerPart
+            );
+#elif defined(SIMD_SHUFFLE_PROBE_D)
+            mx::array histogram = DispatchHistogramProbeDKBench(
+                compressedData, statArr,
+                layout.DocIndices, layout.PartOffsets, layout.PartSizes,
+                features, numUi32PerDoc, numActiveParts,
+                totalBinFeatures, numStats, numDocs, maxBlocksPerPart
+            );
+#else
+            // Default production path (T2 sort-by-bin, v5)
             mx::array histogram = DispatchHistogramT2Bench(
                 compressedData, statArr,
                 layout.DocIndices, layout.PartOffsets, layout.PartSizes,
                 features, numUi32PerDoc, numActiveParts,
                 totalBinFeatures, numStats, numDocs, maxBlocksPerPart
             );
+#endif
             mx::eval(histogram);
             auto hist_t1 = hrc::now();
             pk_histAccum += ms_d(hist_t1 - hist_t0).count();
@@ -1130,16 +1566,39 @@ long long RunIteration(
                 best.BinId, depth, numDocs, numUi32PerDoc
             );
         } else {
-            // Normal (non-profiling) path — identical to original code
+            // Normal (non-profiling) path — probe variants selected via #ifdef guard.
             auto layout = ComputePartitionLayout(partitions, numDocs, numActiveParts);
 
-            // Dispatch histogram — T2 sort-by-bin is the default production path.
+#if defined(SIMD_SHUFFLE_PROBE_B)
+            mx::array histogram = DispatchHistogramProbeBBench(
+                compressedData, statArr,
+                layout.DocIndices, layout.PartOffsets, layout.PartSizes,
+                features, numUi32PerDoc, numActiveParts,
+                totalBinFeatures, numStats, numDocs, maxBlocksPerPart
+            );
+#elif defined(SIMD_SHUFFLE_PROBE_C)
+            mx::array histogram = DispatchHistogramProbeCBench(
+                compressedData, statArr,
+                layout.DocIndices, layout.PartOffsets, layout.PartSizes,
+                features, numUi32PerDoc, numActiveParts,
+                totalBinFeatures, numStats, numDocs, maxBlocksPerPart
+            );
+#elif defined(SIMD_SHUFFLE_PROBE_D)
+            mx::array histogram = DispatchHistogramProbeDKBench(
+                compressedData, statArr,
+                layout.DocIndices, layout.PartOffsets, layout.PartSizes,
+                features, numUi32PerDoc, numActiveParts,
+                totalBinFeatures, numStats, numDocs, maxBlocksPerPart
+            );
+#else
+            // Default production path (T2 sort-by-bin, v5)
             mx::array histogram = DispatchHistogramT2Bench(
                 compressedData, statArr,
                 layout.DocIndices, layout.PartOffsets, layout.PartSizes,
                 features, numUi32PerDoc, numActiveParts,
                 totalBinFeatures, numStats, numDocs, maxBlocksPerPart
             );
+#endif
             mx::eval(histogram);
 
             // Compute partition totals (grad sum, hess sum) per partition

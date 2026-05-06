@@ -2599,3 +2599,190 @@ verdict. S45 is a successful sprint by the plan's Definition of Done.
 - Actual cost driver attribution: DEC-020, S19-01c sprint
 - Process lesson (6-agent convergence on incorrect mechanism): captured in
   `Frameworks/LESSONS-LEARNED.md` at T6 close-out
+
+
+---
+
+## DEC-049: simd_shuffle redesign research arc OPENED — 4-candidate bounded scope
+
+**Sprint:** 46
+**Date:** 2026-05-05
+**Status:** OPEN — verdict pending T5 (one of {COMMIT to S47, user-decision call, KILL})
+**Authority pointers:** `docs/sprint46/sprint-plan.md`, DEC-048 (predecessor; dispatch-fusion KILL), DEC-020/023/025 (sort-by-bin precedent + re-entry policy), DEC-017 (toy-to-production-transfer standing rule), DEC-014 (register-spill precedent), DEC-012 (intra-SIMD butterfly removal + future-trigger clause), `Frameworks/LESSONS-LEARNED.md` (MANDATORY-CODE-INSPECTION rule).
+
+### Context
+
+DEC-048 retired the dispatch-fusion lever (W1/W2/W3-style throughput pivot) on
+empirical falsification: production code at `histogram.cpp:31` already fuses all
+feature groups into a single Metal dispatch per depth level via `numGroups`; dispatch
+overhead is 0.008% of Epsilon iter wall-clock. DEC-048 §"What survives" explicitly
+identified the **simd_shuffle serial chain** in the histogram accumulation kernel
+(empirically established in S19-01c, ~86% of accumulation, ~80% of `histogram_ms`
+at the 50k/RMSE/d6/128b gate config) as the actual cost driver, NOT killed by
+DEC-048 and requiring its own scope decision.
+
+DEC-049 opens that scope decision as a **bounded research investigation** under
+the spike-then-commit pattern (mirroring S45-T2's discipline). S46 produces no
+production-code commits; engineering opens in S47+ only if T5 clears the kill
+criterion.
+
+### Terminology correction (load-bearing for future readers)
+
+DEC-048 and S45-T2 verdict refer to "**simd_shuffle_xor** serial chain." This term
+is a legacy carry-forward from S17-era D1c, which DID use `simd_shuffle_xor`. The
+current production kernel at `kernel_sources.h:209–211` uses `simd_shuffle`
+(broadcast), NOT `simd_shuffle_xor` (butterfly). The xor butterfly was REMOVED in
+S18 (BUG-S18-001 fix, DEC-012 §"reduction phase"). Verified by direct code
+inspection: `grep -n "simd_shuffle\b\|simd_shuffle_xor" kernel_sources.h` returns
+the broadcast at lines 210–211, 1223–1224, with line 89 documenting the xor
+removal.
+
+Per the MANDATORY-CODE-INSPECTION lesson from S45 (six advisory agents converged
+on H-Dispatch from incorrect arithmetic that one `grep` would have refuted), this
+correction is filed here so DEC-049 future-readers find the authoritative
+terminology. The plan text uses **"src-broadcast chain"** to refer to the actual
+hot loop at `kernel_sources.h:209–224`.
+
+### Bounded 4-candidate design space
+
+Per `docs/sprint46/sprint-plan.md` §T2, the research arc evaluates exactly four
+mechanism alternatives (novel architecture proposals are out-of-scope for S46):
+
+- **Candidate A — Atomic-add accumulation.** Re-enters DEC-017 (T3b retired,
+  +42.3% production regression) and DEC-023 (atomic-float race at config #8).
+  HIGH risk per DEC-025 re-entry policy. T2 retires unless new evidence shows
+  Epsilon dispatch shape changes the per-TG amortization ratio that killed T3b.
+- **Candidate B — Hierarchical reduction with re-introduced intra-SIMD butterfly.**
+  Per DEC-012 §"Future trigger" clause (kernels accumulating into per-lane register
+  state should re-introduce the butterfly). MEDIUM risk; register-spill threshold
+  must be verified via Metal compiler register-allocation report (DEC-014
+  precedent). γ_12 ≈ 7.2e-7 — within DEC-008 envelope.
+- **Candidate C — Sort-by-bin extension.** DEC-020 shipped this lever at 0.317×
+  hist_ms ratio and 1.778× e2e iter speedup at gate; DEC-023 v5 retracted due to
+  atomic-float race at config #8 (N=10k bimodal). MEDIUM-HIGH risk per DEC-025
+  re-entry policy. T2 must justify re-entry with new evidence (specifically:
+  whether Epsilon's N=400k dispatch shape avoids the race envelope; DEC-023 §H1
+  hypothesis suggests it might, but probe-D measurement is required).
+- **Candidate D — Split-K accumulation.** Most novel of the four; least DEC-log
+  precedent. K-block partial histograms + on-chip merge. γ_(K+7) ≈ 6.6e-7 (K=4)
+  to 9e-7 (K=8) — within DEC-008. MEDIUM risk; adds dispatch count (well below
+  DEC-048's overhead threshold).
+
+### Kill criterion (T5 outcomes)
+
+Per `docs/sprint46/sprint-plan.md` §T5, all measurements at production dispatch
+shape on Epsilon iter=2000 (3 seeds × 3 warm runs):
+
+- **Outcome A (COMMIT to S47):** Best candidate's probe-D upper-bound ≥3× MLX
+  iter speedup AND parity preservation path is plausible (1-sprint
+  bit-equivalence preservation OR 1-sprint re-baseline). Closes the v0.7.0 perf
+  gate per DEC-048 release condition.
+- **Outcome B (user-decision call):** Best candidate 1.5×–3× upper-bound.
+  Marginal; does not alone close v0.7.0 perf gate.
+- **Outcome C (KILL):** No candidate ≥1.5× at production shape. Throughput epic
+  permanently retired (the S45 plan §"Risk register" meta-criterion fully fires —
+  gap is hardware-class-bound). v0.7.0 path becomes "reproducibility extension
+  only" or remains held.
+
+### Hard constraints (S46-only)
+
+- **MANDATORY-CODE-INSPECTION:** Every hypothesis statement, every T1/T2/T3
+  deliverable, every probe verdict cites file:line. Arithmetic-only mechanism
+  claims are inadmissible. Reviewers reject.
+- **No production-code commits in S46.** All ablations under `#ifdef
+  SIMD_SHUFFLE_PROBE_<X>` guards (S33 PROBE-E pattern); production builds compile
+  bit-identical to v0.6.1.
+- **Branch-B regression test (v0.6.1 baselines) green on master throughout S46.**
+  Probe branches may break temporarily.
+- **Production dispatch shape is non-negotiable** (DEC-017 standing rule). All
+  upper-bound measurements at multi-TG, depth=6, partition-fragmented Epsilon
+  shape. NO single-TG isolation results enter T5 decision.
+- **Hard 1-week sprint budget.** T5 fires at end of Day 5 even if only 2
+  candidates measured; remaining candidates documented as "not measured" not
+  "indeterminate."
+
+### What DEC-049 does NOT decide
+
+DEC-049 is OPEN, not a verdict. T5 fills in the verdict (COMMIT / user-call / KILL).
+Whatever T5 produces, DEC-049 is updated in place with empirical justification.
+
+DEC-049 is a **scope-bounded** entry. Novel architecture proposals, multi-sprint
+engineering commitments, and PyPI v0.7.0 publish are all OUT-OF-SCOPE per the
+sprint plan's "Files explicitly NOT in scope" sections.
+
+### Implication for v0.7.0
+
+v0.7.0 release remains held per DEC-048 §"Implication for v0.7.0":
+- **If T5 = COMMIT** → S47 engineering window opens; v0.7.0 ships if S47 lands the
+  ≥3× perf gate at production shape with Branch-B regression green.
+- **If T5 = user-call** → user decides whether to ship v0.7.0 with marginal perf
+  delta or hold.
+- **If T5 = KILL** → v0.7.0 path narrows further. PyPI publish remains gated on
+  perf delta; project remains at v0.6.1 indefinitely until either a research-grade
+  lever appears or the audience proposition shifts.
+
+---
+
+## DEC-049 OUTCOME — simd_shuffle histogram throughput research arc — RETIRED
+
+**Status:** RETIRED (2026-05-05, S46-T4)
+**Supersedes/extends:** falsification chain DEC-013, DEC-014, DEC-015, DEC-017, DEC-019, DEC-048
+
+**Verdict:** All four bounded candidates (B, C, D1, D2) falsified at production shape
+after build-env fix + dispatcher rewrite + 27-run sweep.
+
+**Evidence:**
+- Probe B — 9.79× iter speedup is BOGUS: `kernel_sources.h:1374-1407` confuses
+  processor-lane with owner-lane, dropping ~97% of histogram contributions.
+  Parity FAIL confirms the speedup is artifact, not signal.
+- Probe D2 — 1.006× iter speedup, Δloss=0.03 at Epsilon. Parity FAIL, no perf.
+- Probe C — already retired (DEC-023, race condition on shared accumulator).
+- Probe D1 — retired in T3 erratum: TG-memory-infeasible (`partialHist[K][NUM_SIMD_GROUPS][1024]` = 128 KB at K=4, 4× over the 32 KB threadgroup ceiling).
+
+**Structural conclusion:** The premise "eliminate src-broadcast without restoring
+routing" is impossible. Bin-owner mapping is intrinsic to bin values; correctness
+requires either shuffle (the cost we tried to remove) or pre-sort + per-lane
+processing (a different research arc, not this one).
+
+**What this closes:** The simd_shuffle-family throughput research arc on the
+existing histogram kernel topology. No further B/C/D-class probes warranted.
+
+**What this does NOT close:** The broader v0.7.0 throughput question. Alternative
+levers — bin-distributed dispatch, sort-then-scan with race-free atomics, or
+fundamentally different kernel topology — remain unevaluated and would require
+fresh f_hist analysis and a new research arc (see DEC-050 if pursued).
+
+**Process win:** This is the 7th throughput-hypothesis falsification in this
+codebase, but the FIRST caught by empirical-measurement-before-merge. The
+LESSONS-LEARNED MANDATORY-CODE-INSPECTION rule fired correctly and prevented a
+bogus 9.79× claim from reaching master.
+
+**Authority pointers:** `docs/sprint46/T5/decision.md`, `docs/sprint46/T6/summary.md`,
+`docs/sprint46/T4/probe-d/results.json`.
+
+---
+
+## DEC-050: v0.7.0 release strategy — Option α (reproducibility-grade release; throughput deferred to v0.8.0)
+
+**Status:** DECIDED (2026-05-05, by user, in S46 close-out)
+**Sprint:** 46 (decision); 47 (execution)
+**Supersedes:** the implicit "v0.7.0 ships on perf delta" framing carried from S43–S46
+**Cross-refs:** DEC-047 (v0.6.0 reproducibility-grade framing), DEC-048 + DEC-049 (failed throughput levers), HANDOFF "BLOCKING DECISION FOR S47" block
+
+**Decision:** v0.7.0 ships as a **reproducibility-grade release**. No throughput delta vs v0.6.x is required. PyPI publish proceeds on functionality, parity, and packaging quality.
+
+**Why α over β/γ:**
+- **α vs β** — Pivoting to a fundamentally different lever (β) would be the 8th throughput-hypothesis attempt on the same hot-loop topology. Falsification chain DEC-013/014/015/017/019/048/049 already disproves the implicit assumption that an incremental kernel-class lever exists. β requires fresh structural premise (different topology, e.g., bin-distributed dispatch with race-free atomics) — that is a v0.8.0+ research question, not a v0.7.0 release blocker.
+- **α vs γ** — α and γ ship the same release. α is the more honest framing: "reproducibility-grade" is a positive product claim grounded in the Branch-B regression test, the cross-class CUDA bit-equivalence (DEC-S45-T4), and the `catboost-tripoint` parity oracle (DEC-S45-T5). γ ("we relax the gate") presents the same artifact as a concession.
+
+**What this closes:**
+- v0.7.0 perf gate as previously framed (≥3× MLX/CPU iter speedup at Epsilon iter=2000).
+- The throughput epic for the v0.7.0 release window. PyPI publish is unblocked.
+
+**What this opens (v0.8.0+ scope, not v0.7.0):**
+- Throughput remains an open product question, but only on a structurally NEW lever class. The DEC-049 OUTCOME §"What this does NOT close" enumerates plausible candidate classes (bin-distributed dispatch, sort-then-scan with race-free atomics, fundamentally different kernel topology). Any future arc must publish a fresh f_hist analysis at v0.7.0's measured baseline before any probe is greenlit.
+- The MANDATORY-CODE-INSPECTION rule (LESSONS-LEARNED, S45-T6 + S46-T6) carries forward to all future probe specs.
+
+**S47 scope (now unblocked):** v0.7.0 release engineering. Reproducibility-grade framing in user-facing CHANGELOG.md + README.md. Version bump (0.6.x → 0.7.0). PyPI publish workflow. No probe code, no kernel changes, no benchmarks beyond release validation.
+
+**Authority pointers:** `.claude/state/HANDOFF.md` (DECIDED block), DEC-047, DEC-049 OUTCOME, `docs/sprint46/T5/decision.md` (path-decision context).

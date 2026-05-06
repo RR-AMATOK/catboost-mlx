@@ -357,6 +357,49 @@ release-readiness filter, not a substitute for fundamental correctness review.
 
 ---
 
+---
+
+## SIMD Histogram Kernel Routing Invariant
+
+### In SIMD histogram kernels, processor-lane and owner-lane are independent random variables
+
+**Date**: 2026-05-05
+**Sprint**: [sprint-46]
+**Tags**: [simd] [histogram] [kernel-correctness] [routing]
+
+In histogram accumulation kernels with per-lane register accumulators, the lane that
+processes a document (selected by doc index, e.g. `d & 31`) and the lane that owns
+that document's target bin (selected by bin value, e.g. `bin & 31`) are statistically
+independent under any realistic bin distribution. P(processor == owner) = 1/SIMD_SIZE.
+
+S46 Probe B (`kernel_sources.h:1374-1407`) removed the `simd_shuffle(packed, src)`
+broadcast believing "each lane's partial sum was already complete for its owned bins."
+That comment was wrong. Without routing — either shuffle (the cost Probe B tried to
+remove) or pre-sort by bin — approximately (1 − 1/SIMD_SIZE) of contributions are
+silently discarded. Probe B measured a 9.79× iter "speedup" that was 96.9% missing
+work, parity broken from iteration 0.
+
+**How to apply:**
+1. When reviewing any kernel touching `simd_shuffle` / `simd_shuffle_xor` in a
+   histogram or scatter context, require an explicit account of how each (bin, value)
+   pair reaches the lane that owns that bin.
+2. Treat any code comment asserting "per-lane partial IS the full sum for that lane"
+   as suspect until verified against the conditional that gates accumulation.
+3. If a probe shows speedup before parity sign-off is complete, treat the speedup
+   as zero. Parity-before-speedup is mandatory.
+4. Any "remove the broadcast" proposal must disclose its routing replacement.
+   No replacement = structurally incorrect — not a candidate.
+
+**Process gap surfaced:** code inspection of Probe B happened post-measurement, not
+pre-sweep. Future probe specs MUST require code-inspection sign-off on the probe
+kernel's accumulation invariant BEFORE the sweep runs. The sign-off question is:
+"How does each (bin, stat) pair reach the lane that owns that bin?" Standing rule
+added S46-T6.
+
+*(source: catboost-mlx S46-T4, DEC-049 OUTCOME, `kernel_sources.h:1374-1407`, 2026-05-05)*
+
+---
+
 ## Contribution Log
 
 | Date | Change | Contributor |
@@ -369,3 +412,4 @@ release-readiness filter, not a substitute for fundamental correctness review.
 | 2026-04-25 | Added § Probe Design — cross-runtime configuration symmetry (PROBE-Q phase 2) | sprint-38 |
 | 2026-04-25 | Added § Noise-Driven Algorithms — RNG-implementation bias multi-seed verification | sprint-39 |
 | 2026-04-26 | Added § Cross-Runtime Triage — 3-experiment decomposition methodology (release-readiness filter) | sprint-40 |
+| 2026-05-05 | Added § SIMD Histogram Kernel Routing Invariant — processor-lane vs owner-lane independence trap (S46 Probe B) | sprint-46 |

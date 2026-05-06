@@ -1,0 +1,44 @@
+bench_boosting — CatBoost-MLX library-path benchmark (TODO-014)
+================================================================
+rows=400000  features=2000  classes=2  depth=6  iters=12  bins=128
+lr=0.1000  l2=3.0000  seed=43  approxDim=1  onehot=0
+----------------------------------------------------------------
+Generating synthetic dataset...
+Dataset: 400000 rows x 2000 features (500 uint32 cols), 254000 total bin-features
+Beginning 12 boosting iterations...
+
+[per-kernel-profile] Enabled — inserting mx::eval() sync points.
+  WARNING: reported ms are UPPER BOUNDS (kernel overlap suppressed).
+
+
+--- Running (T2 sort-by-bin, production default) ---
+  iter    0  time=  267.2 ms  loss=0.688640
+  iter    9  time=  212.4 ms  loss=0.668448
+  iter   11  time=  227.0 ms  loss=0.661720
+
+================================================================
+Timing Summary
+----------------------------------------------------------------
+  iter-0 (cold start):     267.2 ms
+  warm mean (  11 iters):    213.9 ms
+  warm min:                209.2 ms
+  warm max:                227.0 ms
+
+  Final loss: 0.66171968
+  BENCH_FINAL_LOSS=0.66171968
+================================================================
+
+=== Per-kernel profile (--per-kernel-profile; UPPER BOUNDS due to sync) ===
+WARNING: mx::eval() sync points disable MLX kernel overlap. Reported
+         per-kernel ms are UPPER BOUNDS on non-sync production timing.
+         Stats: 10%-trimmed mean/stdev (Metal scheduling jitter suppressed)
+         Warm iters = 11 (iter-0 excluded)
+
+  derivatives      mean=  0.753 ms   stdev= 0.045 ms  ( 5.9%)  [wall-clock floor: sub-ms jitter]
+  tree_support     mean= 17.003 ms   stdev= 0.481 ms  ( 2.8%)
+  histogram        mean=173.957 ms   stdev= 5.047 ms  ( 2.9%)
+  suffix_sum       mean=  1.912 ms   stdev= 0.050 ms  ( 2.6%)
+  split_score      mean=  2.719 ms   stdev= 0.113 ms  ( 4.2%)
+  leaf_estimation  mean=  4.024 ms   stdev= 0.083 ms  ( 2.1%)
+  ------ sum-of-per-kernel=200.369 ms  vs iter_total=212.911 ms  (delta=-12.542 ms, -5.9%)
+  [WARN: |delta| > 5% — possible missing dispatch boundary]

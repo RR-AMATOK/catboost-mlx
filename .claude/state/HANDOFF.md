@@ -1,7 +1,39 @@
 # Handoff — CatBoost-MLX
 
-> Last updated: 2026-05-04 (**S45 CLOSED — H-Dispatch falsified; DEC-048 KILL filed; T4 + T5 shipped**).
-> Branch `mlx/sprint-45-perf-spike-and-decide`. All tasks T0–T6 complete. PR pending.
+> Last updated: 2026-05-05 (**S46 CLOSED — simd_shuffle arc RETIRED; DEC-049 KILL; all 4 candidates falsified**).
+> Branch `mlx/sprint-46-simd-shuffle-research`. All tasks T0–T6 complete. PR pending.
+
+---
+
+## v0.7.0 strategy — DECIDED: Option α (reproducibility-grade release)
+
+> **DECIDED 2026-05-05 by user.** v0.7.0 ships as a reproducibility-grade release. No throughput delta required. PyPI publish unblocked. Throughput → v0.8.0 conditional on a structurally NEW lever class (not another kernel-internal probe). See **DEC-050** in `.claude/state/DECISIONS.md`.
+>
+> **S47 scope:** v0.7.0 release engineering. Version bump (0.6.x → 0.7.0). User-facing CHANGELOG.md + README.md updates with reproducibility-grade framing (build on DEC-047 v0.6.0 framing + DEC-S45-T4 cross-class CUDA bit-equivalence + S45-T5 `catboost-tripoint` parity oracle). PyPI publish workflow validation. No probe code, no kernel changes.
+
+---
+
+## Sprint 46 close-out
+
+**S46 CLOSED — RETIRED.** All 4 candidates falsified.
+
+**Authoritative records:** `docs/sprint46/T5/decision.md` + `docs/sprint46/T6/summary.md`
+
+**What S46 found:**
+All four bounded candidates (B, C, D1, D2) from the simd_shuffle redesign research arc are falsified at production shape after build-env fix + dispatcher rewrite + 27-run sweep. Probe B (per-lane register accumulation) measured 9.79× iter speedup — BOGUS: `kernel_sources.h:1374-1407` confuses processor-lane (doc index mod 32) with owner-lane (bin value mod 32), dropping ~97% of contributions. Probe D2 (split-K merge) measured 1.006× — empirically flat after the `mx::add → mx::concatenate` dispatcher rewrite. Both probes: parity FAIL. Structural conclusion: the premise "eliminate src-broadcast without restoring routing" is logically impossible. DEC-049 = KILL.
+
+**What S46 ships:**
+1. **Probe variants (gated)** — `kernel_sources.h` Probe B + D blocks under `#ifdef SIMD_SHUFFLE_PROBE_{B,D}`. Production path bit-identical to v0.6.1. Branch-B regression test GREEN.
+2. **Build-env fix** — `python/catboost_mlx/_core/CMakeLists.txt` `BUILD_S46_PROBES=ON` option. Unblocks probe builds for v0.7.x via conda-path `find_package(MLX)`.
+3. **Measurement suite** — 27-run sweep at production dispatch shape; `docs/sprint46/T4/probe-d/results.json` + `parse_results.py`.
+4. **DEC-049 OUTCOME** — `.claude/state/DECISIONS.md`. RETIRED. Falsification chain documented.
+5. **LESSONS-LEARNED entries** — project-local (`SIMD histogram routing invariant`) + Frameworks-wide.
+
+**Process finding:** MANDATORY-CODE-INSPECTION rule fired correctly — code inspection of `kernel_sources.h:1374-1407` post-speedup surfaced the processor/owner-lane confusion that prevented a bogus 9.79× claim from reaching master. Process gap: inspection was post-measurement, not pre-sweep. Standing rule added S46-T6: probe specs must include code-inspection sign-off on accumulation invariant BEFORE the sweep runs.
+
+**v0.7.0 gate:** BLOCKING DECISION required (see above).
+
+---
 
 ## Sprint 45 close-out
 

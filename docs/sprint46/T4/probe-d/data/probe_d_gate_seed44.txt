@@ -1,0 +1,43 @@
+bench_boosting — CatBoost-MLX library-path benchmark (TODO-014)
+================================================================
+rows=50000  features=100  classes=2  depth=6  iters=12  bins=128
+lr=0.1000  l2=3.0000  seed=44  approxDim=1  onehot=0
+----------------------------------------------------------------
+Generating synthetic dataset...
+Dataset: 50000 rows x 100 features (25 uint32 cols), 12700 total bin-features
+Beginning 12 boosting iterations...
+
+[per-kernel-profile] Enabled — inserting mx::eval() sync points.
+  WARNING: reported ms are UPPER BOUNDS (kernel overlap suppressed).
+
+
+--- Running (T2 sort-by-bin, production default) ---
+  iter    0  time=   85.3 ms  loss=0.689292
+  iter    9  time=   53.9 ms  loss=0.671144
+  iter   11  time=   52.8 ms  loss=0.668392
+
+================================================================
+Timing Summary
+----------------------------------------------------------------
+  iter-0 (cold start):      85.3 ms
+  warm mean (  11 iters):     52.6 ms
+  warm min:                 49.6 ms
+  warm max:                 54.1 ms
+
+  Final loss: 0.66839212
+  BENCH_FINAL_LOSS=0.66839212
+================================================================
+
+=== Per-kernel profile (--per-kernel-profile; UPPER BOUNDS due to sync) ===
+WARNING: mx::eval() sync points disable MLX kernel overlap. Reported
+         per-kernel ms are UPPER BOUNDS on non-sync production timing.
+         Stats: 10%-trimmed mean/stdev (Metal scheduling jitter suppressed)
+         Warm iters = 11 (iter-0 excluded)
+
+  derivatives      mean=  0.652 ms   stdev= 0.030 ms  ( 4.5%)
+  tree_support     mean=  6.478 ms   stdev= 0.096 ms  ( 1.5%)
+  histogram        mean= 38.953 ms   stdev= 1.086 ms  ( 2.8%)
+  suffix_sum       mean=  1.334 ms   stdev= 0.044 ms  ( 3.3%)
+  split_score      mean=  2.078 ms   stdev= 0.139 ms  ( 6.7%)  [WARN: stdev > 5%]
+  leaf_estimation  mean=  2.564 ms   stdev= 0.023 ms  ( 0.9%)
+  ------ sum-of-per-kernel= 52.058 ms  vs iter_total= 52.764 ms  (delta=-0.705 ms, -1.3%)
