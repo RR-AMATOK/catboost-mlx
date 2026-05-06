@@ -1620,10 +1620,12 @@ static const std::string kHistProbeDPartialSource = R"metal(
     const uint kDocEnd      = min(kDocStart + docsPerSlice, totalDocsInPart);
     if (kDocStart >= totalDocsInPart) return;
 
-    // Output slot: partialHistogram[kBlock * (numPartitions * numStats * totalBinFeatures)
-    //                               + partIdx * numStats * totalBinFeatures + statIdx * totalBinFeatures]
-    const uint partialBase = kBlock * (numPartitions * numStats * totalBinFeatures)
-                           + partIdx * numStats * totalBinFeatures
+    // Output slot: this dispatch owns a dedicated [numPartitions * numStats * totalBinFeatures]
+    // output buffer (shape [P*S*B] — one per K-slice). kBlock is used ONLY for input doc-range
+    // selection above; the output base ignores kBlock entirely. The dispatcher stacks K slices
+    // into [K*P*S*B] via mx::concatenate before passing to the merge kernel.
+    // This makes all K dispatches fully independent in the MLX compute graph (no mx::add chain).
+    const uint partialBase = partIdx * numStats * totalBinFeatures
                            + statIdx * totalBinFeatures;
 
     // Per-SIMD shared histogram (same layout as production — 32 KB).
@@ -1748,3 +1750,4 @@ static const std::string kHistProbeDMergeSource = R"metal(
 #endif  // SIMD_SHUFFLE_PROBE_D
 
 }  // namespace KernelSources
+}  // namespace NCatboostMlx

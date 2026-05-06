@@ -2720,3 +2720,69 @@ v0.7.0 release remains held per DEC-048 §"Implication for v0.7.0":
 - **If T5 = KILL** → v0.7.0 path narrows further. PyPI publish remains gated on
   perf delta; project remains at v0.6.1 indefinitely until either a research-grade
   lever appears or the audience proposition shifts.
+
+---
+
+## DEC-049 OUTCOME — simd_shuffle histogram throughput research arc — RETIRED
+
+**Status:** RETIRED (2026-05-05, S46-T4)
+**Supersedes/extends:** falsification chain DEC-013, DEC-014, DEC-015, DEC-017, DEC-019, DEC-048
+
+**Verdict:** All four bounded candidates (B, C, D1, D2) falsified at production shape
+after build-env fix + dispatcher rewrite + 27-run sweep.
+
+**Evidence:**
+- Probe B — 9.79× iter speedup is BOGUS: `kernel_sources.h:1374-1407` confuses
+  processor-lane with owner-lane, dropping ~97% of histogram contributions.
+  Parity FAIL confirms the speedup is artifact, not signal.
+- Probe D2 — 1.006× iter speedup, Δloss=0.03 at Epsilon. Parity FAIL, no perf.
+- Probe C — already retired (DEC-023, race condition on shared accumulator).
+- Probe D1 — retired in T3 erratum: TG-memory-infeasible (`partialHist[K][NUM_SIMD_GROUPS][1024]` = 128 KB at K=4, 4× over the 32 KB threadgroup ceiling).
+
+**Structural conclusion:** The premise "eliminate src-broadcast without restoring
+routing" is impossible. Bin-owner mapping is intrinsic to bin values; correctness
+requires either shuffle (the cost we tried to remove) or pre-sort + per-lane
+processing (a different research arc, not this one).
+
+**What this closes:** The simd_shuffle-family throughput research arc on the
+existing histogram kernel topology. No further B/C/D-class probes warranted.
+
+**What this does NOT close:** The broader v0.7.0 throughput question. Alternative
+levers — bin-distributed dispatch, sort-then-scan with race-free atomics, or
+fundamentally different kernel topology — remain unevaluated and would require
+fresh f_hist analysis and a new research arc (see DEC-050 if pursued).
+
+**Process win:** This is the 7th throughput-hypothesis falsification in this
+codebase, but the FIRST caught by empirical-measurement-before-merge. The
+LESSONS-LEARNED MANDATORY-CODE-INSPECTION rule fired correctly and prevented a
+bogus 9.79× claim from reaching master.
+
+**Authority pointers:** `docs/sprint46/T5/decision.md`, `docs/sprint46/T6/summary.md`,
+`docs/sprint46/T4/probe-d/results.json`.
+
+---
+
+## DEC-050: v0.7.0 release strategy — Option α (reproducibility-grade release; throughput deferred to v0.8.0)
+
+**Status:** DECIDED (2026-05-05, by user, in S46 close-out)
+**Sprint:** 46 (decision); 47 (execution)
+**Supersedes:** the implicit "v0.7.0 ships on perf delta" framing carried from S43–S46
+**Cross-refs:** DEC-047 (v0.6.0 reproducibility-grade framing), DEC-048 + DEC-049 (failed throughput levers), HANDOFF "BLOCKING DECISION FOR S47" block
+
+**Decision:** v0.7.0 ships as a **reproducibility-grade release**. No throughput delta vs v0.6.x is required. PyPI publish proceeds on functionality, parity, and packaging quality.
+
+**Why α over β/γ:**
+- **α vs β** — Pivoting to a fundamentally different lever (β) would be the 8th throughput-hypothesis attempt on the same hot-loop topology. Falsification chain DEC-013/014/015/017/019/048/049 already disproves the implicit assumption that an incremental kernel-class lever exists. β requires fresh structural premise (different topology, e.g., bin-distributed dispatch with race-free atomics) — that is a v0.8.0+ research question, not a v0.7.0 release blocker.
+- **α vs γ** — α and γ ship the same release. α is the more honest framing: "reproducibility-grade" is a positive product claim grounded in the Branch-B regression test, the cross-class CUDA bit-equivalence (DEC-S45-T4), and the `catboost-tripoint` parity oracle (DEC-S45-T5). γ ("we relax the gate") presents the same artifact as a concession.
+
+**What this closes:**
+- v0.7.0 perf gate as previously framed (≥3× MLX/CPU iter speedup at Epsilon iter=2000).
+- The throughput epic for the v0.7.0 release window. PyPI publish is unblocked.
+
+**What this opens (v0.8.0+ scope, not v0.7.0):**
+- Throughput remains an open product question, but only on a structurally NEW lever class. The DEC-049 OUTCOME §"What this does NOT close" enumerates plausible candidate classes (bin-distributed dispatch, sort-then-scan with race-free atomics, fundamentally different kernel topology). Any future arc must publish a fresh f_hist analysis at v0.7.0's measured baseline before any probe is greenlit.
+- The MANDATORY-CODE-INSPECTION rule (LESSONS-LEARNED, S45-T6 + S46-T6) carries forward to all future probe specs.
+
+**S47 scope (now unblocked):** v0.7.0 release engineering. Reproducibility-grade framing in user-facing CHANGELOG.md + README.md. Version bump (0.6.x → 0.7.0). PyPI publish workflow. No probe code, no kernel changes, no benchmarks beyond release validation.
+
+**Authority pointers:** `.claude/state/HANDOFF.md` (DECIDED block), DEC-047, DEC-049 OUTCOME, `docs/sprint46/T5/decision.md` (path-decision context).

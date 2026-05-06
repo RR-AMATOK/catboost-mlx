@@ -825,13 +825,13 @@ static mx::array DispatchHistogramProbeDKBench(
     auto kTotalArr      = mx::array(static_cast<uint32_t>(kProbeD_K), mx::uint32);
 
     auto flatCompressed = mx::reshape(compressedData, {-1});
-    mx::Shape histShape        = {static_cast<int>(numActiveParts * numStats * totalBinFeatures)};
-    mx::Shape partialHistShape = {static_cast<int>(kProbeD_K * numActiveParts * numStats * totalBinFeatures)};
-
-    // Partial histogram buffer: K * numPartitions * numStats * totalBinFeatures floats.
-    // Initialized to zero via init_value=0.0f.
-    auto partialHistogram = mx::zeros(partialHistShape, mx::float32);
-    mx::eval(partialHistogram);  // ensure zero-init before accumulation dispatches
+    // histShape: final merged output [numPartitions * numStats * totalBinFeatures].
+    // sliceShape: per-K-dispatch output [numPartitions * numStats * totalBinFeatures].
+    // Each dispatch writes only its own doc-range slice; kBlock controls doc range, not output offset.
+    // After K independent dispatches, mx::concatenate forms [K * numPartitions * numStats * totalBinFeatures]
+    // for the merge kernel — making all K dispatches data-independent in the MLX compute graph.
+    mx::Shape histShape  = {static_cast<int>(numActiveParts * numStats * totalBinFeatures)};
+    mx::Shape sliceShape = {static_cast<int>(numActiveParts * numStats * totalBinFeatures)};
 
     auto grid       = std::make_tuple(
         static_cast<int>(256 * maxBlocksPerPart * numGroups),
@@ -840,7 +840,10 @@ static mx::array DispatchHistogramProbeDKBench(
     );
     auto threadgroup = std::make_tuple(256, 1, 1);
 
-    // Partial accumulation: K separate dispatches, each processing 1/K doc slice.
+    // Partial accumulation: K separate dispatches, each processing a disjoint 1/K doc slice.
+    // Each dispatch outputs shape [P*S*B] — its own buffer; kBlock selects the input doc range
+    // (kernel_sources.h:kHistProbeDPartialSource: kDocStart = kBlock * docsPerSlice).
+    // The K outputs are INDEPENDENT in the MLX compute graph — no mx::add chain.
     static auto partialKernel = mx::fast::metal_kernel(
         "probe_d_partial_accum",
         /*input_names=*/{
@@ -858,24 +861,34 @@ static mx::array DispatchHistogramProbeDKBench(
         /*atomic_outputs=*/true
     );
 
+    // Launch K independent dispatches. kSlices[k] = partial histogram for doc-slice k.
+    // Shape per slice: [P*S*B] (one slot per partition × stat × bin-feature).
+    // kBlock is passed as k to select the doc range; output offset is always 0 (kernel
+    // ignores kBlock for output addressing — see kernel_sources.h kHistProbeDPartialSource).
+    std::vector<mx::array> kSlices;
+    kSlices.reserve(kProbeD_K);
     for (ui32 k = 0; k < kProbeD_K; ++k) {
         auto kBlockArr = mx::array(static_cast<uint32_t>(k), mx::uint32);
-        // Each K dispatch writes to unique slot via kBlock offset — race-free by construction.
         auto partialOut = partialKernel(
             {flatCompressed, stats, docIndices, partOffsets, partSizes,
              featureColsArr, foldCountsArr, firstFoldArr,
              lineSizeArr, maxBlocksArr, numGroupsArr,
              numPartsArr, numStatsArr, totalBinsArr, totalDocsArr,
              kBlockArr, kTotalArr},
-            {partialHistShape}, {mx::float32},
+            {sliceShape}, {mx::float32},
             grid, threadgroup, {}, 0.0f, false, mx::Device::gpu
         );
-        // Accumulate partial result into the running partial histogram via addition.
-        // Each k writes to a disjoint [k * stride] offset, so this is additive (not CAS).
-        // Since MLX outputs are new arrays, we accumulate by reassigning partialHistogram.
-        partialHistogram = mx::add(partialHistogram, partialOut[0]);
+        kSlices.push_back(partialOut[0]);
     }
-    mx::eval(partialHistogram);  // ensure all K partials complete before merge
+    // Force evaluation of all K slices simultaneously — MLX scheduler can run them in parallel
+    // since they share no data dependencies (each reads a disjoint doc range, writes to its own buffer).
+    mx::eval(kSlices);
+
+    // Concatenate K slices into [K * P*S*B] for the merge kernel.
+    // Layout after concatenate: [slice_0 (P*S*B elems) | slice_1 | ... | slice_{K-1}]
+    // Merge kernel indexes as: k * (P*S*B) + partIdx*numStats*totalBinFeatures + statIdx*totalBinFeatures
+    // which matches this layout exactly (kernel_sources.h:kHistProbeDMergeSource:1736).
+    auto partialHistogram = mx::concatenate(kSlices, 0);
 
     // Merge: sum K partial slots into final histogram.
     // One TG per (group, partition, stat). Grid and threadgroup same as accumulation.

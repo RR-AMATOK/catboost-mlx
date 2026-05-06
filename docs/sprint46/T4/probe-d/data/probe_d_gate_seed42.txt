@@ -1,0 +1,43 @@
+bench_boosting — CatBoost-MLX library-path benchmark (TODO-014)
+================================================================
+rows=50000  features=100  classes=2  depth=6  iters=12  bins=128
+lr=0.1000  l2=3.0000  seed=42  approxDim=1  onehot=0
+----------------------------------------------------------------
+Generating synthetic dataset...
+Dataset: 50000 rows x 100 features (25 uint32 cols), 12700 total bin-features
+Beginning 12 boosting iterations...
+
+[per-kernel-profile] Enabled — inserting mx::eval() sync points.
+  WARNING: reported ms are UPPER BOUNDS (kernel overlap suppressed).
+
+
+--- Running (T2 sort-by-bin, production default) ---
+  iter    0  time=  209.2 ms  loss=0.689267
+  iter    9  time=   51.4 ms  loss=0.667721
+  iter   11  time=   52.3 ms  loss=0.663984
+
+================================================================
+Timing Summary
+----------------------------------------------------------------
+  iter-0 (cold start):     209.2 ms
+  warm mean (  11 iters):     52.3 ms
+  warm min:                 50.1 ms
+  warm max:                 54.2 ms
+
+  Final loss: 0.66398364
+  BENCH_FINAL_LOSS=0.66398364
+================================================================
+
+=== Per-kernel profile (--per-kernel-profile; UPPER BOUNDS due to sync) ===
+WARNING: mx::eval() sync points disable MLX kernel overlap. Reported
+         per-kernel ms are UPPER BOUNDS on non-sync production timing.
+         Stats: 10%-trimmed mean/stdev (Metal scheduling jitter suppressed)
+         Warm iters = 11 (iter-0 excluded)
+
+  derivatives      mean=  0.656 ms   stdev= 0.036 ms  ( 5.4%)  [wall-clock floor: sub-ms jitter]
+  tree_support     mean=  6.410 ms   stdev= 0.094 ms  ( 1.5%)
+  histogram        mean= 38.291 ms   stdev= 0.450 ms  ( 1.2%)
+  suffix_sum       mean=  1.316 ms   stdev= 0.121 ms  ( 9.2%)  [wall-clock floor: sub-ms jitter]
+  split_score      mean=  2.208 ms   stdev= 0.163 ms  ( 7.4%)  [WARN: stdev > 5%]
+  leaf_estimation  mean=  2.610 ms   stdev= 0.051 ms  ( 2.0%)
+  ------ sum-of-per-kernel= 51.491 ms  vs iter_total= 52.304 ms  (delta=-0.813 ms, -1.6%)

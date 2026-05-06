@@ -155,14 +155,34 @@ merge is per-(partition, group) with single TG per output slot.
 
 ---
 
-## §5  Build blocker
+## §5  Build blocker + dispatcher fix status
 
-**Same as Candidates B and C** — MLX 0.31.2 / Darwin 25.3 SDK incompatibility.
+**Build blocker:** MLX 0.31.2 / Darwin 25.3 SDK incompatibility (same as B and C).
 
-Additionally, probe D has a design concern (§3 review): the `mx::add` accumulation pattern
-should be replaced with a pre-allocated partition buffer for correct K-parallel execution.
-This is a code fix in `DispatchHistogramProbeDKBench` that can be addressed when the build
-environment is restored.
+**Dispatcher fix: APPLIED (S46-T4 Option 2, Phase 2).**
+
+The `mx::add` sequential chain identified in §3 was rewritten. Changes:
+
+**`catboost/mlx/kernels/kernel_sources.h` (kHistProbeDPartialSource, ~line 1623):**
+- `partialBase` no longer includes `kBlock × stride` factor
+- Each dispatch now writes to offset 0 of its own `[P*S*B]` output buffer
+- `kBlock` retained only for input doc-range selection (`kDocStart = kBlock × docsPerSlice`)
+
+**`catboost/mlx/tests/bench_boosting.cpp` (DispatchHistogramProbeDKBench, ~lines 827–891):**
+- Replaced `partialHistogram = mx::zeros([K*P*S*B])` + `mx::add` chain with:
+  - `sliceShape = [P*S*B]` per dispatch
+  - `std::vector<mx::array> kSlices` collecting K independent outputs
+  - `mx::eval(kSlices)` forcing simultaneous GPU evaluation
+  - `mx::concatenate(kSlices, 0)` producing `[K*P*S*B]` for the merge kernel
+- The K dispatches are now data-independent in the MLX compute graph
+
+**Route A build integration (Phase 1):**
+- `python/catboost_mlx/_core/CMakeLists.txt` now has `BUILD_S46_PROBES=ON` option
+- Adds `bench_boosting_baseline`, `bench_boosting_probe_b`, `bench_boosting_probe_d` targets
+- All link via the same `find_package(MLX)` path that builds `_core.so` successfully
+
+**Remaining blocker:** Binary compilation requires CMake re-invocation with `BUILD_S46_PROBES=ON`.
+See `docs/sprint46/T4/build-env/status.md` for exact build commands.
 
 ---
 
@@ -171,6 +191,7 @@ environment is restored.
 **Pre-flight D1: RETIRED (TG-memory infeasible, 128 KB > 32 KB ceiling)**
 **Pre-flight D2 merge overhead: PASS (0.042% << 30% threshold)**
 **Race analysis: PASS by construction (unique per-K slots)**
+**Dispatcher fix: APPLIED (mx::add → concatenate + parallel eval)**
 **Parity: UNCERTAIN — γ_10 may exceed RMSE ceiling (re-baseline required)**
 **Performance measurement: BLOCKED (build environment incompatible)**
 **Implementation note: mx::add accumulation pattern needs review (see §3)**

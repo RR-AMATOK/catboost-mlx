@@ -2,6 +2,86 @@
 
 > Coverage: Sprints 0–15 reconstructed from git log on 2026-04-15. Sprint 16+ is source of truth.
 
+## 2026-05-05 — DEC-050: v0.7.0 strategy DECIDED — Option α (reproducibility-grade)
+
+User-decision in S46 close-out, immediately following DEC-049 RETIRED. v0.7.0 ships as reproducibility-grade release (no throughput delta required); throughput → v0.8.0 conditional on a structurally NEW lever class (not another kernel-internal probe). Falsification chain DEC-013/014/015/017/019/048/049 disproved the implicit assumption that an incremental simd_shuffle-class lever exists. PyPI publish unblocked. S47 scope = release engineering only (version bump, user-facing CHANGELOG/README, PyPI publish workflow).
+
+See `.claude/state/DECISIONS.md` DEC-050 for full reasoning. HANDOFF.md "v0.7.0 strategy — DECIDED" block + TODOS.md S47 task list updated accordingly.
+
+## 2026-05-05 — Sprint 46: simd_shuffle Research Arc — DEC-049 RETIRED
+
+Branch: `mlx/sprint-46-simd-shuffle-research`. Tip: `94a260468b`. No production kernel or source changes. Probe code under `#ifdef SIMD_SHUFFLE_PROBE_{B,D}` guards only.
+
+### T0/T1 — Scaffold + current-state
+
+Sprint plan at `docs/sprint46/sprint-plan.md`. DEC-049 OPEN filed. `docs/sprint46/T1/current-state.md` characterizes `kHistOneByteSource` accumulation loop (`kernel_sources.h:209–224`) with file:line citations. f_hist at Epsilon-proxy = 0.9772 (97.7% of iter wall-clock in histogram phase). Src-broadcast chain runs 32 iterations per batch window; ownership predicate `(bin & 31) == lane` gates writes. 32 KB TG ceiling (DEC-011) fully consumed by `simdHist[8][1024]`.
+
+### T2 — 4-candidate feasibility
+
+`docs/sprint46/T2/feasibility.md`. Candidate A (atomic-add) retired at T2 — no new evidence vs DEC-017/DEC-023 per DEC-025 re-entry policy. Three candidates survive to T3: B (per-lane register accumulators), C (sort-by-bin extension), D (split-K merge). At f_hist=0.9772, any candidate with ≥3× hist speedup maps to ≥2.93× iter speedup — all three analytically viable for Outcome A.
+
+### T3 — Probe-D spec + D1 erratum
+
+`docs/sprint46/T3/probe-d-spec.md`. Production shape sweep: 3 seeds × 12 iters × 3 shapes (Gate 50k×100, Higgs-1M 1M×28, Epsilon 400k×2000). Kill threshold: Epsilon iter speedup < 1.5× → RETIRE. **T3 erratum:** D1 (intra-kernel K-split) requires `partialHist[4][8][1024] × 4B = 128 KB` — 4× the 32 KB TG ceiling. D1 RETIRED structurally. D2 (separate dispatch + merge kernel) is the only viable D path.
+
+### T4 — Build-env fix + probe execution
+
+**Build blocker:** MLX 0.31.2 (Homebrew) headers incompatible with Darwin 25.3 SDK (Apple Clang 21.0.0). Resolution: Route A — `python/catboost_mlx/_core/CMakeLists.txt` `BUILD_S46_PROBES=ON` option adding `bench_boosting_baseline`, `bench_boosting_probe_b`, `bench_boosting_probe_d` targets sharing the conda-path `find_package(MLX)` resolution. `docs/sprint46/T4/build-env/status.md`.
+
+**Probe C retired structurally** (DEC-023 race — no deterministic path covering all 4 features).
+
+**Probe D2 dispatcher rewritten:** `mx::add` sequential chain → K independent `kSlices` + `mx::eval(kSlices)` + `mx::concatenate`. Changes in `bench_boosting.cpp:827–891` + `kernel_sources.h` (`kHistProbeDPartialSource` partial-buffer offset).
+
+**27-run sweep** (`docs/sprint46/T4/probe-d/results.json`):
+
+| Probe | Epsilon iter speedup | Parity |
+|---|---|---|
+| B (per-lane register) | 9.79× — BOGUS | FAIL — Δloss 0.005–0.008, iter-0 |
+| D2 (split-K merge) | 1.006× | FAIL — Δloss 0.03+ |
+
+### T5 — Decision gate: DEC-049 RETIRED
+
+`docs/sprint46/T5/decision.md`. Probe B's 9.79× diagnosed: `kernel_sources.h:1374-1407` confuses processor-lane (`d & 31`) with owner-lane (`bin & 31`). Independent under uniform bins → P(match) = 1/32 → 96.9% of contributions silently dropped. Speedup = doing 1/32 the work. Probe D2 empirically flat (1.006×); dispatch amortization + `mx::concatenate` copy cost absorb K-fold reduction. Structural impossibility argument: routing IS `simd_shuffle`; removing it without replacement is not an optimization. **Outcome C — RETIRED. DEC-049 = KILL.**
+
+This is the 7th throughput-hypothesis falsification in this codebase (DEC-013, 014, 015, 017, 019, 048, 049) — and the FIRST caught by empirical-measurement-before-merge. MANDATORY-CODE-INSPECTION rule fired correctly.
+
+### T6 — Sprint close-out + LESSONS-LEARNED
+
+`docs/sprint46/T6/summary.md` written. DEC-049 OUTCOME appended to DECISIONS.md. HANDOFF, TODOS, CHANGELOG-DEV updated. Two LESSONS-LEARNED entries:
+
+1. **Project-local** (`.claude/state/LESSONS-LEARNED.md`): "SIMD histogram routing invariant" — processor-lane ≠ owner-lane under uniform bins; P(match) = 1/SIMD_SIZE; any routing-free kernel silently drops (1 − 1/SIMD_SIZE) of contributions.
+2. **Frameworks-wide** (`Frameworks/LESSONS-LEARNED.md`): generalized to Metal/CUDA SIMT contexts under "MLX / Metal Gotchas."
+
+Standing rule added: future probe specs MUST require code-inspection sign-off on the probe kernel's accumulation invariant BEFORE the sweep runs.
+
+### v0.7.0 status
+
+BLOCKING DECISION REQUIRED from user. 7 throughput hypotheses falsified. Options α (retire throughput for v0.7.0), β (new lever arc), γ (relax gate). Strategist recommendation: α. No S47 work begins until user decides. See HANDOFF.md §"BLOCKING DECISION FOR S47."
+
+### Files modified
+
+- `catboost/mlx/kernels/kernel_sources.h` — Probe B + D ifdef blocks (gated)
+- `catboost/mlx/tests/bench_boosting.cpp` — `DispatchHistogramProbeDKBench` (gated)
+- `python/catboost_mlx/_core/CMakeLists.txt` — `BUILD_S46_PROBES=ON` option
+- `docs/sprint46/sprint-plan.md` — sprint charter
+- `docs/sprint46/T1/current-state.md`, `T2/feasibility.md`, `T3/probe-d-spec.md` — research arc
+- `docs/sprint46/T4/build-env/status.md`, `T4/probe-d/results.json`, `T4/probe-d/parse_results.py`
+- `docs/sprint46/T4/B/probe-verdict.md`, `T4/C/probe-verdict.md`, `T4/D/probe-verdict.md`
+- `docs/sprint46/T4/f_hist/analysis.md`
+- `docs/sprint46/T5/decision.md` (NEW)
+- `docs/sprint46/T6/summary.md` (NEW)
+- `.claude/state/DECISIONS.md` — DEC-049 OUTCOME appended
+- `.claude/state/LESSONS-LEARNED.md` — routing invariant entry
+- `.claude/state/HANDOFF.md` — S46 CLOSED + BLOCKING DECISION FOR S47
+- `.claude/state/TODOS.md` — S46 tasks completed; S47 BLOCKED
+- `Frameworks/LESSONS-LEARNED.md` — routing invariant entry (Frameworks-wide)
+
+### Tests run
+
+- 27-run sweep: 3 shapes × 3 seeds × 3 probes (baseline, B, D2)
+- Parity check: final loss comparison baseline vs probe at each shape/seed
+- Branch-B regression test: GREEN throughout (production path unmodified)
+
 ## 2026-05-04 — Sprint 45: H-Dispatch Probe + Cross-Class Lock + DEC-048
 
 Branch: `mlx/sprint-45-perf-spike-and-decide`. No production kernel or source code changes.
