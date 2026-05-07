@@ -1,23 +1,37 @@
 # Active Tasks — CatBoost-MLX
 
 > Coverage: Sprints 0–15 reconstructed from git/agent-memory on 2026-04-15. Sprint 16+ is source of truth.
-> Last header refresh: 2026-05-06 (S47 ACTIVE — DEC-051 amended DEC-050; PyPI publish DEFERRED until CUDA-class throughput. v0.7.0 = reproducibility-grade INTERNAL release on master, no PyPI yet.)
+> Last header refresh: 2026-05-06 (S48 ACTIVE — v0.8.0 throughput research arc kickoff. v2 plan APPROVED post agent panel review. T0 ready to fire.)
 
-## Sprint 47 — v0.7.0 reproducibility-grade INTERNAL release (NO PYPI)
+## Sprint 48 — v0.8.0 Throughput Research Arc — KICKOFF (ACTIVE)
 
-**Decision:** Option α DECIDED 2026-05-05 by user (DEC-050) → AMENDED 2026-05-06 (DEC-051). v0.7.0 still ships as reproducibility-grade with version bump + artifacts on master. **PyPI publish DEFERRED** until MLX path reaches CUDA-class throughput (current MLX/CUDA gap: 23–88×). Threshold to lock at v0.8.0 kickoff (working hypothesis: ≤5× MLX/CUDA on Higgs-1M iter=1000).
+**Status:** SCAFFOLDED. T0 ready to fire.
+**Branch:** `mlx/sprint-48-v0.8.0-arc-kickoff` (cut from master `0c4a7b5d31`).
+**Plan:** `docs/sprint48/scoping.md` (v2 panel-synthesis at top, v1 framing preserved below).
+**Authority:** DEC-049 OUTCOME + DEC-050 + DEC-051 + v2 plan approved 2026-05-06 by user.
 
-**Branch:** `mlx/sprint-47-release-0.7.0`
+**Mode:** RESEARCH SPIKE. **3-day spike + 10-day total v0.8.0 throughput budget** (S48 3 days + S49 ≤7 days conditional on Outcome A).
 
-- [x] **S47-T0 SCAFFOLD** — DONE 2026-05-06. `docs/sprint47/sprint-plan.md` (165 lines). Commit `e964f85ac8`.
-- [x] **S47-T1 VERSION BUMP** — DONE 2026-05-06. `__init__.py:30` + `pyproject.toml:13` → 0.7.0. Smoke pass. Commit `e29abb4b1b`.
-- [x] **S47-T2 USER-FACING CHANGELOG** — DONE 2026-05-06. `## [0.7.0]` (~90 lines): reproducibility-grade framing, Branch-B + tripoint + cross-class CUDA + Pareto citations, PyPI publish posture (deferred per DEC-051). Commit `2971372730`.
-- [x] **S47-T3 README POSTURE** — DONE 2026-05-06. NOT-upstream-catboost banner + Status section (source-only install + DEC-051 cross-link). Commit `c80f09cd4f` (post-DEC-051 edit pending in T5).
-- [x] **S47-T4 RELEASE VALIDATION** — DONE 2026-05-06. Branch-B GREEN; tripoint smoke PASS (mlx backend); clean-env wheel install round-trip GREEN. `docs/sprint47/T4/release-validation.md`. Commit `45a7f67ee6`.
-- [x] **S47-T5 RESCOPED** — DONE 2026-05-06. PyPI/TestPyPI upload CANCELLED per DEC-051. README + CHANGELOG adjusted to source-install + deferred-publish framing. DEC-051 filed (`.claude/state/DECISIONS.md`).
-- [ ] **S47-T6 CLOSE-OUT** — DECISIONS.md DEC-050 + DEC-051 → IMPLEMENTED. HANDOFF/TODOS/CHANGELOG-DEV finalized. Single PR `mlx/sprint-47-release-0.7.0` → master squash-merged. **No git tag for now**; reproducibility milestone is captured by the v0.6.1 baselines + Branch-B regression test, not a v0.7.0 git tag (which would imply a public release).
+**v2 candidate roster:** L4 (carryover) + C1 inverted-index + C4 persistent-kernel + C5 leaf-wise (product-changing, needs user-call) + L6 hybrid CPU+GPU. Pre-retired at silicon math: L1 (dispatch explosion), L2 (BW-bound sort), L3 (`mx::segmented_sum` doesn't exist), L5 (76% density at Epsilon).
 
-**Future PyPI publish prerequisite (S48+):** Threshold to lock at v0.8.0 sprint kickoff. Working hypothesis: MLX/CUDA wall-clock ratio ≤ 5× on Higgs-1M iter=1000, parity intact. Until then, no PyPI.
+**Tiered threshold:** ≤5× hard / ≤3× stretch / ≤8× stop-loss after S49.
+
+**Sunk-cost pre-commit rail:** "If T0 produces 0–1 surviving candidates, S48 closes Day 3 with DEC-052 = RETIRED-AT-PREMISE, NO user re-deliberation, v0.8.0 auto-pivots." Default pivot: ordered boosting.
+
+- [ ] **S48-T0 (Day 1) SCAFFOLD + BRAINSTORM + STRESS-GATE** — Commit `docs/sprint48/scoping.md`. File DEC-052 OPEN. Convene `@visionary` brainstorm (expand v2 candidate roster). Convene `@devils-advocate` stress-test (apply 7-falsification cross-reference + LESSONS-LEARNED toy-to-production rule). User-call: candidate list approval + threshold lock + pivot-target confirmation + C5 admit/reject decision.
+- [ ] **S48-T1+T2 (Day 2) F_HIST + ROOFLINE** — Fresh f_hist measurement at v0.7.0 baseline (cheap). `@silicon-architect` roofline + occupancy on survivors (paper only).
+- [ ] **S48-T3+T5 (Day 3) PROBE-SPECS + DECISION** — Probe-spec drafts for 1-2 finalists (specs only, NOT built). `@strategist` synthesis. User decision: A (greenlight S49 build) / B (user-call marginal) / C (retire+pivot) / D (retire hard).
+
+**Probability-weighted expected outcome:** P(C) ≈ 0.55 / P(B) ≈ 0.25 / P(A) ≈ 0.20.
+
+**Hard rules:** NO production-code commits in S48. Probes only fire in S49 on greenlit candidates. Branch-B regression GREEN on master throughout.
+
+## Sprint 47 — v0.7.0 reproducibility-grade INTERNAL release — CLOSED 2026-05-06
+
+PR #48 merged at `0c4a7b5d31`. v0.7.0 ships as reproducibility-grade INTERNAL release. No PyPI publish (DEC-051). No git tag.
+
+- [x] T0–T6 all complete (commits `e964f85`, `e29abb4`, `2971372`, `c80f09c`, `45a7f67`, `71b287e`, `28889af`).
+- DEC-050 + DEC-051 both IMPLEMENTED.
 
 ## Sprint 46 — simd_shuffle Research Arc — CLOSED
 
