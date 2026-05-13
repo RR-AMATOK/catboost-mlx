@@ -30,9 +30,10 @@
 **Sunk-cost pre-commit rail (APPROVED):** "If T0 produces 0–1 surviving candidates, S48 closes Day 3 with DEC-052 = RETIRED-AT-PREMISE, NO user re-deliberation, v0.8.0 auto-pivots to pre-decided target." Default pivot: ordered boosting (LightGBM evidence shows the 5–10× exists). Confirmed at T0c user-call.
 
 **Task status:**
-- [ ] **T0 (Day 1) SCAFFOLD + BRAINSTORM + STRESS-GATE** — Scoping doc committed (`docs/sprint48/scoping.md`). DEC-052 OPEN to be filed. @visionary brainstorm + @devils-advocate stress-test on v2 candidate roster. User-call: candidate list approval + threshold lock + pivot-target confirmation + C5 admit/reject decision.
-- [ ] **T1+T2 (Day 2) F_HIST + ROOFLINE** — Fresh f_hist measurement at v0.7.0 baseline (cheap, hours). @silicon-architect roofline + occupancy on survivors (paper only, no probes).
-- [ ] **T3+T5 (Day 3) PROBE-SPECS + DECISION** — Probe-spec drafts for 1-2 finalists (specs only, NOT built). @strategist synthesis. User decision: A (greenlight S49 build) / B (user-call marginal) / C (retire+pivot) / D (retire hard).
+- [x] **T0 (Day 1) COMPLETE** 2026-05-12. Scoping doc + DEC-052 OPEN filed + visionary brainstorm (`T0/visionary-brainstorm.md`) + devils-advocate T0b (`T0/dac-stress-test.md`) + delta-stress (`T0/dac-stress-test-delta.md`) + T0c user-call all 7 questions LOCKED (DEC-052 T0c LOCK appended in DECISIONS.md). Shortlist: C6 #1 / L6 #2 / C4 #3 unconditional. Q3 pivot=ordered boosting. Q4 C5=REJECTED. Q5 L6 trap-zone=ship-internal ≥1.5×. Q6 C4=retire-at-T2 if API gap. Q7 T1 sequence: child-imbalance FIRST.
+- [ ] **T1 (Day 2) MULTI-TASK** — (1) Child-imbalance instrumentation at v0.7.0 baseline on Higgs-1M + Epsilon (~5h; ≥0.45 retires C6); (2) f_hist remeasurement at v0.7.0 baseline; (3) @silicon-architect roofline + occupancy on survivors.
+- [ ] **T2+T3 (Day 2-3)** — Silicon-architect MANDATORY-CODE-INSPECTION on C6 (parent-cache memory, smaller-child-selection, DEC-017 amortization), L6 (MLX UMA API, histogram.cpp dispatch-fork), C4 (Metal kernel-persistence API). @research-scientist probe-spec drafts for survivors (specs only).
+- [ ] **T5 (Day 3) DECISION** — @strategist synthesis. User decision: A (greenlight S49 build) / B (user-call marginal) / C (retire+pivot to ordered boosting) / D (retire hard).
 
 **Probability-weighted expected outcome:** P(C — Retire+Pivot) ≈ 0.55; P(B — marginal) ≈ 0.25; P(A — measured ≥2×) ≈ 0.20.
 

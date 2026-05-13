@@ -2822,3 +2822,114 @@ DEC-050 was filed 2026-05-05 with the implicit assumption that "reproducibility-
 **S47-T6 close-out:** unchanged scope; sprint closes with v0.7.0 internally tagged on master and PyPI deferred.
 
 **Authority pointers:** `README.md` (Status section + Install section reflecting source-only), `CHANGELOG.md` (`## [0.7.0]` section with PyPI publish posture), `docs/sprint47/T4/release-validation.md` (the wheel artifact that would have shipped, kept for the next attempt).
+
+---
+
+## DEC-052: v0.8.0 throughput research arc OPENED — 5-candidate bounded scope (3-day spike)
+
+**Status:** OPEN (2026-05-07/08, S48 kickoff)
+**Sprint:** 48 (kickoff); S49+ conditional on Outcome A
+**Cross-refs:** DEC-049 OUTCOME (simd_shuffle RETIRED, premise space closed), DEC-050 (Option α), DEC-051 (PyPI gated on CUDA-class throughput), `docs/sprint48/scoping.md`
+
+**Decision:** Open the v0.8.0 throughput research arc with a **bounded 5-candidate roster** under a **3-day spike + 10-day total timebox** (S48 3 days + S49 ≤7 days conditional on Outcome A). Premise gate per scoping doc §0: every candidate must be routing-honest, not in the 7-falsification chain (DEC-013/014/015/017/019/048/049), not a rebrand, production-shape feasible on Apple Silicon, and Branch-B parity-preservable.
+
+**Candidate roster (post 4-agent panel review, 2026-05-06):**
+- **L4** Hybrid two-stage (carryover from v1, only candidate clearing all silicon math)
+- **C1** Inverted-index histogram (visionary; Postgres GIN / Lucene posting-list analogy; sidesteps scatter)
+- **C4** Persistent-kernel pipelining (visionary; Triton/FlashAttention-2 analogy; CPU↔GPU sync topology change)
+- **C5** Leaf-wise tree growth (visionary; LightGBM analogy; product-changing — needs explicit user-call before T2)
+- **L6** Hybrid CPU+GPU concurrent histogram (silicon-architect; UMA exploit; Apple Silicon's defining feature)
+- **PRE-RETIRED at silicon math:** L1 (dispatch explosion 2,000× over DEC-018), L2 (BW-bound sort 6.4 GB I/O at Epsilon), L3 (`mx::segmented_sum` doesn't exist in MLX 0.31.x — verified `mlx/mlx/ops.h:1579` has only `segmented_mm`), L5 (76% density at Epsilon)
+
+**Tiered threshold (LOCK at T0c user-call):**
+- Hard gate (PyPI publish per DEC-051): MLX/CUDA wall-clock ratio ≤ 5× on Higgs-1M iter=1000
+- Stretch: ≤ 3× (structural win)
+- Stop-loss floor: ≤ 8× after S49 → retire arc
+
+**Sunk-cost pre-commit rail:** "If T0 produces 0–1 surviving candidates, S48 closes Day 3 with DEC-052 = RETIRED-AT-PREMISE, **no user re-deliberation**, v0.8.0 auto-pivots to pre-decided target." Default pivot: ordered boosting (LightGBM evidence shows the 5–10× exists on this axis). Confirmed at T0c.
+
+**4-Outcome decision structure:**
+- **A — Greenlight S49:** ≥1 candidate clears all gates AND projects ≥2× theoretical speedup
+- **B — User-call:** 1 candidate clears with 1.2–2× theoretical (THE TRAP ZONE — default to retire)
+- **C — Retire + Pivot to non-throughput milestone** (LIKELY OUTCOME, P≈0.55) — v0.8.0 reframes
+- **D — Retire hard:** zero candidates AND no compelling alternative milestone
+
+**Probability-weighted expected outcome (strategist):** P(C) ≈ 0.55 / P(B) ≈ 0.25 / P(A measured ≥2×) ≈ 0.20.
+
+**Hard rules:** NO production-code commits in S48. All probe code (if any in S49) `#ifdef`-gated. MANDATORY-CODE-INSPECTION at every mechanism claim (file:line citation required). Pre-sweep code-inspection sign-off on routing invariant per S46-T6 SIMD routing rule. Branch-B regression GREEN on master throughout.
+
+**Authority pointers:** `docs/sprint48/scoping.md`, `docs/sprint48/T0/visionary-brainstorm.md`, `docs/sprint48/T0/dac-stress-test.md`, `docs/sprint48/T0/dac-stress-test-delta.md`, HANDOFF.md S48 ACTIVE block.
+
+---
+
+### DEC-052 T0c LOCK (2026-05-12)
+
+User-call resolved all 7 T0c questions. Locked at T0c BEFORE T1 fires (anti-goalpost-moving per DEC-051).
+
+**Q1 — Threshold rubric (Bundle 2):**
+
+```
+Hard gate (PyPI publish per DEC-051):
+- ≤5× MLX/CUDA wall-clock ratio on EVERY dataset:
+  - Higgs-1M iter=1000
+  - Epsilon iter=2000
+  - Amazon iter=1000
+- Failing ANY one dataset = arc fail
+- Parity intact (Branch-B regression GREEN)
+
+Stretch:
+- ≤3× on Higgs-1M iter=1000
+
+Stop-loss floor:
+- >8× on Higgs-1M iter=1000 after S49 → retire arc
+
+Measurement protocol:
+- Hardware anchor: Apple M3 Max
+- 3-seed median (seeds {42, 43, 44}), CV across seeds < 8%
+- Warm runs only (≥1 untimed warmup; discard cold)
+- Ratio = median(MLX) / median(CUDA), NOT per-seed ratio means
+- Branch-B regression GREEN at the commit being measured
+
+Rubric clause (Outcome A escape hatch):
+- IF measured ≥1.7× iter speedup on Higgs-1M iter=1000
+- AND (a) engineering cost ≤2 sprints (PRE-CERTIFIED at T0c)
+- AND (b) cross-domain industrial validation (PRE-CERTIFIED at T0c)
+- THEN eligible for Outcome A (greenlight S49 build)
+- Qualifiers (a) and (b) MUST be pre-certified at T0c; CANNOT be invoked post-hoc.
+- C6 pre-certification: (a) ✓ subtraction kernel is BW-bound elementwise; (b) ✓ LightGBM ships in production, Ke et al. 2017 peer-reviewed.
+```
+
+**Q2 — Shortlist:**
+
+```
+APPROVED FOR T1/T2:
+1. C6 — Histogram subtraction (parent-minus-sibling)  [FLAGGED-FOR-T2]
+2. L6 — Hybrid CPU+GPU concurrent histogram          [FLAGGED-FOR-T2]
+3. C4 — Persistent-kernel pipelining                  [FLAGGED-FOR-T2]
+
+RETIRED:
+- L1, L2, L3, L5  (silicon math pre-T0b)
+- L4              (T0b: DEC-014 + DEC-017 + DEC-049 echoes)
+- C1              (T0b: segmented_reduce missing + L2 territory + DEC-019)
+- C7              (delta: collapses to histogram-of-deltas)
+- C8              (delta: scatter_reduce missing = L3 with linear-algebra branding)
+- C5              (T0c REJECT: breaks oblivious-tree contract; product-defining)
+```
+
+**Q3 — Pivot target if Outcome C fires:** Ordered boosting (E2 backlog). CatBoost's defining algorithmic feature; currently missing from MLX backend; ~2-3 sprint scope; preserves throughput question for future arc.
+
+**Q4 — C5 leaf-wise:** REJECTED. Oblivious-tree contract is product-defining (DEC-008 parity envelope + DEC-030 depthwise leaf-index encoding + cross-platform model-format compatibility). Q3 pivot target (ordered boosting) provides LightGBM-style algorithmic differentiation while keeping oblivious; C5 is redundant.
+
+**Q5 — L6 trap-zone pre-decide:** If L6 measures ≥1.5× iter on Higgs-1M with parity intact, **SHIP INTERNALLY** on master (mirrors v0.7.0 reproducibility-grade pattern per DEC-051). PyPI publish gate per Bundle 2 thresholds unchanged. L6 fails Bundle 2 rubric qualifier (b) — no cross-domain industrial validation for CPU+AMX+GPU concurrent histogram split — so rubric clause does NOT apply to L6. Internal ship preserves measurable progress without violating PyPI gate.
+
+**Q6 — C4 fallback pre-decide:** If T2 silicon-architect confirms Metal kernel-persistence API gap (likely), C4 RETIRES AT T2. Fallback measurement NOT authorized. Fallback paths either collapse to DEC-018 territory ("larger command buffers" = already-measured 2.5% headroom) or require multi-week raw-Metal engineering outside the 10-day timebox.
+
+**Q7 — T1 sequencing:** Child-imbalance instrumentation FIRST (~5h: 4h instrumentation + 1h run on existing benchmark harness). Decision rule:
+- Geomean `min(|L|,|R|)/|P|` ≥ 0.45 across 100 trees × 3 seeds on Higgs-1M + Epsilon: C6 bounded below 1.6× iter → trap zone → likely retire path for C6
+- ≤ 0.35: C6 projects ≥2× → Outcome A plausible
+- 0.35 ≤ geomean < 0.45: ambiguous; C6 measurement at T4 becomes load-bearing
+- Then f_hist remeasurement at v0.7.0 baseline → then silicon-architect roofline on survivors
+
+**Status:** All 7 questions LOCKED. T0 complete. T1 ready to fire.
+
+**Authority pointers (updated):** `docs/sprint48/T0/visionary-brainstorm.md`, `docs/sprint48/T0/dac-stress-test.md`, `docs/sprint48/T0/dac-stress-test-delta.md`, HANDOFF.md S48 ACTIVE block.
