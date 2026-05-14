@@ -30,10 +30,42 @@
 **Sunk-cost pre-commit rail (APPROVED):** "If T0 produces 0–1 surviving candidates, S48 closes Day 3 with DEC-052 = RETIRED-AT-PREMISE, NO user re-deliberation, v0.8.0 auto-pivots to pre-decided target." Default pivot: ordered boosting (LightGBM evidence shows the 5–10× exists). Confirmed at T0c user-call.
 
 **Task status:**
-- [x] **T0 (Day 1) COMPLETE** 2026-05-12. Scoping doc + DEC-052 OPEN filed + visionary brainstorm (`T0/visionary-brainstorm.md`) + devils-advocate T0b (`T0/dac-stress-test.md`) + delta-stress (`T0/dac-stress-test-delta.md`) + T0c user-call all 7 questions LOCKED (DEC-052 T0c LOCK appended in DECISIONS.md). Shortlist: C6 #1 / L6 #2 / C4 #3 unconditional. Q3 pivot=ordered boosting. Q4 C5=REJECTED. Q5 L6 trap-zone=ship-internal ≥1.5×. Q6 C4=retire-at-T2 if API gap. Q7 T1 sequence: child-imbalance FIRST.
-- [ ] **T1 (Day 2) MULTI-TASK** — (1) Child-imbalance instrumentation at v0.7.0 baseline on Higgs-1M + Epsilon (~5h; ≥0.45 retires C6); (2) f_hist remeasurement at v0.7.0 baseline; (3) @silicon-architect roofline + occupancy on survivors.
-- [ ] **T2+T3 (Day 2-3)** — Silicon-architect MANDATORY-CODE-INSPECTION on C6 (parent-cache memory, smaller-child-selection, DEC-017 amortization), L6 (MLX UMA API, histogram.cpp dispatch-fork), C4 (Metal kernel-persistence API). @research-scientist probe-spec drafts for survivors (specs only).
-- [ ] **T5 (Day 3) DECISION** — @strategist synthesis. User decision: A (greenlight S49 build) / B (user-call marginal) / C (retire+pivot to ordered boosting) / D (retire hard).
+- [x] **T0** 2026-05-12. 7 T0c questions LOCKED.
+- [x] **T1 child-imbalance** 2026-05-13. Higgs 0.3064 / Epsilon 0.2830 (both ≤ 0.35 KEEP). C6 advances.
+- [x] **T2 silicon-architect** 2026-05-13. C6 PASS Q1+Q2 + Q3 resolved by T1. L6 RETIRED (Q1+Q2+Q3 FAIL). C4 RETIRED (Q1 FAIL, Metal API gap confirmed).
+- [x] **T3 probe-spec** 2026-05-13. C6 probe-spec at `docs/sprint48/T3/probe-spec-c6.md` (401 lines). Scope FITS ≤2 sprints. Branch-B bit-exact survivable.
+- [x] **T5 DECISION** 2026-05-13. **Outcome A — GREENLIGHT S49 BUILD ON C6.** Per Bundle 2 rubric: (a) ≤2 sprints ✓ pre-certified + confirmed at T3, (b) industrial validation ✓ pre-certified (LightGBM + F5 CatBoost-CPU FixUpStats). (c) ≥1.7× iter measured ← S49.
+- [x] **T6** 2026-05-13. This commit. State files + PR.
+
+**S48 result:** First arc in 8 throughput attempts to clear T0+T1+T2+T3 without falsification. DEC-052 OUTCOME A. C6 mechanism algorithmically validated (CatBoost-CPU + LightGBM precedents); empirically validated (T1 child-imbalance favorable); silicon-feasible (T2 PASS).
+
+---
+
+## Sprint 49 — Engineering on C6 (NEXT)
+
+**Status:** READY TO OPEN post-S48 PR merge.
+**Branch (proposed):** `mlx/sprint-49-c6-engineering`
+**Authority:** DEC-052 OUTCOME A. Bundle 2 thresholds locked at T0c.
+**Mode:** ENGINEERING. ~2 sprints (S49 + S50) per qualifier (a) pre-certification.
+
+**Top 3 risks pre-flagged by research-scientist (full register in `docs/sprint48/T3/probe-spec-c6.md` §7):**
+1. **Amazon cross-domain** — T1 measured Higgs+Epsilon only; Bundle 2 hard gate requires Amazon ≤5×. S49-T0 = Amazon child-imbalance measurement BEFORE engineering.
+2. **MLX lazy-graph fusion** — wrong primitive forces `mx::eval()` boundary erasing speedup. Use `mx::where` / `take_along_axis`, NOT `mx::concatenate`.
+3. **DEC-008 RMSE envelope at depth 6** — γ_13 ≈ 7.7e-7 vs RMSE γ_8 ≈ 4.77e-7 ceiling. May force MultiClass-only ship if RMSE configs fail. S49 Gate B 18-config envelope sweep.
+
+**S49 expected task structure:**
+- T0 — Amazon child-imbalance instrumentation (pre-engineering risk mitigation)
+- T1 — Dispatch graph rewrite + smaller-child selection (GPU-side, sync-free)
+- T2 — Subtract kernel + parent-cache integration
+- T3 — Branch-B regression check + DEC-008 18-config envelope sweep
+- T4 — Bundle 2 multi-dataset measurement (Higgs-1M + Epsilon + Amazon)
+- T5 — Decision gate (S50 cutover greenlight OR retire)
+- T6 — Close-out
+
+**Sub-cases of S49 T5:**
+- ≥1.7× on Higgs-1M iter=1000 AND ≤5× on all 3 datasets AND parity intact → ship to S50 cutover → v0.8.0 PyPI publish per DEC-051
+- 1.5–1.7× on Higgs OR RMSE-only parity fails → user-call (B); feature-flag deployment possible
+- <1.5× OR Bundle 2 multi-dataset fails → DEC-052 OUTCOME revised to RETIRED-EMPIRICALLY; pivot to ordered boosting per T0c Q3
 
 **Probability-weighted expected outcome:** P(C — Retire+Pivot) ≈ 0.55; P(B — marginal) ≈ 0.25; P(A — measured ≥2×) ≈ 0.20.
 

@@ -2,6 +2,60 @@
 
 > Coverage: Sprints 0–15 reconstructed from git log on 2026-04-15. Sprint 16+ is source of truth.
 
+## 2026-05-13 — Sprint 48: v0.8.0 throughput arc kickoff — DEC-052 OUTCOME A
+
+Branch: `mlx/sprint-48-t0-brainstorm`. Cut from master `0131b598b6` post-PR-#49.
+
+**First arc in 8 throughput-hypothesis attempts to clear T0+T1+T2+T3 gates without falsification.** Sole survivor: C6 — histogram subtraction (parent-minus-sibling). DEC-052 OUTCOME A: greenlight S49 build.
+
+### T0 (Day 1, 2026-05-12) — 7 user-call questions LOCKED
+
+Visionary brainstorm (`docs/sprint48/T0/visionary-brainstorm.md`) added C6 + C7 + C8 to v2 roster. Devils-advocate stress-test (`docs/sprint48/T0/dac-stress-test.md`) retired L4 + C1 at premise gate. Delta-stress (`docs/sprint48/T0/dac-stress-test-delta.md`) retired C7 + C8. Q1–Q7 LOCKED per DEC-052 T0c LOCK:
+- Q1 Bundle 2 — every-dataset ≤5× + 3-seed median + M3 Max anchor + rubric clause (≥1.7× iter + pre-certified qualifiers = Outcome A)
+- Q2 Shortlist — C6 #1, L6 #2, C4 #3 unconditional
+- Q3 Pivot target if Outcome C — ordered boosting (E2 backlog)
+- Q4 C5 leaf-wise — REJECTED (oblivious-tree contract)
+- Q5 L6 trap-zone — ship-internal at ≥1.5× iter with parity
+- Q6 C4 fallback — retire at T2 if Metal API gap
+- Q7 T1 sequence — child-imbalance FIRST
+
+### T1 (Day 2, 2026-05-13) — Child-imbalance KEEP on both shapes
+
+Instrumented `bench_boosting_s48_t1` under `#ifdef CATBOOST_MLX_LOG_CHILD_IMBALANCE` guard (bit-exact verified vs baseline). 6-run sweep (3 seeds × 2 shapes × 100 trees):
+- Higgs-1M geomean min(L,R)/(L+R) = **0.3064** (KEEP, ≤ 0.35)
+- Epsilon geomean = **0.2830** (KEEP, ≤ 0.35)
+- Per-depth: smaller-child docs/thread ≥22 even at deepest level, well above DEC-017 cliff (~3 docs/thread). Cliff concern empirically retired.
+
+Files: `catboost/mlx/tests/bench_boosting.cpp` (+125 LoC under guard), `python/catboost_mlx/_core/CMakeLists.txt` (+27 LoC `bench_boosting_s48_t1` target). Analysis at `docs/sprint48/T1/child-imbalance/analysis.md`.
+
+### T2 (Day 2, 2026-05-13) — Silicon-architect MANDATORY-CODE-INSPECTION
+
+- **C6:** Q1 PASS (parent-cache 130-780 MB at Epsilon, within M3 Max budget), Q2 PASS (sync-free smaller-child selection via MLX `less`/`where`/`take`), Q3 MARGINAL → resolved by T1 data.
+- **L6:** Q1+Q2+Q3 ALL FAIL — MLX `HazardTrackingModeUntracked` + no concurrent-fence API; no fork-point in `CalcStatsAndScores`; AMX is BLAS-only. **RETIRED AT T2.**
+- **C4:** Q1 FAIL — `<cooperative_groups.h>` is CUDA-only in MLX; `metal_kernel` is one-shot dispatch; no cross-threadgroup grid-wide sync in Metal 3.x. **RETIRED AT T2** per DEC-052 T0c Q6.
+
+**F5 NEW (load-bearing positive):** `scoring.cpp:315-332` `FixUpStats` already implements parent-minus-sibling subtraction on CPU CatBoost. C6 mechanism is CatBoost-canonical, not just LightGBM-imported.
+
+Report: `docs/sprint48/T2/feasibility.md`.
+
+### T3 (Day 3, 2026-05-13) — C6 probe-spec
+
+Research-scientist drafted `docs/sprint48/T3/probe-spec-c6.md` (401 lines). Engineering scope FITS qualifier (a) ≤2 sprints: ~5.25 days S49 + ~5 days S50. Branch-B regression bit-exact survivable (predict-only test, training not exercised by Branch-B). Top 3 risks for S49: Amazon cross-domain validation, MLX lazy-graph fusion (use `mx::where`/`take_along_axis`, NOT `concatenate`), DEC-008 RMSE envelope at depth 6 (γ_13 ≈ 7.7e-7 vs RMSE γ_8 ≈ 4.77e-7 — may force MultiClass-only).
+
+### T5 (Day 3, 2026-05-13) — User decision: OUTCOME A
+
+All gates passed. Per Bundle 2 rubric: (a) ≤2 sprints ✓ confirmed, (b) industrial validation ✓ pre-certified, (c) measurement pending S49. Sunk-cost rail does NOT trigger (1 candidate survives all gates).
+
+DEC-052 OUTCOME A locked. S49 engineering greenlit.
+
+### T6 (Day 3, 2026-05-13) — Close-out
+
+This commit. State files updated. PR opens against master.
+
+**Next sprint:** S49 (`mlx/sprint-49-c6-engineering`) — implements C6 dispatch graph rewrite + subtract kernel; measures against Bundle 2 multi-dataset ≤5× hard gate.
+
+---
+
 ## 2026-05-06 — Sprint 47: v0.7.0 reproducibility-grade INTERNAL release (NO PYPI)
 
 Branch: `mlx/sprint-47-release-0.7.0`. Cut from master `7a97db638f` (post-S46 merge).

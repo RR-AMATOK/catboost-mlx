@@ -2933,3 +2933,48 @@ RETIRED:
 **Status:** All 7 questions LOCKED. T0 complete. T1 ready to fire.
 
 **Authority pointers (updated):** `docs/sprint48/T0/visionary-brainstorm.md`, `docs/sprint48/T0/dac-stress-test.md`, `docs/sprint48/T0/dac-stress-test-delta.md`, HANDOFF.md S48 ACTIVE block.
+
+---
+
+### DEC-052 OUTCOME — Outcome A (Greenlight S49 build on C6) — 2026-05-13
+
+**Status:** OUTCOME A (DECIDED 2026-05-13 by user, after T1+T2+T3 all gates passed)
+
+**Trajectory:**
+- T0 (Day 1): Visionary brainstorm + devils-advocate stress-test + user-call → 7 questions LOCKED. v2 candidate roster: L4/C1 RETIRED at premise gate; C6/L6/C4/L4/C5 entered T2; +C7/C8 from delta-stress, both RETIRED. C5 user-rejected. C6 promoted to #1 priority.
+- T1 (Day 2): Child-imbalance instrumentation. Geomean min(|L|,|R|)/(|L|+|R|) at v0.7.0 baseline, 100 trees × 3 seeds:
+  - Higgs-1M: **0.3064** (KEEP, ≤ 0.35)
+  - Epsilon: **0.2830** (KEEP, ≤ 0.35)
+  - Per-depth: smaller-child docs/thread ≥ 22 even at deepest level, well above DEC-017 cliff (~3 docs/thread). DEC-017 cliff concern empirically retired.
+  - Report: `docs/sprint48/T1/child-imbalance/analysis.md`.
+- T2 (Day 2): Silicon-architect MANDATORY-CODE-INSPECTION:
+  - C6: PASS Q1 (parent-cache 130-780 MB at Epsilon, within `recommendedMaxWorkingSetSize` ≈ 27 GB on M3 Max); PASS Q2 (sync-free smaller-child selection via `less`/`where`/`take` in MLX); MARGINAL Q3 resolved by T1 data.
+  - L6: FAIL Q1+Q2+Q3 (MLX `HazardTrackingModeUntracked` + no public concurrent-fence API; no fork-point in CPU `CalcStatsAndScores`; AMX is BLAS-only). RETIRED AT T2.
+  - C4: FAIL Q1 (Metal has no cross-threadgroup grid-wide sync; MLX `metal_kernel` is one-shot dispatch). RETIRED AT T2 per pre-commit DEC-052 T0c Q6.
+  - **F5 NEW (load-bearing positive):** CatBoost's own CPU code `catboost/private/libs/algo/scoring.cpp:315-332` `FixUpStats` already implements parent-minus-sibling subtraction, gated by `fold.SmallestSplitSideValue` from `calc_score_cache.cpp:1152-1176`. Not just LightGBM — CatBoost-canonical algorithmic precedent.
+  - Report: `docs/sprint48/T2/feasibility.md`.
+- T3 (Day 3): @research-scientist probe-spec for C6 (401 lines, `docs/sprint48/T3/probe-spec-c6.md`). Engineering scope FITS qualifier (a) ≤ 2 sprints: ~5.25 days S49 + ~5 days S50 = 2 sprints with buffer. Branch-B regression bit-exact survivable (predict-only test, training not exercised).
+
+**Per Bundle 2 rubric clause:** C6 qualifies for Outcome A:
+- (a) ≤2 sprints engineering cost: ✅ PRE-CERTIFIED at T0c, CONFIRMED at T3.
+- (b) Cross-domain industrial validation: ✅ PRE-CERTIFIED at T0c (LightGBM Ke et al. 2017 + F5 CatBoost-CPU `FixUpStats`).
+- (c) Measured ≥1.7× iter on Higgs-1M: PENDING — S49 measurement.
+
+**Verdict:** Outcome A — GREENLIGHT S49 build on C6.
+
+**Sunk-cost rail status:** Does NOT trigger. C6 survives T0 + T1 + T2 + T3 cleanly with 1 unconditional survivor.
+
+**S49 engineering scope (per T3 probe-spec §6):**
+- Sprint 1 (S49): Dispatch graph rewrite in `histogram.cpp` (compute parent → choose smaller child via sync-free MLX ops → dispatch smaller-child histogram → subtract for larger child). Parent cache attached to existing histogram array path. Pre-engineering: Amazon child-imbalance T1-equivalent measurement (mitigates Risk 1).
+- Sprint 2 (S50): DEC-008 18-config envelope parity sweep. Cutover with feature flag `use_histogram_subtraction=True` defaulting to current behavior. Benchmark refresh against Bundle 2 multi-dataset gate (Higgs-1M / Epsilon / Amazon ≤ 5× MLX/CUDA).
+
+**Top 3 S49 risks (research-scientist §7):**
+1. **Amazon cross-domain** — T1 measured Higgs+Epsilon only; Bundle 2 hard gate requires Amazon ≤5×. Pre-engineering S49-T0 instrumentation run on Amazon.
+2. **MLX lazy-graph fusion** — wrong primitive choice forces `mx::eval()` boundary erasing speedup. Mitigation: `mx::where` / `take_along_axis`, NOT `mx::concatenate`.
+3. **DEC-008 RMSE envelope at depth 6** — γ_13 ≈ 7.7e-7 vs RMSE ulp ≤ 4 ceiling γ_8 ≈ 4.77e-7. May constrain to MultiClass-only ship if RMSE configs fail. 18-config envelope sweep at S49 Gate B.
+
+**What this closes:** S48 v0.8.0 throughput arc kickoff sprint. Outcome A delivered. First arc in 8 attempts to clear T0+T1+T2+T3 gates without falsification.
+
+**What this opens:** S49 engineering sprint to implement and measure C6. v0.8.0 PyPI publish per DEC-051 + Bundle 2 thresholds remains gated on S49 measurement (≤5× MLX/CUDA on all 3 datasets).
+
+**Authority pointers:** `docs/sprint48/T1/child-imbalance/analysis.md`, `docs/sprint48/T2/feasibility.md`, `docs/sprint48/T3/probe-spec-c6.md`.

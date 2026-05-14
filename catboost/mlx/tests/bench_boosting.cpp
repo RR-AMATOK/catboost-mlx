@@ -162,6 +162,12 @@ struct TBenchConfig {
     bool PerKernelProfile = false; // --per-kernel-profile: per-dispatch timing (upper bounds)
     // Sprint 23 D0: T2 sort-by-bin is the default production histogram path.
     // --t2 flag and CATBOOST_MLX_HISTOGRAM_T2 compile guard removed.
+#ifdef CATBOOST_MLX_LOG_CHILD_IMBALANCE
+    // S48-T1: per-split child-count CSV output path.
+    // Only parsed/used when compiled with -DCATBOOST_MLX_LOG_CHILD_IMBALANCE.
+    // Production builds (guard off) get zero overhead — no field, no branch.
+    std::string ChildLogPath;
+#endif
 };
 
 TBenchConfig ParseArgs(int argc, char** argv) {
@@ -179,13 +185,21 @@ TBenchConfig ParseArgs(int argc, char** argv) {
         else if (strcmp(argv[i], "--onehot")              == 0 && i+1 < argc) cfg.NumOneHot      = std::atoi(argv[++i]);
         else if (strcmp(argv[i], "--stage-profile")       == 0) cfg.StageProfile      = true;
         else if (strcmp(argv[i], "--per-kernel-profile")  == 0) cfg.PerKernelProfile  = true;
+#ifdef CATBOOST_MLX_LOG_CHILD_IMBALANCE
+        // S48-T1: child-count CSV output path (only available in instrumented build).
+        else if (strcmp(argv[i], "--child-log") == 0 && i+1 < argc) cfg.ChildLogPath = argv[++i];
+#endif
         else {
             fprintf(stderr, "Unknown argument: %s\n", argv[i]);
             fprintf(stderr,
                 "Usage: bench_boosting [--rows N] [--features N] [--classes N]\n"
                 "                      [--depth D] [--iters N] [--bins B]\n"
                 "                      [--lr F] [--l2 F] [--seed N] [--onehot N]\n"
-                "                      [--stage-profile] [--per-kernel-profile]\n");
+                "                      [--stage-profile] [--per-kernel-profile]\n"
+#ifdef CATBOOST_MLX_LOG_CHILD_IMBALANCE
+                "                      [--child-log PATH]\n"
+#endif
+            );
             exit(1);
         }
     }
@@ -1370,6 +1384,126 @@ struct TPerKernelTimings {
 };
 
 // ============================================================================
+// S48-T1: Per-split child-count instrumentation
+//
+// Compiled only when -DCATBOOST_MLX_LOG_CHILD_IMBALANCE is passed.
+// The guard ensures ZERO overhead in production builds:
+//   - No struct definitions, no function bodies, no branch sites.
+//
+// Logging path:
+//   RunIteration receives a TChildImbalanceLog* (null in production, non-null
+//   in instrumented builds when --child-log is set).  After ApplySplitToPartitions
+//   the split-application loop has already resolved the left/right counts by
+//   examining bin values against the threshold.  We re-derive them here using
+//   the same logic (same compressedData, same binThreshold, same feature) so
+//   that logging is a pure READ of already-materialized CPU memory — it does NOT
+//   change any partition state or gradient computation.
+//
+// Bit-exactness guarantee:
+//   The logging code path (TChildImbalanceLogger::Record) only reads
+//   compressedData and partitions, which are CPU-side after mx::eval().
+//   It does NOT modify any array passed to the GPU kernels.  The training
+//   outputs (cursor, partitions, leaf values) are identical whether the
+//   guard is ON or OFF.  Verified by the bit-exactness spot-check procedure
+//   documented in docs/sprint48/T1/child-imbalance/analysis.md §"Verification".
+// ============================================================================
+
+#ifdef CATBOOST_MLX_LOG_CHILD_IMBALANCE
+
+struct TChildSplitRecord {
+    ui32 Tree;
+    ui32 Level;     // depth-0 = root split, depth-5 = leaf-level split
+    ui32 Leaf;      // parent partition index at this depth (0 .. 2^level - 1)
+    ui32 LeftCount;
+    ui32 RightCount;
+};
+
+// Accumulates split records for one full training run, then flushes to CSV.
+struct TChildImbalanceLog {
+    std::string                   Path;
+    std::vector<TChildSplitRecord> Records;
+
+    explicit TChildImbalanceLog(std::string path) : Path(std::move(path)) {}
+
+    void Record(ui32 tree, ui32 level, ui32 leaf,
+                ui32 leftCount, ui32 rightCount) {
+        Records.push_back({tree, level, leaf, leftCount, rightCount});
+    }
+
+    // Write all accumulated records to CSV.
+    // Header: tree,level,leaf,left_count,right_count
+    bool Flush() const {
+        std::ofstream f(Path);
+        if (!f.is_open()) {
+            fprintf(stderr, "[S48-T1] Cannot open child-log: %s\n", Path.c_str());
+            return false;
+        }
+        f << "tree,level,leaf,left_count,right_count\n";
+        for (const auto& r : Records) {
+            f << r.Tree << ","
+              << r.Level << ","
+              << r.Leaf << ","
+              << r.LeftCount << ","
+              << r.RightCount << "\n";
+        }
+        f.flush();
+        bool ok = f.good();
+        if (ok) {
+            fprintf(stderr, "[S48-T1] child-log written: %s  (%zu splits)\n",
+                    Path.c_str(), Records.size());
+        }
+        return ok;
+    }
+};
+
+// Count left / right children for the just-applied split.
+// Called AFTER ApplySplitToPartitions has written newParts but BEFORE the next
+// depth iteration so we can reference the original (pre-split) partition values
+// that are still held in the newParts vector inside ApplySplitToPartitions.
+//
+// Rather than threading the internal newParts vector out of ApplySplitToPartitions
+// (which would require API surgery), we recount from the now-updated partitions
+// array.  After ApplySplitToPartitions at depth d, every doc that went RIGHT has
+// bit (1 << d) set in its partition index.  Docs belonging to the parent partition
+// leafIdx at depth d (= leafIdx) have the low-d bits equal to leafIdx, independent
+// of bit d.  We count docs whose bit-d is 1 (right child) and whose low-d mask
+// equals leafIdx.
+//
+// This is a CPU-only scan of the already-eval'd partitions array.  Cost = O(numDocs).
+// At 1M docs and depth 6 this is ~1M uint32 reads = ~4 MB, sub-ms.
+static void CountChildSplits(
+    const mx::array& partitions,  // [numDocs] uint32 — already eval'd post-split
+    ui32 depth,          // the depth at which the split just fired (0..maxDepth-1)
+    ui32 leafIdx,        // parent partition index before the split
+    ui32 numDocs,
+    ui32& leftCountOut,
+    ui32& rightCountOut
+) {
+    // After a split at depth `depth`, partition index layout:
+    //   bits [depth-1 .. 0] = the leaf path up to (but not including) this depth
+    //   bit [depth]         = 0 (left child) or 1 (right child)
+    //
+    // Parent leafIdx has bits [depth-1..0] == leafIdx (all lower bits).
+    // Left child:  full partition index = leafIdx | 0       = leafIdx
+    // Right child: full partition index = leafIdx | (1<<depth)
+
+    const uint32_t leftIdx  = leafIdx;
+    const uint32_t rightIdx = leafIdx | (1u << depth);
+
+    const uint32_t* partsPtr = partitions.data<uint32_t>();
+    ui32 left = 0, right = 0;
+    for (ui32 d = 0; d < numDocs; ++d) {
+        uint32_t p = partsPtr[d];
+        if (p == leftIdx)  ++left;
+        else if (p == rightIdx) ++right;
+    }
+    leftCountOut  = left;
+    rightCountOut = right;
+}
+
+#endif  // CATBOOST_MLX_LOG_CHILD_IMBALANCE
+
+// ============================================================================
 // Single boosting iteration
 //   Returns wall time in microseconds (excluding GPU graph construction overhead)
 // ============================================================================
@@ -1392,7 +1526,15 @@ long long RunIteration(
     float learningRate,
     ui32 maxBlocksPerPart,
     TBenchStageRecord*   stageOut = nullptr,  // optional per-iter stage record
-    TPerKernelTimings*   pkOut    = nullptr   // optional per-kernel timing record
+    TPerKernelTimings*   pkOut    = nullptr,  // optional per-kernel timing record
+#ifdef CATBOOST_MLX_LOG_CHILD_IMBALANCE
+    // S48-T1: tree index + child-imbalance log sink.
+    // These parameters are compiled away entirely in non-instrumented builds.
+    ui32 treeIdx = 0,
+    TChildImbalanceLog* childLog = nullptr
+#else
+    ui32 treeIdx = 0   // unused placeholder keeps call-sites identical across builds
+#endif
 ) {
     auto wallStart = std::chrono::steady_clock::now();
 
@@ -1565,6 +1707,20 @@ long long RunIteration(
                 partitions, compressedData, splitFeat,
                 best.BinId, depth, numDocs, numUi32PerDoc
             );
+#ifdef CATBOOST_MLX_LOG_CHILD_IMBALANCE
+            // S48-T1: record per-parent child counts for this depth level.
+            // The oblivious tree applies one global split to ALL numActiveParts
+            // partitions.  We iterate over every parent partition and count the
+            // resulting left/right children.  partitions is CPU-resident here
+            // (ApplySplitToPartitions materialised it with mx::eval + rewrite).
+            if (childLog) {
+                for (ui32 leafIdx = 0; leafIdx < numActiveParts; ++leafIdx) {
+                    ui32 lc = 0, rc = 0;
+                    CountChildSplits(partitions, depth, leafIdx, numDocs, lc, rc);
+                    childLog->Record(treeIdx, depth, leafIdx, lc, rc);
+                }
+            }
+#endif  // CATBOOST_MLX_LOG_CHILD_IMBALANCE
         } else {
             // Normal (non-profiling) path — probe variants selected via #ifdef guard.
             auto layout = ComputePartitionLayout(partitions, numDocs, numActiveParts);
@@ -1625,6 +1781,18 @@ long long RunIteration(
                 partitions, compressedData, splitFeat,
                 best.BinId, depth, numDocs, numUi32PerDoc
             );
+#ifdef CATBOOST_MLX_LOG_CHILD_IMBALANCE
+            // S48-T1: record per-parent child counts for this depth level.
+            // Same logic as the per-kernel-profile branch above.
+            // partitions is CPU-resident here after ApplySplitToPartitions.
+            if (childLog) {
+                for (ui32 leafIdx = 0; leafIdx < numActiveParts; ++leafIdx) {
+                    ui32 lc = 0, rc = 0;
+                    CountChildSplits(partitions, depth, leafIdx, numDocs, lc, rc);
+                    childLog->Record(treeIdx, depth, leafIdx, lc, rc);
+                }
+            }
+#endif  // CATBOOST_MLX_LOG_CHILD_IMBALANCE
         }
     }
 
@@ -1797,6 +1965,20 @@ int main(int argc, char** argv) {
 
     // Helper lambda to run one full pass of the boosting loop.
     // Resets cursor and partitions before the run.
+#ifdef CATBOOST_MLX_LOG_CHILD_IMBALANCE
+    // S48-T1: construct child-imbalance log sink if --child-log was supplied.
+    // One log object per full training run; Flush() is called after all iters.
+    std::unique_ptr<TChildImbalanceLog> childLogPtr;
+    if (!cfg.ChildLogPath.empty()) {
+        childLogPtr = std::make_unique<TChildImbalanceLog>(cfg.ChildLogPath);
+        // Pre-reserve: 100 trees * 6 depths * ~32 parents/depth (worst case) = 19200 rows
+        childLogPtr->Records.reserve(static_cast<size_t>(cfg.NumIters) * cfg.MaxDepth * 32);
+        fprintf(stderr, "[S48-T1] child-imbalance logging enabled → %s\n",
+                cfg.ChildLogPath.c_str());
+    }
+    TChildImbalanceLog* childLog = childLogPtr.get();
+#endif  // CATBOOST_MLX_LOG_CHILD_IMBALANCE
+
     auto runBench = [&](TPerKernelTimings& timingsOut) -> float {
         // Reset model state
         if (approxDim == 1) {
@@ -1837,6 +2019,10 @@ int main(int argc, char** argv) {
                 maxBlocksPerPart,
                 doStageProfile ? &stageRec : nullptr,
                 doPerKernelProfile ? &timingsOut : nullptr
+#ifdef CATBOOST_MLX_LOG_CHILD_IMBALANCE
+                , iter,      // treeIdx
+                childLog     // TChildImbalanceLog* (null if --child-log not supplied)
+#endif
             );
             timesUs.push_back(us);
             if (doStageProfile) stageRecords.push_back(stageRec);
@@ -1883,6 +2069,16 @@ int main(int argc, char** argv) {
     // --- Single production run (T2 default) ---
     printf("\n--- Running (T2 sort-by-bin, production default) ---\n");
     float finalLossT1 = runBench(pkTimings);
+
+#ifdef CATBOOST_MLX_LOG_CHILD_IMBALANCE
+    // S48-T1: flush child-imbalance CSV after all iterations complete.
+    // Flush happens after the full training run so we get all trees in one write.
+    if (childLog) {
+        if (!childLog->Flush()) {
+            fprintf(stderr, "[S48-T1] ERROR: child-log flush failed.\n");
+        }
+    }
+#endif  // CATBOOST_MLX_LOG_CHILD_IMBALANCE
 
     // Alias for compatibility with per-kernel report below
     float finalLoss = finalLossT1;

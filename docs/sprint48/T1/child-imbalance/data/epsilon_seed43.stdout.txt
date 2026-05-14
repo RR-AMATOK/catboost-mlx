@@ -1,0 +1,36 @@
+[S48-T1] child-imbalance logging enabled → /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint48/T1/child-imbalance/data/epsilon_seed43.csv
+[S48-T1] child-log written: /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint48/T1/child-imbalance/data/epsilon_seed43.csv  (6300 splits)
+bench_boosting — CatBoost-MLX library-path benchmark (TODO-014)
+================================================================
+rows=400000  features=2000  classes=2  depth=6  iters=100  bins=128
+lr=0.1000  l2=3.0000  seed=43  approxDim=1  onehot=0
+----------------------------------------------------------------
+Generating synthetic dataset...
+Dataset: 400000 rows x 2000 features (500 uint32 cols), 254000 total bin-features
+Beginning 100 boosting iterations...
+
+
+--- Running (T2 sort-by-bin, production default) ---
+  iter    0  time= 2214.1 ms  loss=0.688640
+  iter    9  time= 2198.8 ms  loss=0.661226
+  iter   19  time= 2155.7 ms  loss=0.644110
+  iter   29  time= 2076.9 ms  loss=0.627596
+  iter   39  time= 2153.8 ms  loss=0.610963
+  iter   49  time= 2181.5 ms  loss=0.597440
+  iter   59  time= 2155.3 ms  loss=0.585810
+  iter   69  time= 2200.0 ms  loss=0.571620
+  iter   79  time= 2122.0 ms  loss=0.551840
+  iter   89  time= 1994.4 ms  loss=0.535360
+  iter   99  time= 2202.2 ms  loss=0.524844
+
+================================================================
+Timing Summary
+----------------------------------------------------------------
+  iter-0 (cold start):    2214.1 ms
+  warm mean (  99 iters):   2131.6 ms
+  warm min:               1960.0 ms
+  warm max:               2213.1 ms
+
+  Final loss: 0.52484423
+  BENCH_FINAL_LOSS=0.52484423
+================================================================
