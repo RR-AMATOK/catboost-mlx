@@ -3,7 +3,18 @@
 > Coverage: Sprints 0–15 reconstructed from git/agent-memory on 2026-04-15. Sprint 16+ is source of truth.
 > Last header refresh: 2026-05-06 (S48 ACTIVE — v0.8.0 throughput research arc kickoff. v2 plan APPROVED post agent panel review. T0 ready to fire.)
 
-## Sprint 48 — v0.8.0 Throughput Research Arc — KICKOFF (ACTIVE)
+## Sprint 49 — Engineering on C6 (NEXT, post S48 PR merge)
+
+**Status:** READY TO OPEN.
+**Branch (proposed):** `mlx/sprint-49-c6-engineering`
+**Authority:** DEC-052 OUTCOME A (2026-05-13) — Bundle 2 thresholds locked at T0c.
+**Mode:** ENGINEERING. ~2 sprints (S49 + S50).
+
+S49-T0 mitigates Risk 1 (Amazon validation) BEFORE engineering commits. S49-T1+T2 implement dispatch graph + subtract kernel. S49-T3+T4 are parity + benchmark gates. S49-T5 decides cutover OR retire.
+
+Full task structure in HANDOFF.md S49 block.
+
+## Sprint 48 — v0.8.0 Throughput Research Arc — CLOSED 2026-05-13 (OUTCOME A)
 
 **Status:** SCAFFOLDED. T0 ready to fire.
 **Branch:** `mlx/sprint-48-v0.8.0-arc-kickoff` (cut from master `0c4a7b5d31`).

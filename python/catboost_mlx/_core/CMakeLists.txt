@@ -135,3 +135,37 @@ if(BUILD_S46_PROBES)
 
   message(STATUS "S46 probe binaries enabled: bench_boosting_baseline, bench_boosting_probe_b, bench_boosting_probe_d")
 endif()
+
+# ── S48-T1 child-imbalance instrumentation binary ─────────────────────────────
+# Single executable compiled with -DCATBOOST_MLX_LOG_CHILD_IMBALANCE.
+# Adds --child-log <path> CLI flag; writes per-split child-count CSV.
+# Production _core.so is NEVER modified.
+#
+# Build:
+#   cmake -S python/catboost_mlx/_core -B <build_dir> -DBUILD_S48_T1=ON
+#   cmake --build <build_dir> --target bench_boosting_s48_t1
+#
+# Binary lands in: <build_dir>/bench_boosting_s48_t1
+
+option(BUILD_S48_T1 "Build S48-T1 child-imbalance instrumentation binary" OFF)
+
+if(BUILD_S48_T1)
+  set(_T1_SRC
+    "${CATBOOST_MLX_ROOT}/catboost/mlx/tests/bench_boosting.cpp"
+    "${CATBOOST_MLX_ROOT}/catboost/mlx/methods/histogram_t2_impl.cpp"
+  )
+  set(_T1_OPTS -Wno-c++20-extensions -Wno-unused-function)
+
+  add_executable(bench_boosting_s48_t1 ${_T1_SRC})
+  target_include_directories(bench_boosting_s48_t1 PRIVATE "${CATBOOST_MLX_ROOT}")
+  target_link_libraries(bench_boosting_s48_t1 PRIVATE mlx ${METAL_FRAMEWORK} ${FOUNDATION_FRAMEWORK})
+  # The only define that differs from a production build.
+  # Default OFF so production builds compiled without this option are bit-identical.
+  target_compile_definitions(bench_boosting_s48_t1 PRIVATE CATBOOST_MLX_LOG_CHILD_IMBALANCE)
+  target_compile_options(bench_boosting_s48_t1 PRIVATE ${_T1_OPTS})
+  if(APPLE)
+    set_target_properties(bench_boosting_s48_t1 PROPERTIES OSX_DEPLOYMENT_TARGET "13.0")
+  endif()
+
+  message(STATUS "S48-T1 child-imbalance binary enabled: bench_boosting_s48_t1")
+endif()

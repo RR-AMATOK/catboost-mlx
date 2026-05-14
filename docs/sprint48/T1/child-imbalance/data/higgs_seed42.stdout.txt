@@ -1,0 +1,36 @@
+[S48-T1] child-imbalance logging enabled → /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint48/T1/child-imbalance/data/higgs_seed42.csv
+[S48-T1] child-log written: /Users/ramos/Library/Mobile Documents/com~apple~CloudDocs/Programming/Frameworks/catboost-mlx/docs/sprint48/T1/child-imbalance/data/higgs_seed42.csv  (6300 splits)
+bench_boosting — CatBoost-MLX library-path benchmark (TODO-014)
+================================================================
+rows=1000000  features=28  classes=2  depth=6  iters=100  bins=128
+lr=0.1000  l2=3.0000  seed=42  approxDim=1  onehot=0
+----------------------------------------------------------------
+Generating synthetic dataset...
+Dataset: 1000000 rows x 28 features (7 uint32 cols), 3556 total bin-features
+Beginning 100 boosting iterations...
+
+
+--- Running (T2 sort-by-bin, production default) ---
+  iter    0  time=  535.3 ms  loss=0.688665
+  iter    9  time=  437.0 ms  loss=0.668620
+  iter   19  time=  453.5 ms  loss=0.652046
+  iter   29  time=  406.5 ms  loss=0.639559
+  iter   39  time=  426.4 ms  loss=0.628415
+  iter   49  time=  394.4 ms  loss=0.608800
+  iter   59  time=  486.1 ms  loss=0.596038
+  iter   69  time=  435.9 ms  loss=0.586979
+  iter   79  time=  394.5 ms  loss=0.578034
+  iter   89  time=  422.0 ms  loss=0.570701
+  iter   99  time=  425.1 ms  loss=0.566274
+
+================================================================
+Timing Summary
+----------------------------------------------------------------
+  iter-0 (cold start):     535.3 ms
+  warm mean (  99 iters):    434.8 ms
+  warm min:                376.6 ms
+  warm max:                543.0 ms
+
+  Final loss: 0.56627351
+  BENCH_FINAL_LOSS=0.56627351
+================================================================
