@@ -41,12 +41,31 @@
 
 ---
 
-## Sprint 49 — Engineering on C6 (NEXT)
+## Sprint 49 — Engineering on C6 (ACTIVE)
 
-**Status:** READY TO OPEN post-S48 PR merge.
-**Branch (proposed):** `mlx/sprint-49-c6-engineering`
-**Authority:** DEC-052 OUTCOME A. Bundle 2 thresholds locked at T0c.
-**Mode:** ENGINEERING. ~2 sprints (S49 + S50) per qualifier (a) pre-certification.
+**Status:** ACTIVE 2026-05-14. T0c locks approved (5-question batch). T0 ready to fire.
+**Branch:** `mlx/sprint-49-c6-engineering` (cut from master `5d1ae685fc`)
+**Plan:** `docs/sprint49/sprint-plan.md`
+**Authority:** DEC-052 OUTCOME A + S49-T0c AMENDMENTS (2026-05-14, DECISIONS.md).
+**Mode:** ENGINEERING. ~6.5 days; 7-day hard timebox.
+
+**S49-T0c LOCKS (5 batch decisions, user-approved post 3-agent panel review):**
+- Q1: Bundle 2 AMENDED — Amazon CARVED OUT pending DEC-046 fix. Hard gate = Higgs-1M + Epsilon ≤5× only. Amazon informational.
+- Q2: Amazon T0 kill rubric ≤0.35/0.35-0.45/>0.45 (informational, NOT arc-retire trigger)
+- Q3: Outcome B(1.5-1.7× Higgs) AUTO-RETIRE; no user-call
+- Q4: RMSE envelope fail → loss-conditional dispatch (NO feature flag)
+- Q5: Modified β shape — T0/T1 kill-able, T2-T5 classify-only
+
+**Probability-weighted expected outcome:** P(A)=0.42 / P(B auto-retire)=0.30 / P(C empirical retire)=0.25 / P(D stop-loss)=0.03.
+
+**Task status:**
+- [ ] T0 (0.5d) — Amazon child-imbalance pre-flight
+- [ ] T1 (0.5d) — Dispatch graph design (DESIGN-ONLY; MLX primitive sequence; lazy-graph fusion preservation)
+- [ ] T2 (2d) — Engineering implementation (loss-conditional dispatch; parent cache; subtract kernel)
+- [ ] T3 (1d) — DEC-008 18-config envelope sweep
+- [ ] T4 (1.5d) — Bundle 2 measurement (Higgs+Epsilon hard gate; Amazon informational)
+- [ ] T5 (0.5d) — Decision A/B/C/D per Q3 rubric
+- [ ] T6 (0.5d) — Close-out PR
 
 **Top 3 risks pre-flagged by research-scientist (full register in `docs/sprint48/T3/probe-spec-c6.md` §7):**
 1. **Amazon cross-domain** — T1 measured Higgs+Epsilon only; Bundle 2 hard gate requires Amazon ≤5×. S49-T0 = Amazon child-imbalance measurement BEFORE engineering.
