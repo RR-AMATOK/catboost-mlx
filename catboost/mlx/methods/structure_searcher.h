@@ -57,7 +57,8 @@ namespace NCatboostMlx {
         ui32 maxDepth,
         float l2RegLambda,
         ui32 approxDimension = 1,
-        TStageProfiler* profiler = nullptr
+        TStageProfiler* profiler = nullptr,
+        bool useHistogramSubtraction = false  // [S49 C6] per S49-T0c Q4 lock — default false preserves v0.7.0
     );
 
     // Result of a depthwise (non-symmetric) tree structure search.

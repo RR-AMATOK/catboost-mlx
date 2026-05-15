@@ -57,6 +57,13 @@ namespace NCatboostMlx {
         float SubsampleRatio = 1.0f;       // row subsampling fraction per iteration
         float ColsampleByTree = 1.0f;      // feature subsampling fraction per tree
         ui64 RandomSeed = 42;
+
+        // [S49 C6] Histogram dispatch policy — set ONCE at training entry based on loss type.
+        // true  => use parent-minus-sibling subtraction (Logloss / CrossEntropy / MultiClass)
+        // false => use production src-broadcast dispatch (RMSE and all other loss types)
+        // This is NOT a user-facing toggle. Set by RunTrainMLXImpl based on lossFunction
+        // (train.cpp:162) per S49-T0c Q4 lock.
+        bool UseHistogramSubtraction = false;
     };
 
     // Run the gradient boosting loop.
