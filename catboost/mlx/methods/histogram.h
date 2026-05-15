@@ -11,6 +11,11 @@
 namespace NCatboostMlx {
     namespace mx = mlx::core;
 
+    // Forward declaration — TPartitionLayout is defined in structure_searcher.h.
+    // histogram.h cannot include structure_searcher.h (circular dependency:
+    // structure_searcher.h already includes histogram.h).
+    struct TPartitionLayout;
+
     // Result of histogram computation: a flat buffer of gradient (and optionally weight) sums
     // per feature-bin, per partition.
     // Layout: [numPartitions, numStats, totalBinFeatures]
@@ -56,6 +61,45 @@ namespace NCatboostMlx {
 
     // Zero-initialize a histogram buffer
     mx::array CreateZeroHistogram(ui32 numPartitions, ui32 numStats, ui32 totalBinFeatures);
+
+    // [S49 C6] Compute histograms for SMALLER CHILDREN only, then derive LARGER CHILDREN
+    // via parent-minus-sibling subtraction, and assemble the full [numPartitions × numStats × totalBinFeatures]
+    // histogram in partition-index order.
+    //
+    // Oblivious-tree partition convention at depth d:
+    //   Left child of parent p  → partition index p
+    //   Right child of parent p → partition index p + numParents   (numParents = numPartitions / 2)
+    //
+    // Algorithm (per design §1.1–§1.6):
+    //   1. Compute smaller-child mask per parent via mx::slice + mx::less (sync-free).
+    //   2. Build partition-index arrays for smaller and larger sides via mx::arange + mx::where.
+    //   3. Gather smallerPartOffsets / smallerPartSizes from fullLayout via mx::take.
+    //   4. Dispatch ComputeHistogramsImpl over smaller children only (numParents partitions).
+    //   5. Derive larger-child histogram: histLarger = histParent - histSmaller (mx::subtract).
+    //   6. Assemble full [numPartitions] output via mx::where + mx::tile + mx::reshape.
+    //
+    // NO mx::eval() boundary in this function — all ops are lazy and fusable.
+    // Sync-point inventory: zero (per §2.2). Production builds: CATBOOST_MLX_STAGE_PROFILE
+    // block is the only conditional eval, gated at compile-time.
+    //
+    // Parameters:
+    //   dataset       — training dataset (features, compressed index)
+    //   gradients     — [numDocs] float32 gradient for dimension k
+    //   hessians      — [numDocs] float32 hessian for dimension k
+    //   fullLayout    — depth-d partition layout (all numPartitions = 2*numParents partitions)
+    //   histParent    — [numParents * numStats * totalBinFeatures] float32 — parent histogram cache
+    //                   (materialized as side-effect of prior depth's FindBestSplitGPU call; §2.4)
+    //   numPartitions — total partitions at depth d = 2 * numParents
+    //
+    // Returns THistogramResult with NumPartitions = numPartitions (full shape, assembled).
+    THistogramResult ComputeHistogramsSmallerChildAndAssemble(
+        const TMLXDataSet& dataset,
+        const mx::array& gradients,          // [numDocs] float32
+        const mx::array& hessians,           // [numDocs] float32
+        const TPartitionLayout& fullLayout,  // depth-d layout (all 2*numParents partitions)
+        const mx::array& histParent,         // [numParents * numStats * totalBinFeatures] float32
+        ui32 numPartitions                   // = 2 * numParents
+    );
 
     // T2 histogram dispatch (Sprint 24 D0 v5 — DEC-023 complete fix).
     //
