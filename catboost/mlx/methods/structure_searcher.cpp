@@ -48,11 +48,22 @@ namespace NCatboostMlx {
         ui32 maxDepth,
         float l2RegLambda,
         ui32 approxDimension,
-        TStageProfiler* profiler
+        TStageProfiler* profiler,
+        bool useHistogramSubtraction   // [S49 C6] per S49-T0c Q4 lock — default false in header decl
     ) {
         TObliviousTreeStructure result;
         result.Splits.reserve(maxDepth);
         result.SplitProperties.reserve(maxDepth);
+
+        // [S49 C6] Parent histogram cache — one entry per approxDim.
+        // Allocated lazily on first use at depth 0; reused across depths within this tree.
+        // Lifetime: local to SearchTreeStructure; destroyed at return (§4.4 scope-based invalidation).
+        // NOT a member of TPartitionLayout — this holds histogram DATA from the previous depth,
+        // not the doc-partition mapping of the current depth.
+        std::vector<mx::array> parentHistograms;
+        if (useHistogramSubtraction) {
+            parentHistograms.reserve(approxDimension);
+        }
 
         const auto& features = dataset.GetCompressedIndex().GetFeatures();
         const ui32 numDocs = dataset.GetNumDocs();
@@ -98,11 +109,54 @@ namespace NCatboostMlx {
                         dimHess  = mx::reshape(dimHess, {static_cast<int>(numDocs)});
                     }
 
-                    auto histResult = ComputeHistograms(
-                        dataset, dimGrads, dimHess,
-                        layout.DocIndices, layout.PartOffsets, layout.PartSizes,
-                        numPartitions
-                    );
+                    // [S49 C6] Fork: at depth >= 1 with C6 active, dispatch over smaller children only
+                    // and derive the larger-child histogram via parent-minus-sibling subtraction.
+                    // At depth 0 (single root partition), always use the production path —
+                    // there are no siblings yet. RMSE and other non-C6 losses always use production path.
+                    //
+                    // Branch-predictor note: useHistogramSubtraction is constant for the lifetime of
+                    // SearchTreeStructure; the branch is predicted perfectly after the first iteration.
+                    // This is the same structural pattern as the isLossguide / isDepthwise fork in
+                    // mlx_boosting.cpp:129-167.
+                    THistogramResult histResult;
+                    if (useHistogramSubtraction && depth >= 1) {
+                        // C6 path — smaller-child kernel + parent-minus-sibling subtract + assembly.
+                        // parentHistograms[k] holds the depth-(d-1) full histogram for dim k,
+                        // guaranteed materialized as a side-effect of the prior depth's FindBestSplitGPU
+                        // call (§2.4 — no additional mx::eval needed).
+                        histResult = ComputeHistogramsSmallerChildAndAssemble(
+                            dataset, dimGrads, dimHess,
+                            layout,
+                            parentHistograms[k],
+                            numPartitions
+                        );
+                    } else {
+                        // Production path — full-shape dispatch (unchanged).
+                        // Also used at depth 0 when useHistogramSubtraction is true
+                        // (no parent available yet; the result becomes the first cache entry).
+                        histResult = ComputeHistograms(
+                            dataset, dimGrads, dimHess,
+                            layout.DocIndices, layout.PartOffsets, layout.PartSizes,
+                            numPartitions
+                        );
+                    }
+
+                    // [S49 C6] Update parent cache for the next depth.
+                    // Cache holds the ASSEMBLED full-shape histogram so that depth-(d+1)'s
+                    // subtract correctly derives its larger-child from the full parent.
+                    // NOTE: mx::array assignment is a handle-swap, not an in-place buffer write —
+                    // the existing handle already captured by the current depth's subtract remains
+                    // valid until it evaluates (§4.4 subtle correctness check).
+                    if (useHistogramSubtraction) {
+                        if (depth == 0) {
+                            // First entry: push_back (cache was empty; reserved in header)
+                            parentHistograms.push_back(histResult.Histograms);
+                        } else {
+                            // Update slot k for next depth's subtract
+                            parentHistograms[k] = histResult.Histograms;
+                        }
+                    }
+
                     perDimHistograms.push_back(std::move(histResult));
                 }
             }
