@@ -162,6 +162,26 @@ namespace NCatboostMlx {
         auto lossFunction = updatedOptions.LossFunctionDescription->GetLossFunction();
         const auto& lossParamsMap = updatedOptions.LossFunctionDescription->GetLossParamsMap();
 
+        // [S49 C6] Derive histogram dispatch policy from loss type — set ONCE, immutable for
+        // the lifetime of this training call (S49-T0c Q4 lock: no runtime user-facing flag).
+        //
+        // C6 path (parent-minus-sibling subtraction) activates for:
+        //   Logloss + CrossEntropy — both use TLoglossTarget; hessian H = p*(1-p) in (0, 0.25]
+        //     ⇒ balanced child splits expected (§5.1 geomean smaller fraction ~0.47); worth C6.
+        //   MultiClass — multi-dimensional softmax; similar split-balance profile.
+        //
+        // Production path (src-broadcast, unchanged) for all other losses (RMSE, MAE, Quantile,
+        // Huber, Poisson, Tweedie, MAPE, PairLogit, YetiRank).
+        //
+        // This boolean is constant throughout RunBoosting; branch-predictor-friendly.
+        const bool useHistogramSubtraction =
+            (lossFunction == ELossFunction::Logloss)
+            || (lossFunction == ELossFunction::CrossEntropy)
+            || (lossFunction == ELossFunction::MultiClass);
+        config.UseHistogramSubtraction = useHistogramSubtraction;
+        CATBOOST_INFO_LOG << "CatBoost-MLX: UseHistogramSubtraction=" << useHistogramSubtraction
+            << " (loss=" << lossFunction << ")" << Endl;
+
         std::unique_ptr<IMLXTargetFunc> targetPtr;
         switch (lossFunction) {
             case ELossFunction::RMSE:
