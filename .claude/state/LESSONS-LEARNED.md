@@ -413,3 +413,60 @@ added S46-T6.
 | 2026-04-25 | Added § Noise-Driven Algorithms — RNG-implementation bias multi-seed verification | sprint-39 |
 | 2026-04-26 | Added § Cross-Runtime Triage — 3-experiment decomposition methodology (release-readiness filter) | sprint-40 |
 | 2026-05-05 | Added § SIMD Histogram Kernel Routing Invariant — processor-lane vs owner-lane independence trap (S46 Probe B) | sprint-46 |
+| 2026-05-18 | Added § Workload-Reduction Lever — passes all pre-empirical gates but no measured speedup (S49 C6) | sprint-49 |
+
+---
+
+## Workload-Reduction Lever Passes All Pre-Empirical Gates But Fails Measurement (S49 C6)
+
+**Filed:** 2026-05-18 (S49 close)
+**Lever:** C6 — histogram subtraction (parent-minus-sibling) — LightGBM `FixUpStats` analog on Apple Silicon GPU
+**Result:** DEC-052 OUTCOME revised A → RETIRED-EMPIRICALLY at S49-T4
+
+### The trap
+
+S49 was the **first arc in 8 throughput-hypothesis attempts** (DEC-013/014/015/017/019/048/049 + this) to pass all pre-empirical gates without falsification:
+
+| Gate | Verdict | Evidence |
+|---|---|---|
+| S48-T0 Premise (cross-domain industrial validation) | PASS | LightGBM ships this; CatBoost-CPU `FixUpStats` (`scoring.cpp:315-332`) precedent |
+| S48-T1 Child-imbalance empirical (favorable skew) | PASS | Higgs geomean 0.3064, Epsilon 0.2830 (≤0.35 threshold) |
+| S48-T2 Silicon-architect feasibility | PASS | Q1+Q2+Q3 all PASS or MARGINAL→resolved by T1 |
+| S48-T3 Probe-spec engineering scope | PASS | Fits ≤2-sprint qualifier (a) |
+| S49-T1 Design | PASS | 14-task checklist, zero unresolved questions; caught probe-spec sibling-pairing bug |
+| S49-T2 Implementation | PASS | 5 atomic commits, code compiles GREEN |
+| S49-T2.12 Branch-B regression | PASS | 2/2 byte-equivalent predict output |
+| S49-T2.13 RMSE bit-equivalence | PASS | Q4 loss-conditional dispatch honored; RMSE untouched |
+| S49-T2.14 Sync-check (wall-clock proxy) | PASS | Logloss/RMSE 0.96× at small scale; fusion preserved |
+| S49-T3 DEC-008 18-config envelope sweep | **ALL_PASS** | RMSE 18/18 max_ulp=1; Logloss 18/18 max_ulp=1; MultiClass 18/18 max_ulp=2 |
+| **S49-T4 measurement** | **FAIL** | C6/baseline = 1.002× iter speedup on Higgs-1M iter=200 Logloss |
+
+The mechanism is mathematically correct (bit-equivalent parity to 1-2 ULP), the code is correctly integrated, the sync infrastructure is preserved — but the production-shape speedup is ~0%.
+
+### Why the trap exists
+
+C6 saves work by NOT computing the larger child's histogram (derives via subtraction). Theoretically valid AND empirically supported by the child-imbalance distribution (geomean 0.30 means smaller child is ~30% of parent size). At face value, this should reduce per-depth histogram work by ~50%.
+
+**But the production-shape ratio is 1.002×.** Three hypotheses:
+1. **Dispatch overhead absorbs the savings.** C6 adds ~5+ MLX primitive ops per depth (smaller-child mask construction, smaller-child dispatch, subtract, assembly via where/tile/reshape). On a per-iter histogram already at ~135ms, the per-depth dispatch latency may equal the per-depth savings.
+2. **Lazy-graph materializes the same work elsewhere.** Even with "skip" semantics in the C6 path, the lazy compute graph may evaluate the equivalent data through other consumers downstream.
+3. **Downstream consumer reads both children.** If score-calc or partition-update requires both children's histograms, the "saved" work is computed anyway just from a different code path.
+
+### Rule
+
+**A workload-reduction lever must demonstrate measured per-iter speedup at production shape before merging implementation code, even after passing every parity gate.** Parity tests verify correctness; they do NOT verify speedup. Static analysis of FLOP reduction is NOT sufficient — the dispatch/sync/lazy-graph overhead can absorb savings invisibly.
+
+### How to apply
+
+When evaluating workload-reduction levers on GPU compute graphs with framework-managed lazy evaluation (MLX, JAX, PyTorch traced/compiled):
+1. **Require a per-iter wall-clock measurement at production shape BEFORE engineering commits.** Synthetic-shape micro-benchmarks do not generalize.
+2. **Inspect the lazy compute graph downstream consumers.** A "saved" output may be a transitive input to score-calc, leaf-estimation, or partition-update. If so, the framework re-materializes it; the savings are fictional.
+3. **Per-dispatch latency budget check.** Add `~5 × MLX_dispatch_overhead` against `~0.5 × baseline_per_depth_kernel_time`. If the former exceeds the latter, the lever cannot win regardless of theoretical FLOP savings.
+4. **Accept that "8th-falsification on first arc passing all pre-empirical gates" is a legitimate result.** The sunk-cost rail (S48-T0c Q3 lock pattern) was specifically designed for this scenario. Honor it.
+
+### Cross-refs
+- `docs/sprint49/T4/measurement.md` (the empirical result)
+- `docs/sprint49/T3/envelope-sweep/analysis.md` (the parity gate that passed)
+- `docs/sprint48/T3/probe-spec-c6.md` (the original speedup projection)
+- `.claude/state/DECISIONS.md` DEC-052 OUTCOME REVISED (the retirement)
+- DEC-017 (toy-to-production transfer standing rule — extends here to "parity-to-production transfer")

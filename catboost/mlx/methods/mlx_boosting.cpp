@@ -163,8 +163,7 @@ namespace NCatboostMlx {
                     config.MaxDepth,
                     config.L2RegLambda,
                     approxDim,
-                    profiler,
-                    config.UseHistogramSubtraction  // [S49 C6] propagate dispatch policy; default false
+                    profiler
                 );
                 actualDepth = static_cast<ui32>(obliviousStructure.Splits.size());
                 if (actualDepth == 0) {
