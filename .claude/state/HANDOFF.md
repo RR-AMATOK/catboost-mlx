@@ -41,6 +41,28 @@
 
 ---
 
+## Sprint 50 — Categorical Handling Closure (ACTIVE, per DEC-053)
+
+**Status:** SCAFFOLDED. T0 ready to fire.
+**Branch:** `mlx/sprint-50-categorical-closure` (cut from S49 tip `42e1089cba`; will rebase post PR #51 merge)
+**Plan:** `docs/sprint50/scoping.md`
+**Authority:** DEC-053 — re-sequence per 3-agent panel review (2026-05-18). T0c Q3 pivot was locked 2026-05-12 BEFORE Amazon Bundle 2 carve-out evidence surfaced 2026-05-14; new info justifies re-evaluation per anti-goalpost rule.
+
+**Sprint focus:** Fix Amazon bin-aliasing defect (RESOURCE feature cardinality 799 folded into 255 bins; logloss MLX 0.2195 vs CPU 0.1332 — fictional measurement). 1-2 sprint bounded engineering scope. Re-enable Amazon into Bundle 2 hard gate. Unblock future throughput investigation infrastructure.
+
+**T0-T6 structure** (~4 days agent work, 7-day timebox):
+- T0 — Scaffold + advisory board kickoff
+- T1 — Root cause + code path inspection (uint8 quantization)
+- T2 — Fix design (uint8 → uint16, hashing, feature engineering)
+- T3 — Implementation
+- T4 — Amazon validity verification (logloss MLX within ±0.005 of CPU)
+- T5 — Decision: ship + amend DEC-051 to re-include Amazon in Bundle 2
+- T6 — Close-out PR
+
+**S52+ ordered boosting roadmap PRESERVED:** Per T0c Q3 intent. @ml-product-owner plan + @research-scientist deep-dive saved at `docs/sprint52/preliminary/` for direct use when S52 fires (post-S50 close). NOT abandoned, just re-sequenced.
+
+---
+
 ## Sprint 49 — Engineering on C6 — CLOSED 2026-05-18 (RETIRED-EMPIRICALLY)
 
 **Status:** CLOSED. DEC-052 OUTCOME revised A → **RETIRED-EMPIRICALLY** at T4.

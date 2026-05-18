@@ -3080,3 +3080,75 @@ These hypotheses are documented for potential future revival but NOT investigate
 **Disposition of C6 production code:** T2 commits will be REVERTED in T6 close-out. Implementation preserved in PR history for future revival; master stays clean of dead code (per devils-advocate "no feature flags = no dead-code rot ratchet" at S48 T0c Q4). Documentation (sprint plan, T1 design, T3 envelope sweep results, T4 measurement) preserved as research artifacts.
 
 **Authority pointers:** `docs/sprint49/T4/measurement.md`, `docs/sprint49/T3/envelope-sweep/analysis.md`, `docs/sprint49/T1/design.md`.
+
+---
+
+## DEC-053: S50 pivot re-sequenced — Categorical Handling Closure FIRST, Ordered Boosting deferred to S52+
+
+**Status:** DECIDED (2026-05-18, by user, after 3-agent panel review)
+**Sprint:** 50 (re-sequenced from ordered boosting → categorical-handling closure)
+**Supersedes:** DEC-052 T0c Q3 ordered-boosting pivot (locked 2026-05-12; now deferred to S52+)
+**Cross-refs:** DEC-046 (S40 CTR RNG ordering), DEC-052 OUTCOME REVISED + S49-T0c Q1 Amendment (Amazon Bundle 2 carve-out 2026-05-14)
+
+### What this amends
+
+DEC-052 T0c Q3 pre-decided pivot was **ordered boosting** if throughput arc retired. C6 retired 2026-05-18; ordered should have fired automatically per pre-commit. However, 3-agent panel review (@ml-product-owner sprint plan + @research-scientist algorithmic deep-dive + @devils-advocate stress-test) surfaced a load-bearing NEW finding that materially changes the calculus.
+
+### The new information
+
+S48-T0c Q1 Amendment (2026-05-14) carved Amazon out of Bundle 2 hard gate because MLX runs a **degenerate workload on Amazon** due to bin-quantization aliasing: RESOURCE feature (cardinality 799) folds into 255 bins via uint8 encoding, producing logloss MLX 0.2195 vs CPU 0.1332. **catboost-mlx is currently shipping a measurement infrastructure that lies on Amazon.** This was attributed to "DEC-046" in S48-T0c shorthand though technically distinct from DEC-046's CTR RNG ordering — both fall under "categorical handling" umbrella.
+
+T0c Q3 ordered-boosting pivot was locked **2026-05-12**. Amazon Bundle 2 carve-out surfaced **2026-05-14** — 2 days AFTER the pivot lock. **The pre-commit was made without this load-bearing information.**
+
+### Anti-goalpost-moving rule clarification
+
+DEC-051 anti-goalpost-moving rule prevents *relaxing thresholds AFTER measurement*. It does NOT prevent re-evaluating a *pivot target* when new information surfaces post-lock. Re-sequencing per new evidence ≠ rationalizing a marginal result. Refusing to update would be rigid pre-commit at the cost of evidence-responsiveness — a different anti-pattern.
+
+### Devils-advocate 5-axis comparison (DEC-046/categorical first vs ordered first)
+
+| Axis | Categorical Closure first | Ordered first |
+|---|---|---|
+| Scope | 1-2 sprints (bounded; known defect) | 2-3 → 5+ realistic (devils-advocate P=0.45 scope blow) |
+| Measurement integrity | **Fixes broken substrate** | Adds another axis to a broken substrate |
+| Bundle 2 hard gate | **Re-enables Amazon** | Doesn't touch |
+| Future throughput attempts | **Unblocks all of them** | No relationship |
+| Real user-facing fix | YES (Amazon currently produces wrong model) | Feature add, no defect repair |
+
+### Sequencing argument
+
+- **Categorical first → Ordered second:** 1-2 + 2-3 = 3-5 sprints; ordered runs on honest substrate; Amazon parity test trustworthy
+- **Ordered first → Categorical later:** 2-3 + 1-2 = 3-5 sprints; ordered's Amazon parity test in middle is untrustworthy; may need re-run after categorical lands
+
+Same total time; categorical-first sequencing is strictly higher-quality.
+
+### Decision
+
+**S50 = Categorical Handling Closure** (Amazon bin-aliasing fix; possibly also revisit DEC-046 CTR RNG ordering if scope permits). Bounded engineering scope, 1-2 sprints. Closes a known product defect. Re-enables Amazon into Bundle 2 hard gate. Unblocks future throughput investigation infrastructure.
+
+**Ordered boosting deferred to S52+** on honest measurement substrate. T0c Q3 intent preserved — just re-sequenced for evidence-quality. The @ml-product-owner sprint plan (~330 lines) and @research-scientist algorithmic deep-dive (CPU BodyTail mechanism, MLX integration points) from this session are preserved under `docs/sprint52/preliminary/` for direct use when S52 fires.
+
+### What this closes
+
+- The misalignment between T0c Q3 lock (2026-05-12) and S48-T0c Q1 Amendment evidence (2026-05-14).
+- The fictional-measurement risk of shipping ordered boosting against a known-broken Amazon substrate.
+
+### What this opens (S50 scope)
+
+- S50 = scoping + engineering for categorical handling fix:
+  - T0 — scaffold + advisory board (visionary, devils-advocate)
+  - T1 — current-state: what's the bin-aliasing mechanism; where does it live in code (catboost/mlx/data/, catboost/mlx/methods/, or catboost/libs/data/objects.h)
+  - T2 — design: fix approach (uint8 → uint16 binning, dynamic feature engineering, hashing scheme, etc.)
+  - T3 — implementation
+  - T4 — Amazon validity verification (logloss MLX vs CPU within DEC-008 envelope)
+  - T5 — decision: ship + re-enable Amazon into Bundle 2, OR scope-adjust
+  - T6 — close-out
+
+### S52+ ordered boosting roadmap (preserved per T0c Q3 intent)
+
+When S50 closes Amazon validity: S51 = polish/release-prep (if needed); S52 = ordered boosting kickoff using the preserved @ml-product-owner plan + @research-scientist deep-dive as primary inputs. Per @research-scientist analysis, CPU mechanism is BodyTail batching (NOT N supplementary models — ~13 doubling batches at 1M scale; ~400-500 MB overhead). Engineering estimate: 3 sprints (S52-S54).
+
+### Confidence and limitations
+
+@devils-advocate verdict: YELLOW-leaning-GREEN on (B) sequencing. Confidence ~80%. The 20% caveat: if user prioritized shipping "CatBoost has the 'ordered' in its name" claim regardless of measurement substrate, (A) honor-lock was legitimate. User chose (B) after panel review.
+
+**Authority pointers:** `docs/sprint50/scoping.md` (S50 scoping), `docs/sprint52/preliminary/` (preserved ordered-boosting plan + algorithmic deep-dive for future S52), `docs/sprint49/T4/measurement.md` (DEC-052 retirement context).
