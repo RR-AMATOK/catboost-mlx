@@ -2,6 +2,46 @@
 
 > Coverage: Sprints 0–15 reconstructed from git log on 2026-04-15. Sprint 16+ is source of truth.
 
+## 2026-05-18 — Sprint 49: C6 engineering — DEC-052 OUTCOME REVISED → RETIRED-EMPIRICALLY
+
+Branch: `mlx/sprint-49-c6-engineering`. Cut from master `5d1ae685fc` (S48 close).
+
+**Verdict:** Outcome C — RETIRED-EMPIRICALLY. C6 measured 1.002× iter speedup on Higgs-1M iter=200 Logloss (Outcome A required ≥1.7×; Outcome B 1.5–1.7× auto-retire per Q3 lock). Q3 rail fired automatically; no user re-deliberation per pre-commit. **8th throughput-hypothesis falsification on this codebase; FIRST one to pass design + implementation + parity gates (S48-T0/T1/T2/T3 + S49-T1/T2/T3) before failing empirically at T4.**
+
+### S49 trajectory
+
+- T0 SKIPPED (Q1 amendment carved Amazon out of Bundle 2 hard gate)
+- T1 design (`docs/sprint49/T1/design.md`, 677 lines): 14-task T2 checklist; caught probe-spec sibling-pairing bug; zero unresolved questions
+- T2 engineering (5 atomic commits `96bd87d0d4` → `c323c7fe64`): loss-conditional dispatch per Q4 (RMSE unchanged; Logloss/CE/Multi → C6 path); parent-cache lifetime; smaller-child selection via MLX `less`/`where`/`take`; assembly via `where`/`tile`/`reshape` (no `concatenate` on histogram data per Risk 2)
+- T2.12 Branch-B regression: PASS 2/2
+- T2.13 RMSE smoke: PASS (bit-identical to v0.7.0 baseline)
+- T2.14 sync-check wall-clock proxy: PASS (Logloss/RMSE 0.96× at small scale; fusion preserved)
+- T3 DEC-008 18-config envelope sweep (`docs/sprint49/T3/envelope-sweep/`): **ALL_PASS** — RMSE 18/18 max_ulp=1; Logloss 18/18 max_ulp=1; MultiClass 18/18 max_ulp=2; all losses well under DEC-008 ceilings
+- T4 quick measurement (`docs/sprint49/T4/measurement.md`): baseline=27.08s, C6=27.14s on Higgs-1M iter=200 Logloss seed=42 → **1.002× ratio**; Outcome C fires
+
+### Why no speedup despite correct mechanism + perfect parity
+
+Three hypotheses documented in T4 measurement doc (not investigated, per sunk-cost discipline):
+1. ~5+ MLX primitive ops per depth (C6 dispatch overhead) absorb the per-depth savings from halving histogram work
+2. Lazy compute graph may materialize the "skipped" larger child elsewhere through downstream consumers
+3. Score-calc or partition-update may require BOTH children's histograms regardless
+
+### Disposition
+
+- **C6 production code REVERTED** in T6 close-out (devils-advocate "no feature flags = no dead-code rot ratchet" discipline from S48 T0c)
+- Implementation preserved in PR history for potential future revival
+- Documentation artifacts (`docs/sprint49/*`) preserved as research evidence
+
+### LESSONS-LEARNED entry
+
+New category: "Workload-Reduction Lever Passes All Pre-Empirical Gates But Fails Measurement." Rule: parity tests verify correctness, not speedup; static FLOP-reduction analysis insufficient; require per-iter wall-clock at production shape BEFORE engineering commits.
+
+### v0.8.0 implications
+
+Throughput epic for v0.8.0 RETIRED. PyPI publish per DEC-051 remains gated; no path via histogram-internal levers. S50 = ordered boosting kickoff per DEC-052 T0c Q3 pre-decided pivot.
+
+---
+
 ## 2026-05-13 — Sprint 48: v0.8.0 throughput arc kickoff — DEC-052 OUTCOME A
 
 Branch: `mlx/sprint-48-t0-brainstorm`. Cut from master `0131b598b6` post-PR-#49.

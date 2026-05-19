@@ -3,7 +3,15 @@
 > Coverage: Sprints 0–15 reconstructed from git/agent-memory on 2026-04-15. Sprint 16+ is source of truth.
 > Last header refresh: 2026-05-06 (S48 ACTIVE — v0.8.0 throughput research arc kickoff. v2 plan APPROVED post agent panel review. T0 ready to fire.)
 
-## Sprint 49 — Engineering on C6 (NEXT, post S48 PR merge)
+## Sprint 50 — Ordered Boosting Kickoff (NEXT, post S49 PR merge)
+
+**Status:** READY TO OPEN.
+**Branch (proposed):** `mlx/sprint-50-ordered-boosting-kickoff`
+**Authority:** DEC-052 T0c Q3 pre-decided pivot target (locked 2026-05-12); DEC-052 OUTCOME REVISED to RETIRED-EMPIRICALLY (2026-05-18).
+**Mode:** SCOPING for new feature. Mirror S46/S48 scoping structure.
+**Pivot reason:** v0.8.0 throughput epic RETIRED (8th-falsification including C6). Ordered boosting is CatBoost's defining algorithmic feature; missing from MLX backend.
+
+## Sprint 49 — Engineering on C6 — CLOSED 2026-05-18 (RETIRED-EMPIRICALLY)
 
 **Status:** READY TO OPEN.
 **Branch (proposed):** `mlx/sprint-49-c6-engineering`

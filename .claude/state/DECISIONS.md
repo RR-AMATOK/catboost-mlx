@@ -2978,3 +2978,105 @@ RETIRED:
 **What this opens:** S49 engineering sprint to implement and measure C6. v0.8.0 PyPI publish per DEC-051 + Bundle 2 thresholds remains gated on S49 measurement (≤5× MLX/CUDA on all 3 datasets).
 
 **Authority pointers:** `docs/sprint48/T1/child-imbalance/analysis.md`, `docs/sprint48/T2/feasibility.md`, `docs/sprint48/T3/probe-spec-c6.md`.
+
+---
+
+### DEC-052 S49-T0c AMENDMENTS — 2026-05-14
+
+User-approved 3-agent panel (@ml-product-owner + @devils-advocate + @strategist) recommendations as batch lock. 5 decisions locked BEFORE S49-T1 fires.
+
+#### Q1 — Bundle 2 hard gate AMENDED (Amazon carve-out)
+
+**NEW FINDING (devils-advocate, 2026-05-14):** Amazon MLX/CUDA at v0.7.0 baseline is already 0.91× (MLX faster than CUDA), but MLX runs a degenerate workload due to DEC-046 uint8 aliasing folding RESOURCE feature (cardinality 799) into 255 bins. Logloss diverges (MLX 0.2195 vs CPU 0.1332). **Amazon Bundle 2 gate currently tests a fictional measurement.**
+
+This wasn't known at S48-T0c on 2026-05-12. **NOT goalpost-moving** — correcting a measurement-validity error before T1 fires.
+
+**AMENDMENT:** Bundle 2 hard gate becomes:
+- ≤5× MLX/CUDA on Higgs-1M iter=1000 (primary, rubric clause anchor)
+- ≤5× MLX/CUDA on Epsilon iter=2000 (cross-shape robustness)
+- Amazon iter=1000: **CARVED OUT** of S49 Bundle 2 hard gate. Re-enters Bundle 2 conditional on DEC-046 fix in future sprint.
+- v0.8.x release notes document Amazon as known limitation pending DEC-046.
+
+DEC-052 OUTCOME A clauses on Higgs-1M ≥1.7× iter + parity intact + ≤5× on the two retained datasets remain LOCKED.
+
+#### Q2 — Amazon T0 child-imbalance kill rubric
+
+Amazon still measured at S49-T0 — cheapest signal on C6 behavior under categorical-heavy workloads; pre-flights v0.8.x DEC-046 dependency.
+
+**LOCKED:**
+- ≤ 0.35 → PASS (matches Higgs/Epsilon framework)
+- 0.35–0.45 → user-call (one-shot escalation; NOT auto-retire — Amazon is informational at S49)
+- > 0.45 → C6 ships but flagged as "Amazon-sub-optimal" in v0.8.x release notes; does NOT retire arc
+
+Softer than Higgs/Epsilon kill rule because Amazon is no longer Bundle 2 hard gate.
+
+#### Q3 — Outcome B(1.5–1.7×) trap-zone discipline
+
+Devils-advocate: feature flags create permanent technical complexity ratchets; "user-call at 1.5–1.7×" is the trap-zone rationalization door.
+
+**LOCKED:** If Higgs-1M measured 1.5–1.7× iter speedup → **arc auto-retires under sunk-cost rail**. No user re-deliberation. Pivot to ordered boosting per DEC-052 T0c Q3.
+
+#### Q4 — RMSE envelope strategy (DEC-008 Gate B fallback)
+
+γ_13 ≈ 7.7e-7 vs RMSE γ_8 ≈ 4.77e-7 ceiling. RMSE configurations may exceed envelope at depth 6.
+
+**LOCKED:** Loss-conditional dispatch (NOT feature flag):
+- C6 path applies to Logloss + MultiClass loss configurations only
+- RMSE configurations use production src-broadcast path (unchanged)
+- Dispatch decision is loss-type-based, made at training start
+- No `use_histogram_subtraction` runtime flag; no per-iter branching cost
+- Honest scope-narrowing, NOT Outcome-B-trap-zone hedge
+
+If T3 shows RMSE+Logloss+MultiClass ALL fail → STOP, investigate (likely code bug).
+
+#### Q5 — Sprint plan shape
+
+**LOCKED:** Modified β — T0 and T1 are kill-able gates; T2 commits engineering investment; T3/T4/T5 are classify-only.
+
+#### Updated probability-weighted expected outcome
+
+- P(A — full ship, ≥1.7× Higgs, Bundle 2 clean): **0.42**
+- P(B — auto-retire at 1.5–1.7×): **0.30**
+- P(C — retire empirically, Higgs <1.5× or Epsilon >5×): **0.25**
+- P(D — stop-loss >8× Higgs): **0.03**
+
+**Authority pointers:** `docs/sprint49/sprint-plan.md`, `docs/sprint48/T1/child-imbalance/analysis.md`, `docs/benchmarks/cross-class-cuda-comparison.md` (Amazon DEC-046 context).
+
+---
+
+### DEC-052 OUTCOME REVISED — RETIRED-EMPIRICALLY at S49-T4 — 2026-05-18
+
+**Original status:** OUTCOME A (locked 2026-05-13 post-S48; greenlit C6 engineering)
+**Revised status:** **RETIRED-EMPIRICALLY** at S49-T4 measurement (2026-05-18)
+**Empirical evidence:** `docs/sprint49/T4/measurement.md`
+
+**S49 trajectory:**
+- T0 SKIPPED (Q1 amendment carved Amazon out of Bundle 2)
+- T1 design (`docs/sprint49/T1/design.md`, 677 lines) — caught probe-spec bug (sibling-pairing pattern); zero unresolved questions; 14-task T2 checklist
+- T2 engineering (5 atomic commits `96bd87d0d4` → `c323c7fe64`) — production code implementation; loss-conditional dispatch per Q4
+- T2.12 Branch-B regression: PASS 2/2 (predict-path untouched, RMSE bit-identical)
+- T2.13 RMSE smoke: PASS (predictions match v0.7.0 baseline exactly)
+- T2.14 Sync-check (Logloss/RMSE wall-clock proxy): PASS (Logloss 0.96× RMSE at small scale — fusion preserved)
+- T3 DEC-008 18-config envelope sweep: **ALL_PASS** (RMSE 18/18 max_ulp=1; Logloss 18/18 max_ulp=1; MultiClass 18/18 max_ulp=2; far under envelope ceilings)
+- T4 quick measurement: **C6/baseline = 1.002× (essentially zero speedup)**
+
+**Per Q3 lock (DEC-052 T0c AMENDMENTS):** <1.5× → Outcome C → retire empirically; pivot to ordered boosting per T0c Q3.
+
+**Q3 rail fires automatically. No user re-deliberation required.**
+
+**Why no measured speedup despite correct mechanism + perfect parity (hypothesized in T4 doc):**
+1. Dispatch overhead from ~5+ MLX primitive ops per depth absorbs the per-depth savings from halving histogram work
+2. Lazy-graph may materialize "skipped" work elsewhere through downstream consumers
+3. Score-calc or partition-update may require BOTH children's histograms, defeating the savings
+
+These hypotheses are documented for potential future revival but NOT investigated here — per sunk-cost discipline.
+
+**New LESSONS-LEARNED failure category:** "Workload-reduction lever with correct mechanism + bit-equivalent parity that delivers no measured speedup due to dispatch/synchronization overhead absorbing theoretical savings."
+
+**What this closes:** S49 sprint; the v0.8.0 throughput arc (now 8th-falsified). C6 was the first arc in 8 attempts to pass all pre-empirical gates (design + implementation + parity); failed at the final measurement gate.
+
+**What this opens:** S50 = ordered boosting kickoff (DEC-052 T0c Q3 pre-decided pivot target). Throughput epic for v0.8.0 is retired. PyPI publish per DEC-051 remains gated; no path via histogram-internal levers.
+
+**Disposition of C6 production code:** T2 commits will be REVERTED in T6 close-out. Implementation preserved in PR history for future revival; master stays clean of dead code (per devils-advocate "no feature flags = no dead-code rot ratchet" at S48 T0c Q4). Documentation (sprint plan, T1 design, T3 envelope sweep results, T4 measurement) preserved as research artifacts.
+
+**Authority pointers:** `docs/sprint49/T4/measurement.md`, `docs/sprint49/T3/envelope-sweep/analysis.md`, `docs/sprint49/T1/design.md`.

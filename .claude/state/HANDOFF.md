@@ -41,12 +41,36 @@
 
 ---
 
-## Sprint 49 — Engineering on C6 (NEXT)
+## Sprint 49 — Engineering on C6 — CLOSED 2026-05-18 (RETIRED-EMPIRICALLY)
 
-**Status:** READY TO OPEN post-S48 PR merge.
-**Branch (proposed):** `mlx/sprint-49-c6-engineering`
-**Authority:** DEC-052 OUTCOME A. Bundle 2 thresholds locked at T0c.
-**Mode:** ENGINEERING. ~2 sprints (S49 + S50) per qualifier (a) pre-certification.
+**Status:** CLOSED. DEC-052 OUTCOME revised A → **RETIRED-EMPIRICALLY** at T4.
+**Branch:** `mlx/sprint-49-c6-engineering` (PR pending)
+**Plan:** `docs/sprint49/sprint-plan.md`
+**Authority:** DEC-052 OUTCOME A → REVISED at S49-T4 (DECISIONS.md).
+
+**Outcome:** Q3 lock fired automatically. C6 quick T4 measured 1.002× iter speedup on Higgs-1M iter=200 (Outcome A required ≥1.7×; Outcome B 1.5–1.7× auto-retire). The mechanism passed every pre-empirical gate (T0c+T1+T2+T3 parity ALL_PASS max 2 ULP) but failed the final speedup measurement. 8th throughput-hypothesis falsification on this codebase; FIRST one to pass design + implementation + parity gates before failing empirically.
+
+**S50 = ordered boosting kickoff** per DEC-052 T0c Q3 pre-decided pivot. Throughput epic for v0.8.0 RETIRED. PyPI publish per DEC-051 remains gated; no path via histogram-internal levers.
+
+**S49-T0c LOCKS (5 batch decisions, user-approved post 3-agent panel review):**
+- Q1: Bundle 2 AMENDED — Amazon CARVED OUT pending DEC-046 fix. Hard gate = Higgs-1M + Epsilon ≤5× only. Amazon informational.
+- Q2: Amazon T0 kill rubric ≤0.35/0.35-0.45/>0.45 (informational, NOT arc-retire trigger)
+- Q3: Outcome B(1.5-1.7× Higgs) AUTO-RETIRE; no user-call
+- Q4: RMSE envelope fail → loss-conditional dispatch (NO feature flag)
+- Q5: Modified β shape — T0/T1 kill-able, T2-T5 classify-only
+
+**Probability-weighted expected outcome:** P(A)=0.42 / P(B auto-retire)=0.30 / P(C empirical retire)=0.25 / P(D stop-loss)=0.03.
+
+**Task status:**
+- [x] ~~T0~~ — SKIPPED (Q1 amendment carved Amazon out of Bundle 2; T0 tail-risk insurance value diminished)
+- [ ] T1 (0.5d) — Dispatch graph design (DESIGN-ONLY; MLX primitive sequence; lazy-graph fusion preservation)
+- [ ] T2 (2d) — Engineering implementation (loss-conditional dispatch; parent cache; subtract kernel)
+- [ ] T3 (1d) — DEC-008 18-config envelope sweep
+- [ ] T4 (1.5d) — Bundle 2 measurement (Higgs+Epsilon hard gate; Amazon informational)
+- [ ] T5 (0.5d) — Decision A/B/C/D per Q3 rubric
+- [ ] T6 (0.5d) — Close-out PR
+
+Total: 6 days; 7-day timebox preserved.
 
 **Top 3 risks pre-flagged by research-scientist (full register in `docs/sprint48/T3/probe-spec-c6.md` §7):**
 1. **Amazon cross-domain** — T1 measured Higgs+Epsilon only; Bundle 2 hard gate requires Amazon ≤5×. S49-T0 = Amazon child-imbalance measurement BEFORE engineering.
